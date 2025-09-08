@@ -11,29 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('productables', function (Blueprint $table) {
+        Schema::create('attribute_value_variant', function (Blueprint $table) {
             $table->id();
-
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
-            
-            $table->morphs('productable');
-
-            $table->integer('quantity')->default(0);
-
-            $table->decimal('price', 10, 2)->default(0);
-
-            $table->decimal('subtotal', 10, 2)->default(0);
-
+            $table->foreignId('attribute_value_id')->constrained()->onDelete('cascade');
+            $table->foreignId('variant_id')->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }
-
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        //
+        Schema::dropIfExists('attribute_value_variant');
     }
 };

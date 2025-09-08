@@ -28,6 +28,9 @@ return new class extends Migration
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
 
             $table->decimal('total', 10, 2)->default(0.00);
+
+            $table->string('observation')->nullable();
+
             $table->timestamps();
         });
     }

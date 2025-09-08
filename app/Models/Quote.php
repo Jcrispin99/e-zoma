@@ -6,5 +6,14 @@ use Illuminate\Database\Eloquent\Model;
 
 class Quote extends Model
 {
-    //
+    protected $fillable = [
+        'voucher_type',
+        'serie',
+        'correlative',
+        'date',
+        'purchase_order_id',
+        'supplier_id',
+        'warehouse_id',
+        'total',
+    ];
 }

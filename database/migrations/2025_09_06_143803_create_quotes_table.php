@@ -20,13 +20,11 @@ return new class extends Migration
 
             $table->timestamp('date');
 
-            $table->foreignId('purchase_order_id')->constrained()->onDelete('cascade');
-
-            $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
-
-            $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
+            $table->foreignId('customer_id')->constrained()->onDelete('cascade');
 
             $table->decimal('total', 10, 2)->default(0.00);
+
+            $table->string('observation')->nullable();
 
             $table->timestamps();
         });

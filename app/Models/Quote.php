@@ -11,9 +11,8 @@ class Quote extends Model
         'serie',
         'correlative',
         'date',
-        'purchase_order_id',
-        'supplier_id',
-        'warehouse_id',
+        'customer_id',
         'total',
+        'observation',
     ];
 }

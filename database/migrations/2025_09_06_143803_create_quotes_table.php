@@ -13,7 +13,6 @@ return new class extends Migration
     {
         Schema::create('quotes', function (Blueprint $table) {
             $table->id();
-
             $table->integer('voucher_type');
 
             $table->string('serie');
@@ -21,7 +20,11 @@ return new class extends Migration
 
             $table->timestamp('date');
 
-            $table->foreignId('customer_id')->constrained()->onDelete('cascade');
+            $table->foreignId('purchase_order_id')->constrained()->onDelete('cascade');
+
+            $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
+
+            $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
 
             $table->decimal('total', 10, 2)->default(0.00);
 

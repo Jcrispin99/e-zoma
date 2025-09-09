@@ -10,12 +10,14 @@ class Product extends Model
     protected $fillable = [
         'name',
         'description',
-        'base_price'
+        'sku',
+        'barcode',
+        'price',
+        'category_id',
+
     ];
 
-    protected $casts = [
-        'base_price' => 'decimal:2'
-    ];
+
 
     public function variants(): HasMany
     {

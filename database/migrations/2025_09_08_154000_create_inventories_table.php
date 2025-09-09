@@ -23,12 +23,12 @@ return new class extends Migration
             $table->integer('quantity_out')->default(0);
             $table->decimal('const_out', 10, 2)->default(0);
             $table->decimal('total_out', 10, 2)->default(0);
-             
+
             $table->integer('quantity_balance')->default(0);
             $table->decimal('const_balance', 10, 2)->default(0);
             $table->decimal('total_balance', 10, 2)->default(0);
 
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->foreignId('variant_id')->constrained()->onDelete('cascade');
 
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
 

@@ -16,7 +16,7 @@ return new class extends Migration
 
             $table->string('detail')->nullable();
 
-            $table->integer('quantity_in')->default(0);
+            $table->integer('quaßntity_in')->default(0);
             $table->decimal('const_in', 10, 2)->default(0);
             $table->decimal('total_in', 10, 2)->default(0);
 

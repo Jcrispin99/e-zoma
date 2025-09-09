@@ -1,5 +1,5 @@
 <x-admin-layout 
-title="Dashboard"
+title="CAtegorias"
 :breadcrumbs="[
     [
         'name' => 'Dashboard',
@@ -7,10 +7,13 @@ title="Dashboard"
         'icon' => 'fa-solid fa-gauge',
     ],
     [
-        'name' => 'Contenido',
-        'href' => '#',
+        'name' => 'Categorias',
         'icon' => 'fa-regular fa-file-lines',
+        'href' => route('admin.categories.index'),
     ],
+    [
+        'name' => 'Editar',
+    ]
 ]">
 
     <div>

@@ -16,4 +16,21 @@ class Transfer extends Model
         'origin_warehouse_id',
         'desination_warehouse_id',
     ];
+
+    public function originWarehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'origin_warehouse_id');
+    }
+
+    public function destinationWarehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'desination_warehouse_id');
+    }
+
+    public function variants()
+    {
+        return $this->morphToMany(Variant::class, 'variantable')
+            ->withPivot('quantity', 'price', 'subtotal')
+            ->withTimestamps();
+    }
 }

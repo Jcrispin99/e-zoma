@@ -25,28 +25,23 @@ class Variant extends Model
         return $this->belongsTo(Product::class);
     }
 
-    public function attributeValues(): BelongsToMany
+    public function attributeValues()
     {
         return $this->belongsToMany(AttributeValue::class, 'attribute_value_variant');
     }
 
-    public function variantables(): MorphMany
+    public function variantables()
     {
         return $this->morphMany(Variantable::class, 'variantable');
     }
 
-    public function purchases()
+    public function inventories()
     {
-        return $this->morphedByMany(Purchase::class, 'variantable');
+        return $this->hasMany(Inventory::class);
     }
 
-    public function sales()
+    public function images()
     {
-        return $this->morphedByMany(Sale::class, 'variantable');
-    }
-
-    public function quotes()
-    {
-        return $this->morphedByMany(Quote::class, 'variantable');
+        return $this->morphMany(Image::class, 'imageable');
     }
 }

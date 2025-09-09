@@ -22,4 +22,19 @@ class Inventory extends Model
         'inventoryable_id',
         'inventoryable_type',
     ];
+
+    public function variant()
+    {
+        return $this->belongsTo(Variant::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function inventoryable()
+    {
+        return $this->morphTo();
+    }
 }

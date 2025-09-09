@@ -17,4 +17,16 @@ class Sale extends Model
         'total',
         'observation',
     ];
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class);
+    }
+
+    public function products()
+    {
+        return $this->morphToMany(Product::class, 'variantable')
+            ->withPivot('quantity', 'price', 'subtotal')
+            ->withTimestamps();
+    }
 }

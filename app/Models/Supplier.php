@@ -14,4 +14,19 @@ class Supplier extends Model
         'email',
         'phone',
     ];
+    //Relaciones
+    public function identity()
+    {
+        return $this->belongsTo(Identity::class);
+    }
+
+    public function purchasesOrder()
+    {
+        return $this->hasMany(PurchaseOrder::class);
+    }
+
+    public function purchases()
+    {
+        return $this->hasMany(Purchase::class);
+    }
 }

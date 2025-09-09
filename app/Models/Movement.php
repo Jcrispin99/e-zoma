@@ -16,4 +16,11 @@ class Movement extends Model
         'observation',
         'reason_id',
     ];
+
+    public function products()
+    {
+        return $this->morphToMany(Product::class, 'variantable')
+            ->withPivot('quantity', 'price', 'subtotal')
+            ->withTimestamps();
+    }
 }

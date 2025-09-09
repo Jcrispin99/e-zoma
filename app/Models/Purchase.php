@@ -17,4 +17,16 @@ class Purchase extends Model
         'total',
         'observation',
     ];
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
+
+    public function products()
+    {
+        return $this->morphToMany(Product::class, 'variantable')
+            ->withPivot('quantity', 'price', 'subtotal')
+            ->withTimestamps();
+    }
 }

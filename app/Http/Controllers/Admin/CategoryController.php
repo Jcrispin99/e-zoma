@@ -60,13 +60,15 @@ class CategoryController extends Controller
         return redirect()->route('admin.categories.edit', $category);
     }
 
-
     /**
      * Show the form for editing the specified resource.
      */
     public function edit(Category $category)
     {
-        return view('admin.categories.edit', compact('category'));
+        return view('admin.categories.edit', [
+            'category' => $category,
+            'categories' => Category::where('id', '!=', $category->id)->get()
+        ]);
     }
 
     /**
@@ -74,7 +76,31 @@ class CategoryController extends Controller
      */
     public function update(Request $request, Category $category)
     {
-        return view('admin.categories.update', compact('category'));
+        $data = $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
+            'description' => 'nullable|string',
+            'parent_id' => 'nullable|exists:categories,id',
+        ]);
+
+        $data['slug'] = \Illuminate\Support\Str::slug($data['name']);
+
+        if (!empty($data['parent_id'])) {
+            $parent = Category::find($data['parent_id']);
+            $parent_full_name = $parent->full_name ?: $parent->name;
+            $data['full_name'] = $parent_full_name . ' > ' . $data['name'];
+        } else {
+            $data['full_name'] = $data['name'];
+        }
+
+        $category->update($data);
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Categoria ' . $category->name . ' ha sido actualizada',
+        ]);
+
+        return redirect()->route('admin.categories.edit', $category);
     }
 
     /**
@@ -82,6 +108,23 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
-        //
+        if ($category->products()->exists()) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => '¡Error!',
+                'text' => 'No se puede eliminar la categoría porque tiene productos asociados',
+            ]);
+            return redirect()->route('admin.categories.index');
+        }
+
+        $category->delete();
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Categoria ' . $category->name . ' ha sido eliminada',
+        ]);
+
+        return redirect()->route('admin.categories.index');
     }
 }

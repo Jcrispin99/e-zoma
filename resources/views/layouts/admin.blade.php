@@ -32,6 +32,7 @@
     {{-- wireui --}}
     <wireui:scripts />
 
+    @stack('css')
 </head>
 
 <body class="font-sans antialiased">
@@ -65,6 +66,8 @@
             Swal.fire(@json(session('swalt')));
         </script>
     @endif
+
+    @stack('js')
 
 </body>
 

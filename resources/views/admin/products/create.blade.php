@@ -15,7 +15,7 @@
 ]">
 
     <x-wire-card>
-        @livewire('admin.product-create')
+        @livewire('admin.product.create')
     </x-wire-card>
 
 </x-admin-layout>

@@ -19,24 +19,18 @@
         <form action="{{ route('admin.categories.store') }}" method="post" class="space-y-4">
 
             @csrf
-            <x-wire-input label="Nombre" name="name" placeholder="Nombre de la categoría" />
-            <x-wire-textarea label="Descripción" name="description" placeholder="Descripción de la categoría">
-                {{ old('description') }}
-            </x-wire-textarea>
+            <x-wire-input label="Nombre" name="name" />
+            <x-wire-textarea label="Descripción" name="description" />
 
-            <x-wire-native-select label="Categoría padre" name="parent_id">
-                <option value="">Ninguna</option>
-                @foreach ($categories as $parent_category)
-                    <option value="{{ $parent_category->id }}" @selected(old('parent_id') == $parent_category->id)>
-                        {{ $parent_category->full_name }}
+            <x-wire-native-select label="Categoría" name="category_id">
+                @foreach ($categories as $category)
+                    <option value="{{ $category->id }}" @selected(old('category_id') == $category->id)>
+                        {{ $category->full_name }}
                     </option>
                 @endforeach
             </x-wire-native-select>
-            <div class="flex justify-end">
-                <x-button type="submit">
-                    Guardar
-                </x-button>
-            </div>
+
+            <x-wire-button type="submit" green label="Guardar" />
 
         </form>
 

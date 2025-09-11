@@ -87,17 +87,12 @@ class CategoryController extends Controller
         if (!empty($data['parent_id'])) {
             $parent = Category::find($data['parent_id']);
             $parent_full_name = $parent->full_name ?: $parent->name;
-            $data['full_name'] = $parent_full_name . ' / ' . $data['name'];
+            $data['full_name'] = $parent_full_name . ' > ' . $data['name'];
         } else {
             $data['full_name'] = $data['name'];
         }
 
         $category->update($data);
-
-        // Si el nombre o el padre de la categoría cambiaron, actualizamos el full_name de los hijos.
-        if ($category->wasChanged('name') || $category->wasChanged('parent_id')) {
-            $this->updateChildrenFullName($category);
-        }
 
         session()->flash('swalt', [
             'icon' => 'success',

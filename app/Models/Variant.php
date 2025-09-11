@@ -13,7 +13,7 @@ class Variant extends Model
         'product_id',
         'sku',
         'price',
-        'stock'
+        'barcode'
     ];
 
     protected $casts = [

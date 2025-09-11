@@ -372,6 +372,122 @@ class Create extends Component
         return $existingValues;
     }
 
+    // Método para obtener valores disponibles de un atributo específico
+    public function getAvailableValues($attributeIndex)
+    {
+        $attributeName = $this->productAttributes[$attributeIndex]['name'] ?? '';
+        if (empty($attributeName)) {
+            return [];
+        }
+
+        $attribute = Attribute::where('name', $attributeName)->first();
+        if (!$attribute) {
+            return [];
+        }
+
+        return AttributeValue::where('attribute_id', $attribute->id)
+            ->get()
+            ->map(function ($value) {
+                return [
+                    'id' => $value->id,
+                    'value' => $value->value,
+                    'selected' => false
+                ];
+            })
+            ->toArray();
+    }
+
+    // Método para alternar selección de valor
+    public function toggleValue($attributeIndex, $value)
+    {
+        $selectedValues = $this->productAttributes[$attributeIndex]['selectedValues'] ?? [];
+        
+        if (in_array($value, $selectedValues)) {
+            // Remover valor si ya está seleccionado
+            $this->productAttributes[$attributeIndex]['selectedValues'] = array_values(
+                array_filter($selectedValues, fn($v) => $v !== $value)
+            );
+        } else {
+            // Agregar valor si no está seleccionado
+            $this->productAttributes[$attributeIndex]['selectedValues'][] = $value;
+        }
+
+        // Regenerar variantes
+        $this->generateVariants();
+        $this->showVariants = true;
+    }
+
+    // Método para agregar nuevo valor desde input
+    public function addNewValue($attributeIndex)
+    {
+        try {
+            $newValue = trim($this->newValues[$attributeIndex] ?? '');
+            
+            if (empty($newValue)) {
+                $this->addError('newValues.' . $attributeIndex, 'El valor no puede estar vacío.');
+                return;
+            }
+            
+            if (strlen($newValue) > 255) {
+                $this->addError('newValues.' . $attributeIndex, 'El valor no puede exceder 255 caracteres.');
+                return;
+            }
+
+            $attributeName = $this->productAttributes[$attributeIndex]['name'] ?? '';
+            if (empty($attributeName)) {
+                $this->addError('productAttributes.' . $attributeIndex, 'Debe seleccionar un atributo válido.');
+                return;
+            }
+            
+            // Verificar si el valor ya existe en los seleccionados
+            $selectedValues = $this->productAttributes[$attributeIndex]['values'] ?? [];
+            if (in_array($newValue, $selectedValues)) {
+                $this->addError('newValues.' . $attributeIndex, 'Este valor ya está seleccionado.');
+                return;
+            }
+
+            // Crear o encontrar el atributo
+            $attribute = Attribute::firstOrCreate(['name' => $attributeName]);
+            
+            // Crear el nuevo valor si no existe
+            $attributeValue = AttributeValue::firstOrCreate([
+                'attribute_id' => $attribute->id,
+                'value' => $newValue
+            ]);
+
+            // Agregar a los valores disponibles
+            if (!isset($this->availableValues[$attributeIndex])) {
+                $this->availableValues[$attributeIndex] = [];
+            }
+            
+            $valueExists = collect($this->availableValues[$attributeIndex])
+                ->contains('value', $newValue);
+                
+            if (!$valueExists) {
+                $this->availableValues[$attributeIndex][] = [
+                    'label' => $newValue,
+                    'value' => $newValue
+                ];
+            }
+
+            // Agregar a los valores seleccionados
+            $this->productAttributes[$attributeIndex]['values'][] = $newValue;
+
+            // Limpiar el input y errores
+            $this->newValues[$attributeIndex] = '';
+            $this->resetErrorBag('newValues.' . $attributeIndex);
+            
+            // Regenerar variantes
+            $this->generateVariants();
+            $this->showVariants = true;
+            
+            session()->flash('success', 'Nuevo valor "' . $newValue . '" agregado correctamente.');
+            
+        } catch (\Exception $e) {
+            $this->addError('newValues.' . $attributeIndex, 'Error al crear el nuevo valor: ' . $e->getMessage());
+        }
+    }
+
     public function createAttributeValue($attributeId, $value)
     {
         // Buscar si ya existe el valor
@@ -412,6 +528,25 @@ class Create extends Component
             // Procesar valores seleccionados para crear nuevos si es necesario
             $this->processSelectedValues();
             $this->generateVariants();
+            
+            // Mostrar las variantes automáticamente
+            $this->showVariants = true;
+        }
+    }
+
+    public function updatedVariantPrices($value, $index)
+    {
+        // Actualizar precio de variante en tiempo real
+        if (isset($this->generatedVariants[$index])) {
+            $this->generatedVariants[$index]['price'] = $value;
+        }
+    }
+
+    public function updatedVariantSkus($value, $index)
+    {
+        // Actualizar SKU de variante en tiempo real
+        if (isset($this->generatedVariants[$index])) {
+            $this->generatedVariants[$index]['sku'] = $value;
         }
     }
     

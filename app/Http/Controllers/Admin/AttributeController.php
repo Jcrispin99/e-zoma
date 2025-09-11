@@ -44,6 +44,53 @@ class AttributeController extends Controller
         return response()->json($existingValues->values()->all());
     }
 
+    public function searchValuesByAttribute(Request $request)
+    {
+        $query = $request->get('search', '');
+        $attributeId = $request->get('attribute_id');
+        
+        if (empty($attributeId)) {
+            return response()->json([]);
+        }
+        
+        // Buscar valores existentes para el atributo específico
+        $valuesQuery = AttributeValue::byAttribute($attributeId);
+        
+        if (!empty($query)) {
+            $valuesQuery->search($query);
+        }
+        
+        $existingValues = $valuesQuery->limit(20)
+            ->get()
+            ->map(function ($attributeValue) {
+                return [
+                    'label' => $attributeValue->value,
+                    'value' => $attributeValue->value,
+                    'id' => $attributeValue->id,
+                    'attribute_id' => $attributeValue->attribute_id
+                ];
+            });
+        
+        // Si hay query y no hay coincidencia exacta, agregar opción para crear
+        if (!empty($query)) {
+            $exactMatch = AttributeValue::where('attribute_id', $attributeId)
+                ->where('value', $query)
+                ->exists();
+            
+            if (!$exactMatch) {
+                $existingValues->prepend([
+                    'label' => "Crear: {$query}",
+                    'value' => $query,
+                    'id' => null,
+                    'attribute_id' => $attributeId,
+                    'create_new' => true
+                ]);
+            }
+        }
+        
+        return response()->json($existingValues->values()->all());
+    }
+
     public function searchAttributes(Request $request)
     {
         $query = $request->get('search', '');

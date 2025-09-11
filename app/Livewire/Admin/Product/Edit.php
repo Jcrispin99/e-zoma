@@ -38,20 +38,37 @@ class Edit extends Component
 
     public function mount($id)
     {
-        // Cargar producto con eager loading
-        $this->product = Product::with(['variants.attributeValues.attribute', 'category'])->findOrFail($id);
-
-        // Cargar los datos del producto
+        $this->product = Product::with([
+            'variants.attributeValues.attribute',
+            'variants' => function($query) {
+                $query->where('status', 'active');
+            }
+        ])->findOrFail($id);
+        
+        // Cargar datos del producto
         $this->name = $this->product->name;
         $this->description = $this->product->description;
         $this->price = $this->product->price;
         $this->category_id = $this->product->category_id;
-
-        // Cargar atributos existentes del producto
+        $this->brand_id = $this->product->brand_id;
+        $this->status = $this->product->status;
+        $this->featured = $this->product->featured;
+        $this->meta_title = $this->product->meta_title;
+        $this->meta_description = $this->product->meta_description;
+        
+        // Inicializar arrays
+        $this->newValues = [];
+        $this->availableValues = [];
+        
+        // Cargar atributos y variantes existentes
         $this->loadExistingAttributes();
-
-        // Cargar variantes existentes
         $this->loadExistingVariants();
+        
+        // Cargar valores disponibles para cada atributo
+        $this->loadAvailableValues();
+        
+        // Mostrar variantes si existen
+        $this->showVariants = count($this->generatedVariants) > 0;
     }
 
     public function render()
@@ -111,42 +128,46 @@ class Edit extends Component
 
     public function loadExistingAttributes()
     {
-        $this->productAttributes = [];
-
-        // Obtener atributos únicos de las variantes existentes
         $attributesData = [];
-
+        
+        // Obtener todos los atributos únicos de las variantes
+        $uniqueAttributes = collect();
+        
         foreach ($this->product->variants as $variant) {
             foreach ($variant->attributeValues as $attributeValue) {
-                $attributeName = $attributeValue->attribute->name;
-                $value = $attributeValue->value;
-
-                if (!isset($attributesData[$attributeName])) {
-                    $attributesData[$attributeName] = [];
-                }
-
-                if (!in_array($value, $attributesData[$attributeName])) {
-                    $attributesData[$attributeName][] = $value;
-                }
+                $attribute = $attributeValue->attribute;
+                $uniqueAttributes->push([
+                    'id' => $attribute->id,
+                    'name' => $attribute->name,
+                    'value' => $attributeValue->value
+                ]);
             }
         }
-
-        // Convertir a formato esperado para multi-select
-        foreach ($attributesData as $name => $values) {
-            $this->productAttributes[] = [
-                'name' => $name,
-                'values' => [], // Mantener para compatibilidad
-                'selectedValues' => $values, // Array de valores seleccionados
+        
+        // Agrupar por atributo
+        $groupedAttributes = $uniqueAttributes->groupBy('id');
+        
+        foreach ($groupedAttributes as $attributeId => $attributeGroup) {
+            $attribute = $attributeGroup->first();
+            $values = $attributeGroup->pluck('value')->unique()->values()->toArray();
+            
+            $attributesData[] = [
+                'attribute_id' => $attributeId,
+                'attribute_name' => $attribute['name'],
+                'values' => $values
             ];
         }
-
-        // Si no hay atributos, inicializar con una fila vacía
-        if (empty($this->productAttributes)) {
-            $this->productAttributes = [[
-                'name' => '', 
-                'values' => [], 
-                'selectedValues' => [],
-            ]];
+        
+        $this->productAttributes = $attributesData;
+    }
+    
+    public function loadAvailableValues()
+    {
+        foreach ($this->productAttributes as $index => $attribute) {
+            if (isset($attribute['attribute_id'])) {
+                $this->availableValues[$index] = $this->getAvailableValues($attribute['attribute_id']);
+                $this->newValues[$index] = '';
+            }
         }
     }
 
@@ -156,10 +177,20 @@ class Edit extends Component
         $this->variantPrices = [];
         $this->variantSkus = [];
 
-        foreach ($this->product->variants as $index => $variant) {
+        // Cargar solo variantes activas
+        $activeVariants = $this->product->variants()->where('status', 'active')->get();
+
+        foreach ($activeVariants as $index => $variant) {
             $attributes = [];
+            $attributeValues = [];
+            
             foreach ($variant->attributeValues as $attributeValue) {
                 $attributes[] = $attributeValue->value;
+                $attributeValues[] = [
+                    'attribute_id' => $attributeValue->attribute->id,
+                    'attribute_name' => $attributeValue->attribute->name,
+                    'value' => $attributeValue->value
+                ];
             }
 
             $this->generatedVariants[] = [
@@ -168,7 +199,12 @@ class Edit extends Component
                 'sku' => $variant->sku,
                 'price' => $variant->price,
                 'stock' => $variant->stock,
-                'attributes' => $attributes
+                'status' => $variant->status,
+                'attributes' => $attributes,
+                'attribute_values' => $attributeValues,
+                'existing' => true,
+                'created_at' => $variant->created_at,
+                'updated_at' => $variant->updated_at
             ];
 
             // Cargar precios y SKUs existentes
@@ -185,6 +221,7 @@ class Edit extends Component
             'name' => '', 
             'values' => [], 
             'selectedValues' => [],
+            'preselected' => false,
         ];
     }
 
@@ -367,6 +404,7 @@ class Edit extends Component
                     ? $this->variantPrices[$index] 
                     : $variantData['price'],
                 'stock' => $variantData['stock'] ?? 0,
+                'status' => 'active',
             ]);
 
             // Asociar valores de atributos con la variante
@@ -452,6 +490,123 @@ class Edit extends Component
         return $values;
     }
 
+    // Método para obtener valores disponibles por atributo específico
+    public function getAvailableValues($attributeIndex)
+    {
+        if (!isset($this->productAttributes[$attributeIndex]['name']) || empty($this->productAttributes[$attributeIndex]['name'])) {
+            return [];
+        }
+
+        $attributeName = $this->productAttributes[$attributeIndex]['name'];
+        $attribute = Attribute::where('name', $attributeName)->first();
+        
+        if (!$attribute) {
+            return [];
+        }
+
+        return AttributeValue::where('attribute_id', $attribute->id)
+            ->pluck('value')
+            ->toArray();
+    }
+
+    // Método para alternar selección de valores
+    public function toggleValue($attributeIndex, $value)
+    {
+        if (!isset($this->productAttributes[$attributeIndex]['selectedValues'])) {
+            $this->productAttributes[$attributeIndex]['selectedValues'] = [];
+        }
+
+        $selectedValues = $this->productAttributes[$attributeIndex]['selectedValues'];
+        $key = array_search($value, $selectedValues);
+
+        if ($key !== false) {
+            // Remover valor si ya está seleccionado
+            unset($selectedValues[$key]);
+            $this->productAttributes[$attributeIndex]['selectedValues'] = array_values($selectedValues);
+        } else {
+            // Agregar valor si no está seleccionado
+            $this->productAttributes[$attributeIndex]['selectedValues'][] = $value;
+        }
+
+        // Regenerar variantes y archivar las existentes si es necesario
+        $this->handleVariantArchiving();
+        $this->generateVariants();
+    }
+
+    // Método para agregar nuevo valor desde input
+    public function addNewValue($attributeIndex)
+    {
+        try {
+            $newValue = trim($this->newValues[$attributeIndex] ?? '');
+            
+            if (empty($newValue)) {
+                $this->addError('newValues.' . $attributeIndex, 'El valor no puede estar vacío.');
+                return;
+            }
+            
+            if (strlen($newValue) > 255) {
+                $this->addError('newValues.' . $attributeIndex, 'El valor no puede exceder 255 caracteres.');
+                return;
+            }
+
+            $attributeName = $this->productAttributes[$attributeIndex]['name'] ?? '';
+            if (empty($attributeName)) {
+                $this->addError('productAttributes.' . $attributeIndex, 'Debe seleccionar un atributo válido.');
+                return;
+            }
+            
+            // Verificar si el valor ya existe en los seleccionados
+            $selectedValues = $this->productAttributes[$attributeIndex]['values'] ?? [];
+            if (in_array($newValue, $selectedValues)) {
+                $this->addError('newValues.' . $attributeIndex, 'Este valor ya está seleccionado.');
+                return;
+            }
+
+            // Crear o encontrar el atributo
+            $attribute = Attribute::firstOrCreate(['name' => $attributeName]);
+            
+            // Crear el nuevo valor si no existe
+            $attributeValue = AttributeValue::firstOrCreate([
+                'attribute_id' => $attribute->id,
+                'value' => $newValue
+            ]);
+
+            // Agregar a los valores disponibles
+            if (!isset($this->availableValues[$attributeIndex])) {
+                $this->availableValues[$attributeIndex] = [];
+            }
+            
+            $valueExists = collect($this->availableValues[$attributeIndex])
+                ->contains('value', $newValue);
+                
+            if (!$valueExists) {
+                $this->availableValues[$attributeIndex][] = [
+                    'label' => $newValue,
+                    'value' => $newValue
+                ];
+            }
+
+            // Agregar a los valores seleccionados
+            $this->productAttributes[$attributeIndex]['values'][] = $newValue;
+
+            // Limpiar el input y errores
+            $this->newValues[$attributeIndex] = '';
+            $this->resetErrorBag('newValues.' . $attributeIndex);
+            
+            // Archivar variantes existentes si se añaden nuevos valores
+            $this->handleVariantArchiving();
+            
+            // Regenerar variantes
+            $this->generateVariants();
+            $this->showVariants = true;
+            
+            session()->flash('success', 'Nuevo valor "' . $newValue . '" agregado correctamente.');
+            
+        } catch (\Exception $e) {
+            $this->addError('newValues.' . $attributeIndex, 'Error al crear el nuevo valor: ' . $e->getMessage());
+        }
+    }
+
     public function createAttributeValue($attributeId, $value)
     {
         // Verificar si el valor ya existe
@@ -486,16 +641,38 @@ class Edit extends Component
         return $baseSku . '-STD-' . rand(1000, 9999);
     }
 
-    public function updatedProductAttributes()
+    public function updatedProductAttributes($value, $key)
     {
-        // Procesar valores seleccionados y regenerar variantes automáticamente
-        foreach ($this->productAttributes as $index => $attribute) {
-            if (!empty($attribute['selectedValues'])) {
-                $this->processSelectedValues($index);
-            }
+        // Extraer el índice y el campo del key
+        $parts = explode('.', $key);
+        $index = $parts[0];
+        $field = $parts[1] ?? null;
+
+        if ($field === 'selectedValues') {
+            $this->processSelectedValues($index, $value);
         }
+
+        // Regenerar variantes automáticamente cuando cambien los atributos
+        $this->regenerateVariantsWithNewValues();
         
-        $this->generateVariants();
+        // Mostrar las variantes automáticamente
+        $this->showVariants = true;
+    }
+
+    public function updatedVariantPrices($value, $index)
+    {
+        // Actualizar precio de variante en tiempo real
+        if (isset($this->generatedVariants[$index])) {
+            $this->generatedVariants[$index]['price'] = $value;
+        }
+    }
+
+    public function updatedVariantSkus($value, $index)
+    {
+        // Actualizar SKU de variante en tiempo real
+        if (isset($this->generatedVariants[$index])) {
+            $this->generatedVariants[$index]['sku'] = $value;
+        }
     }
 
     public function processSelectedValues($index)
@@ -518,6 +695,20 @@ class Edit extends Component
         }
 
         $this->productAttributes[$index]['selectedValues'] = $processedValues;
+    }
+
+    // Método para manejar el archivado de variantes existentes
+    public function handleVariantArchiving()
+    {
+        // Solo archivar si hay variantes existentes en la base de datos
+        if ($this->product && $this->product->variants()->where('status', 'active')->exists()) {
+            // Archivar todas las variantes activas existentes
+            $this->product->variants()
+                ->where('status', 'active')
+                ->update(['status' => 'archived']);
+            
+            session()->flash('info', 'Las variantes existentes han sido archivadas. Se generarán nuevas variantes.');
+        }
     }
 
     // Método para agregar valores a atributos existentes sin perder variantes

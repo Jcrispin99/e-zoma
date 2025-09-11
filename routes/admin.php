@@ -13,3 +13,4 @@ Route::resource('categories', CategoryController::class)->except(['show']);
 Route::resource('products', ProductController::class)->except(['show']);
 Route::get('search-attribute-values/{index}', [AttributeController::class, 'searchValues'])->name('search-attribute-values');
 Route::get('search-attributes', [AttributeController::class, 'searchAttributes'])->name('search-attributes');
+Route::get('search-values-by-attribute', [AttributeController::class, 'searchValuesByAttribute'])->name('search-values-by-attribute');

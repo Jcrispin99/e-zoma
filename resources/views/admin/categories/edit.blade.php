@@ -25,10 +25,15 @@
             <x-wire-textarea label="Descripción" name="description"
                 placeholder="Descripción de la categoría">{{ old('description', $category->description) }}</x-wire-textarea>
 
-            <x-wire-select label="Categoría padre" placeholder="Seleccione una opción" :options="$categories"
-                option-label="name" option-value="id" name="parent_id" value="{{ $category->parent_id }}"
-                :clearable="true" />
 
+            <x-wire-native-select label="Categoría padre" name="parent_id">
+                <option value="">Ninguna</option>
+                @foreach ($categories as $parent_category)
+                    <option value="{{ $parent_category->id }}" @selected(old('parent_id', $category->parent_id) == $parent_category->id)>
+                        {{ $parent_category->full_name }}
+                    </option>
+                @endforeach
+            </x-wire-native-select>
             <div class="flex justify-end">
                 <x-button type="submit">
                     Actualizar

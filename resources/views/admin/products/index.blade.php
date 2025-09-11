@@ -1,21 +1,30 @@
-<x-admin-layout title="Categorias" :breadcrumbs="[
+<x-admin-layout title="Productos" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),
         'icon' => 'fa-solid fa-gauge',
     ],
     [
-        'name' => 'Categorias',
+        'name' => 'Productos',
         'icon' => 'fa-regular fa-file-lines',
-        'href' => route('admin.categories.index'),
+        'href' => route('admin.products.index'),
     ],
 ]">
+    @push('css')
+        <style>
+            table th span,
+            table td {
+                font-size: 0.75rem !important;
+            }
+        </style>
+    @endpush
+
     <x-slot name="action">
-        <x-wire-button href="{{ route('admin.categories.create') }}" green>
+        <x-wire-button href="{{ route('admin.products.create') }}" green>
             Nuevo
         </x-wire-button>
     </x-slot>
-    @livewire('admin.datatables.category-table')
+    @livewire('admin.datatables.product-table')
 
     @push('js')
         <script>

@@ -44,7 +44,7 @@ class CategoryController extends Controller
         if (!empty($data['parent_id'])) {
             $parent = Category::find($data['parent_id']);
             $parent_full_name = $parent->full_name ?: $parent->name;
-            $data['full_name'] = $parent_full_name . ' > ' . $data['name'];
+            $data['full_name'] = $parent_full_name . ' / ' . $data['name'];
         } else {
             $data['full_name'] = $data['name'];
         }
@@ -67,7 +67,7 @@ class CategoryController extends Controller
     {
         return view('admin.categories.edit', [
             'category' => $category,
-            'categories' => Category::where('id', '!=', $category->id)->get()
+            'categories' => Category::whereNull('parent_id')->get()
         ]);
     }
 
@@ -87,12 +87,17 @@ class CategoryController extends Controller
         if (!empty($data['parent_id'])) {
             $parent = Category::find($data['parent_id']);
             $parent_full_name = $parent->full_name ?: $parent->name;
-            $data['full_name'] = $parent_full_name . ' > ' . $data['name'];
+            $data['full_name'] = $parent_full_name . ' / ' . $data['name'];
         } else {
             $data['full_name'] = $data['name'];
         }
 
         $category->update($data);
+
+        // Si el nombre o el padre de la categoría cambiaron, actualizamos el full_name de los hijos.
+        if ($category->wasChanged('name') || $category->wasChanged('parent_id')) {
+            $this->updateChildrenFullName($category);
+        }
 
         session()->flash('swalt', [
             'icon' => 'success',
@@ -126,5 +131,21 @@ class CategoryController extends Controller
         ]);
 
         return redirect()->route('admin.categories.index');
+    }
+
+    /**
+     * Actualiza recursivamente el campo full_name de las categorías hijas.
+     *
+     * @param Category $category
+     * @return void
+     */
+    private function updateChildrenFullName(Category $category)
+    {
+        foreach ($category->children as $child) {
+            $child->full_name = $category->full_name . ' / ' . $child->name;
+            $child->save();
+
+            $this->updateChildrenFullName($child);
+        }
     }
 }

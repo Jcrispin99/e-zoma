@@ -32,7 +32,7 @@ class CategorySeder extends Seeder
                     'name' => $childName,
                     'slug' => Str::slug($childName),
                     'parent_id' => $parent->id,
-                    'full_name' => $parent->name . ' > ' . $childName,
+                    'full_name' => $parent->name . ' / ' . $childName,
                     'description' => 'Descripción de la subcategoría ' . $childName,
                 ]);
             }

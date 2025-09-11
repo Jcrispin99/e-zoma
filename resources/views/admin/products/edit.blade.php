@@ -18,8 +18,8 @@
 
         <form action="{{ route('admin.products.update', $product) }}" method="post" class="space-y-4">
 
-            @method('put')
             @csrf
+            @method('put')
 
             <x-wire-input label="Nombre" name="name" placeholder="Nombre del producto"
                 value="{{ old('name', $product->name) }}" />
@@ -40,7 +40,7 @@
 
             <div class="flex justify-end">
                 <x-button type="submit">
-                    Guardar
+                    Actualizar
                 </x-button>
             </div>
 

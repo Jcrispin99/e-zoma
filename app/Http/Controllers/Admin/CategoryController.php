@@ -127,20 +127,4 @@ class CategoryController extends Controller
 
         return redirect()->route('admin.categories.index');
     }
-
-    /**
-     * Actualiza recursivamente el campo full_name de las categorías hijas.
-     *
-     * @param Category $category
-     * @return void
-     */
-    private function updateChildrenFullName(Category $category)
-    {
-        foreach ($category->children as $child) {
-            $child->full_name = $category->full_name . ' / ' . $child->name;
-            $child->save();
-
-            $this->updateChildrenFullName($child);
-        }
-    }
 }

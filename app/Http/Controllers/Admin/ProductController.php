@@ -21,7 +21,7 @@ class ProductController extends Controller
      */
     public function create()
     {
-        $categories = Category::query()->get();
+        $categories = Category::all();
         return view('admin.products.create', compact('categories'));
     }
 
@@ -45,7 +45,7 @@ class ProductController extends Controller
             'text' => 'Producto ' . $data['name'] . ' ha sido creado',
         ]);
 
-        return redirect()->route('admin.products.index');
+        return redirect()->route('admin.products.edit', $product);
     }
 
     /**
@@ -53,7 +53,7 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        $categories = Category::query()->get();
+        $categories = Category::all();
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
@@ -62,7 +62,22 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        return view('admin.products.update');
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric',
+            'category_id' => 'required|exists:categories,id',
+        ]);
+
+        $product->update($data);
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Producto ' . $data['name'] . ' ha sido actualizado',
+        ]);
+
+        return redirect()->route('admin.products.edit', $product);
     }
 
     /**
@@ -70,6 +85,24 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
-        //
+        if ($product->variants()->exists()) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => '¡Error!',
+                'text' => 'No se puede eliminar el producto porque tiene variantes asociadas.',
+            ]);
+
+            return redirect()->route('admin.products.index');
+        }
+
+        $product->delete();
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Producto ' . $product->name . ' ha sido eliminado',
+        ]);
+
+        return redirect()->route('admin.products.index');
     }
 }

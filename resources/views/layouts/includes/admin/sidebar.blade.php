@@ -17,8 +17,12 @@
         [
             'name' => 'Productos',
             'icon' => 'fa-solid fa-list',
-            'href' => route('admin.products.index'),
+            'href' => '#',
             'active' => request()->routeIs('admin.products.*'),
+            'submenu' => [
+                ['name' => 'Productos', 'href' => route('admin.products.index'), 'active' => false],
+                ['name' => 'Variantes', 'href' => route('admin.variants.index'), 'active' => false],
+            ],
         ],
         [
             'name' => 'Contenido',

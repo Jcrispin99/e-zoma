@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Variant extends Model
 {
@@ -25,6 +27,13 @@ class Variant extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function image(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->images()->count() ? Storage::url($this->images()->first()->path) : asset('storage/images/images.png'),
+        );
     }
 
     public function attributeValues()

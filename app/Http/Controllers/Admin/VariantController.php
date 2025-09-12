@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Variant;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class VariantController extends Controller
 {
@@ -20,30 +21,11 @@ class VariantController extends Controller
     }
 
     /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        $products = Product::all();
-
-        return view('admin.variants.create', compact('products'));
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        return view('admin.variants.create', compact('products'));
-    }
-
-    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Variant $variant)
     {
         $products = Product::all();
-
         return view('admin.variants.edit', compact('variant', 'products'));
     }
 
@@ -52,6 +34,13 @@ class VariantController extends Controller
      */
     public function update(Request $request, Variant $variant)
     {
+        $data = $request->validate([
+            'product_id' => 'required',
+            'sku' => 'required',
+            'barcode' => 'required',
+            'price' => 'required',
+        ]);
+
         $variant->update($request->all());
 
         return redirect()->route('admin.variants.index');
@@ -62,6 +51,46 @@ class VariantController extends Controller
      */
     public function destroy(Variant $variant)
     {
-        //
+        if ($variant->inventories()->exists()) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No se puede eliminar el variant porque está relacionado con un inventario.',
+            ]);
+
+            return redirect()->route('admin.variants.index');
+        }
+
+        if ($variant->purchasesOrders()->exists() || $variant->quotes()->exists()) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No se puede eliminar el variant porque está relacionado con una orden de compra o una cotización.',
+            ]);
+
+            return redirect()->route('admin.variants.index');
+        }
+
+        $variant->delete();
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => 'Bien',
+            'text' => 'Variant eliminado correctamente.',
+        ]);
+
+        return redirect()->route('admin.variants.index');
+    }
+
+    public function dropzone(Request $request, Variant $variant)
+    {
+        $image = $variant->images()->create([
+            'path' => Storage::put('/images/variants', $request->file('file')),
+            'size' => $request->file('file')->getSize(),
+        ]);
+
+        return response()->json([
+            'id' => $image->id,
+            'path' => $image->path,
+        ]);
     }
 }

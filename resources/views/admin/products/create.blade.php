@@ -13,7 +13,9 @@
         'name' => 'Nuevo',
     ],
 ]">
-
+    @push('css')
+        <link rel="stylesheet" href="https://unpkg.com/dropzone@5/dist/min/dropzone.min.css" type="text/css" />
+    @endpush
     <x-wire-card>
 
         <form action="{{ route('admin.products.store') }}" method="post" class="space-y-4">
@@ -44,5 +46,7 @@
         </form>
 
     </x-wire-card>
-
+    @push('js')
+        <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+    @endpush
 </x-admin-layout>

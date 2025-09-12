@@ -19,7 +19,6 @@ class VariantFactory extends Factory
     {
         return [
             'product_id' => Product::factory(),
-            'name' => $this->faker->unique()->words(3, true),
             'sku' => $this->faker->unique()->regexify('[A-Z0-9]{8}'),
             'barcode' => $this->faker->unique()->ean13(),
             'price' => $this->faker->randomFloat(2, 10, 1000),

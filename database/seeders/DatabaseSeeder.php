@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Variant;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use App\Models\Customer;
 
 class DatabaseSeeder extends Seeder
 {
@@ -24,9 +25,11 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            IdentitySeeder::class,
             CategorySeder::class,
         ]);
 
+        Customer::factory(50)->create();
         Product::factory(100)->create();
         Variant::factory(100)->create();
     }

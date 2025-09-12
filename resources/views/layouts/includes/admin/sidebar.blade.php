@@ -25,15 +25,10 @@
             ],
         ],
         [
-            'name' => 'Contenido',
-            'icon' => 'fa-regular fa-file-lines',
-            'href' => '#',
-            'active' => request()->routeIs('admin.content.*'),
-            'submenu' => [
-                ['name' => 'Páginas', 'href' => '#', 'active' => false],
-                ['name' => 'Entradas', 'href' => '#', 'active' => false],
-                ['name' => 'Medios', 'href' => '#', 'active' => false],
-            ],
+            'name' => 'Clientes',
+            'icon' => 'fa-solid fa-user',
+            'href' => route('admin.customers.index'),
+            'active' => request()->routeIs('admin.customers.*'),
         ],
     ];
 @endphp

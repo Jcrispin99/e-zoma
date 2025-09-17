@@ -1,4 +1,4 @@
-<x-admin-layout title="CAtegorias" :breadcrumbs="[
+<x-admin-layout title="Categorias" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),

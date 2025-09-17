@@ -1,0 +1,13 @@
+<div class="flex items-center space-x-2">
+    <x-wire-button href="{{ route('admin.warehouses.edit', $warehouse->id) }}" blue xs>
+        Editar
+    </x-wire-button>
+
+    <form action="{{ route('admin.warehouses.destroy', $warehouse->id) }}" method="post" class="delete-form">
+        @csrf
+        @method('delete')
+        <x-wire-button type="submit" red xs>
+            Eliminar
+        </x-wire-button>
+    </form>
+</div>

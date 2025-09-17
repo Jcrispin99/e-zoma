@@ -30,7 +30,9 @@
                 @endforeach
             </x-wire-native-select>
 
-            <x-wire-button type="submit" green label="Guardar" />
+            <div class="flex justify-end">
+                <x-wire-button type="submit" green label="Guardar" />
+            </div>
 
         </form>
 

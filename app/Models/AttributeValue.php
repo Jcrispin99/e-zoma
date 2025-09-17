@@ -22,4 +22,25 @@ class AttributeValue extends Model
     {
         return $this->belongsToMany(Variant::class, 'attribute_value_variant');
     }
+
+    // Scope to get values by attribute
+    public function scopeByAttribute($query, $attributeId)
+    {
+        return $query->where('attribute_id', $attributeId);
+    }
+
+    // Scope to search values
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('value', 'like', '%' . $search . '%');
+    }
+
+    // Get or create attribute value
+    public static function getOrCreate($attributeId, $value)
+    {
+        return static::firstOrCreate([
+            'attribute_id' => $attributeId,
+            'value' => trim($value)
+        ]);
+    }
 }

@@ -42,7 +42,11 @@ class VariantController extends Controller
         ]);
 
         $variant->update($request->all());
-
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => 'Bien',
+            'text' => 'Variant actualizado correctamente.',
+        ]);
         return redirect()->route('admin.variants.index');
     }
 

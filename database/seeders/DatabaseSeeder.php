@@ -8,6 +8,7 @@ use App\Models\Variant;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Customer;
+use App\Models\Supplier;
 
 class DatabaseSeeder extends Seeder
 {
@@ -31,6 +32,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         Customer::factory(50)->create();
+        Supplier::factory(50)->create();
         Product::factory(100)->create();
         Variant::factory(100)->create();
     }

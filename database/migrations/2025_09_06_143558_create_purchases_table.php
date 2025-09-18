@@ -19,10 +19,11 @@ return new class extends Migration
             $table->string('serie');
             $table->string('correlative');
 
-            $table->timestamp('date');
+            $table->timestamp('date')
+                ->useCurrent();
 
             $table->foreignId('purchase_order_id')->constrained()->onDelete('cascade');
-            
+
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
 
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');

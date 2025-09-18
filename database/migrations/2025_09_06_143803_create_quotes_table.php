@@ -18,7 +18,8 @@ return new class extends Migration
             $table->string('serie');
             $table->string('correlative');
 
-            $table->timestamp('date');
+            $table->timestamp('date')
+                ->useCurrent();
 
             $table->foreignId('customer_id')->constrained()->onDelete('cascade');
 

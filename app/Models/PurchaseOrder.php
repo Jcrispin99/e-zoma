@@ -21,9 +21,9 @@ class PurchaseOrder extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    public function products()
+    public function variants()
     {
-        return $this->morphToMany(Product::class, 'variantable')
+        return $this->morphToMany(Variant::class, 'variantable')
             ->withPivot('quantity', 'price', 'subtotal')
             ->withTimestamps();
     }

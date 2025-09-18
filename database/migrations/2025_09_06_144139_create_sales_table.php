@@ -12,19 +12,20 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('sales', function (Blueprint $table) {
-            $table->id();  
-            
+            $table->id();
+
             $table->integer('voucher_type');
 
             $table->string('serie');
             $table->string('correlative');
 
-            $table->timestamp('date');
-            
+            $table->timestamp('date')
+                ->useCurrent();
+
             $table->foreignId('quote_id')->constrained()->onDelete('cascade');
 
             $table->foreignId('customer_id')->constrained()->onDelete('cascade');
-            
+
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
 
             $table->decimal('total', 10, 2)->default(0.00);

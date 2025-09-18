@@ -61,6 +61,14 @@
     @livewireScripts
 
     <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
+
+    <script>
+        Livewire.on('swal', (data) => {
+            Swal.fire(data[0]);
+        });
+    </script>
+
+
     @if (session()->has('swalt'))
         <script>
             Swal.fire(@json(session('swalt')));

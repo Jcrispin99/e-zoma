@@ -15,15 +15,18 @@ class Quote extends Model
         'total',
         'observation',
     ];
+    protected $casts = [
+        'date' => 'datetime',
+    ];
 
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
 
-    public function products()
+    public function variants()
     {
-        return $this->morphToMany(Product::class, 'variantable')
+        return $this->morphToMany(Variant::class, 'variantable')
             ->withPivot('quantity', 'price', 'subtotal')
             ->withTimestamps();
     }

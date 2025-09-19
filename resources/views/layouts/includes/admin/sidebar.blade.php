@@ -71,8 +71,7 @@
         [
             'name' => 'Ventas',
             'icon' => 'fa-solid fa-cash-register',
-            'href' => '#',
-            'active' => request()->routeIs(['admin.customers.*']),
+            'active' => request()->routeIs(['admin.customers.*', 'admin.quotes.*', 'admin.sales.*']),
             'submenu' => [
                 [
                     'name' => 'Clientes',
@@ -81,13 +80,13 @@
                 ],
                 [
                     'name' => 'Cotizaciones',
-                    'href' => '#',
-                    'active' => false,
+                    'href' => route('admin.quotes.index'),
+                    'active' => request()->routeIs('admin.quotes.*'),
                 ],
                 [
                     'name' => 'Ventas',
-                    'href' => '#',
-                    'active' => false,
+                    'href' => route('admin.sales.index'),
+                    'active' => request()->routeIs('admin.sales.*'),
                 ],
             ],
         ],

@@ -29,39 +29,18 @@
                     <option value="2">Boleta</option>
                 </x-wire-native-select>
 
-                <div class="grid grid-cols-2 gap-2">
-                    <x-wire-input label="Serie" wire:model="serie" placeholder="Serie del comprobante" />
-                    <x-wire-input label="Correlativo" wire:model="correlative"
-                        placeholder="Correlativo del comprobante" />
-                </div>
+                <x-wire-input label="Serie" wire:model="serie" placeholder="Serie del comprobante" disabled />
+                <x-wire-input label="Correlativo" wire:model="correlative" placeholder="Correlativo del comprobante"
+                    disabled />
+
                 <x-wire-input label="Fecha" wire:model="date" type="date" />
-
-                <x-wire-select label="Orden de Compra" wire:model.live="purchase_order_id"
-                    placeholder="Seleccione una orden de compra" :async-data="[
-                        'api' => route('api.purchase-orders.index'),
-                        'method' => 'POST',
-                    ]" option-label="name" option-value="id"
-                    option-description="description" class="flex-1" />
-
-                <div class="col-span-2">
-                    <x-wire-select label="Proveedor" wire:model="supplier_id" placeholder="Seleccione un proveedor"
-                        :async-data="[
-                            'api' => route('api.suppliers.index'),
-                            'method' => 'POST',
-                        ]" option-label="name" option-value="id" class="flex-1"
-                        option-description="description" />
-                </div>
-                <div class="col-span-2">
-                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén"
-                        :async-data="[
-                            'api' => route('api.warehouse.index'),
-                            'method' => 'POST',
-                        ]" option-label="name" option-value="id" class="flex-1"
-                        option-description="description" />
-                </div>
             </div>
 
-
+            <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente"
+                :async-data="[
+                    'api' => route('api.customers.index'),
+                    'method' => 'POST',
+                ]" option-label="name" option-value="id" class="flex-1" />
 
             <div class="lg:flex lg:space-x-4">
                 <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"

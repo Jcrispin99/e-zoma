@@ -38,7 +38,7 @@
 
             <x-wire-select label="Proveedor" wire:model="supplier_id" placeholder="Seleccione un proveedor"
                 :async-data="[
-                    'api' => route('api.supplier.index'),
+                    'api' => route('api.suppliers.index'),
                     'method' => 'POST',
                 ]" option-label="name" option-value="id" class="flex-1" />
 

@@ -49,7 +49,7 @@
             'name' => 'Compras',
             'icon' => 'fa-solid fa-cart-shopping',
             'href' => '#',
-            'active' => request()->routeIs(['admin.suppliers.*', 'admin.purchases-orders.*']),
+            'active' => request()->routeIs(['admin.suppliers.*', 'admin.purchases-orders.*', 'admin.purchases.*']),
             'submenu' => [
                 [
                     'name' => 'Proveedores',
@@ -63,8 +63,8 @@
                 ],
                 [
                     'name' => 'Compras',
-                    'href' => '#',
-                    'active' => false,
+                    'href' => route('admin.purchases.index'),
+                    'active' => request()->routeIs('admin.purchases.*'),
                 ],
             ],
         ],

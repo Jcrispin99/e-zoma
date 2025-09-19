@@ -10,11 +10,15 @@ class PurchaseOrder extends Model
         'voucher_type',
         'serie',
         'correlative',
-        'date',
         'supplier_id',
         'total',
         'observation',
     ];
+
+    protected $casts = [
+        'date' => 'datetime',
+    ];
+
 
     public function supplier()
     {

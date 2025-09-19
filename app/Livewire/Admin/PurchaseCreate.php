@@ -2,17 +2,24 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\Purchase;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\PurchaseOrder;
 
-class PurchaseOrderCreate extends Component
+class PurchaseCreate extends Component
 {
     public $voucher_type = 1;
-    public $serie = 'A';
+    public $serie;
+
     public $correlative;
 
     public $date;
+
+    public $purchase_order_id;
+
+    public $warehouse_id;
+
     public $supplier_id;
     public $total = 0;
     public $observation;
@@ -44,9 +51,27 @@ class PurchaseOrderCreate extends Component
             }
         });
     }
-    public function mount()
+
+    public function updated($property, $value)
     {
-        $this->correlative = PurchaseOrder::max('correlative') + 1;
+        if ($property == 'purchase_order_id') {
+            $purchaseOrder = PurchaseOrder::find($value);
+            if ($purchaseOrder) {
+
+                $this->voucher_type = $purchaseOrder->voucher_type;
+                $this->supplier_id = $purchaseOrder->supplier_id;
+
+                $this->variants = $purchaseOrder->variants->map(function ($variant) {
+                    return [
+                        'id' => $variant->id,
+                        'name' => $variant->product->name,
+                        'quantity' => $variant->pivot->quantity,
+                        'price' => $variant->pivot->price,
+                        'subtotal' => $variant->pivot->subtotal,
+                    ];
+                })->toArray();
+            }
+        }
     }
 
     public function addProduct()
@@ -85,8 +110,12 @@ class PurchaseOrderCreate extends Component
         $this->validate(
             [
                 'voucher_type' => 'required|in:1,2',
+                'serie' => 'required|string|max:10',
+                'correlative' => 'required|numeric|max:14',
                 'date' => 'nullable|date',
+                'purchase_order_id' => 'nullable|exists:purchase_orders,id',
                 'supplier_id' => 'required|exists:suppliers,id',
+                'warehouse_id' => 'required|exists:warehouses,id',
                 'total' => 'required|numeric|min:0',
                 'observation' => 'nullable|string|max:255',
                 'variants' => 'required|array|min:1',
@@ -105,18 +134,20 @@ class PurchaseOrderCreate extends Component
             ]
         );
 
-        $purchaseOrder = PurchaseOrder::create([
+        $purchase = Purchase::create([
             'voucher_type' => $this->voucher_type,
             'serie' => $this->serie,
             'correlative' => $this->correlative,
             'date' => $this->date ?? now(),
+            'purchase_order_id' => $this->purchase_order_id,
             'supplier_id' => $this->supplier_id,
+            'warehouse_id' => $this->warehouse_id,
             'total' => $this->total,
             'observation' => $this->observation,
         ]);
 
         foreach ($this->variants as $variant) {
-            $purchaseOrder->variants()->attach($variant['id'], [
+            $purchase->variants()->attach($variant['id'], [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
                 'subtotal' => $variant['quantity'] * $variant['price'],
@@ -126,14 +157,14 @@ class PurchaseOrderCreate extends Component
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => '¡Bien hecho!',
-            'text' => 'Orden de compra creada exitosamente.',
+            'text' => 'LA compra creada exitosamente.',
         ]);
 
-        return redirect()->route('admin.purchases-orders.index');
+        return redirect()->route('admin.purchases.index');
     }
 
     public function render()
     {
-        return view('livewire.admin.purchase-order-create');
+        return view('livewire.admin.purchase-create');
     }
 }

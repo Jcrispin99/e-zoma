@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CustomerController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
+use App\Http\Controllers\Admin\PurchaseController;
 
 // Dashboard
 
@@ -24,6 +25,7 @@ Route::resource('warehouses', WarehouseController::class)->except(['show']);
 // compras
 Route::resource('suppliers', SupplierController::class)->except(['show']);
 Route::resource('purchases-orders', PurchaseOrderController::class)->only(['index', 'create']);
+Route::resource('purchases', PurchaseController::class)->only(['index', 'create']);
 
 //ventas
 Route::resource('customers', CustomerController::class)->except(['show']);

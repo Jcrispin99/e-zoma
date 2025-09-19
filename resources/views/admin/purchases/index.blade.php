@@ -1,20 +1,20 @@
-<x-admin-layout title="Ordenes de Compra" :breadcrumbs="[
+<x-admin-layout title="Compras" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),
         'icon' => 'fa-solid fa-gauge',
     ],
     [
-        'name' => 'Ordenes de Compra',
+        'name' => 'Compras',
         'icon' => 'fa-regular fa-file-lines',
-        'href' => route('admin.purchases-orders.index'),
+        'href' => route('admin.purchases.index'),
     ],
 ]">
     <x-slot name="action">
-        <x-wire-button href="{{ route('admin.purchases-orders.create') }}" green>
+        <x-wire-button href="{{ route('admin.purchases.create') }}" green>
             Nuevo
         </x-wire-button>
     </x-slot>
-    @livewire('admin.datatables.purchase-order-table')
+    @livewire('admin.datatables.purchase-table')
 
 </x-admin-layout>

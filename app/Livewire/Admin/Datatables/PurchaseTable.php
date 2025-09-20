@@ -36,6 +36,10 @@ class PurchaseTable extends DataTableComponent
                 ->sortable(),
             Column::make("Total", "total")
                 ->sortable(),
+            Column::make("Acciones")
+                ->label(function ($row, Column $column) {
+                    return view('admin.purchases.actions', ['purchase' => $row]);
+                })
         ];
     }
     public function builder(): Builder

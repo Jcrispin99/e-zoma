@@ -5,8 +5,10 @@ use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Models\Customer;
 use App\Models\Variant;
+use App\Models\Quote;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -109,3 +111,47 @@ Route::post('/purchase-orders', function (Request $request) {
     });
 })
     ->name('api.purchase-orders.index');
+
+Route::post('/quotes', function (Request $request) {
+    $quotes = Quote::when($request->search, function ($query, $search) {
+
+        //OC-123
+        $parts = explode('-', $search);
+
+        if (count($parts) == 1) {
+            //buscar por nombre de proveedor
+            $query->whereHas('customer', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('document_number', 'like', "%{$search}%");
+            });
+            return;
+        }
+
+        if (count($parts) == 2) {
+
+            $serie = $parts[0];
+            $correlative = ltrim($parts[1], '0');
+
+            $query->where('serie', $serie)
+                ->where('correlative', 'LIKE', "%{$correlative}%");
+            return;
+        }
+    })
+        ->when(
+            $request->exists('selected'),
+            fn($query) => $query->whereIn('id', $request->input('selected', [])),
+            fn($query) => $query->limit(10)
+        )
+        ->with(['customer'])
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    return $quotes->map(function ($quote) {
+        return [
+            'id' => $quote->id,
+            'name' => $quote->serie . '-' . $quote->correlative,
+            'description' => $quote->customer->name . ' - ' . $quote->customer->document_number,
+        ];
+    });
+})
+    ->name('api.quotes.index');

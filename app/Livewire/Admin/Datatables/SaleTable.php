@@ -5,16 +5,15 @@ namespace App\Livewire\Admin\Datatables;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use Illuminate\Database\Eloquent\Builder;
-use App\Models\Quote;
+use App\Models\Sale;
 
-class QuoteTable extends DataTableComponent
+class SaleTable extends DataTableComponent
 {
-    protected $model = Quote::class;
+    protected $model = Sale::class;
 
     public function configure(): void
     {
         $this->setPrimaryKey('id');
-        $this->setDefaultSort('id', 'desc');
     }
 
     public function columns(): array
@@ -29,21 +28,27 @@ class QuoteTable extends DataTableComponent
             Column::make("Correlative", "correlative")
                 ->sortable(),
             Column::make("Date", "date")
-                ->sortable()
-                ->format(fn($value) => $value->format('Y/m/d')),
+                ->format(function ($value) {
+                    return $value->format('d/m/Y');
+                })
+                ->sortable(),
+            Column::make("Quote id", "quote.correlative")
+                ->sortable(),
             Column::make("Customer id", "customer.name")
+                ->sortable(),
+            Column::make("Warehouse id", "warehouse.name")
                 ->sortable(),
             Column::make("Total", "total")
                 ->sortable(),
             Column::make("Acciones")
                 ->label(function ($row, Column $column) {
-                    return view('admin.quotes.actions', ['quote' => $row]);
+                    return view('admin.sales.actions', ['sale' => $row]);
                 })
         ];
     }
 
     public function builder(): Builder
     {
-        return Quote::query()->with(['customer']);
+        return Sale::query()->with(['quote', 'customer', 'warehouse']);
     }
 }

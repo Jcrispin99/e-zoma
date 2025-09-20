@@ -1,19 +1,19 @@
-<x-admin-layout title="Compras" :breadcrumbs="[
+<x-admin-layout title="Ventas" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),
         'icon' => 'fa-solid fa-gauge',
     ],
     [
-        'name' => 'Compras',
+        'name' => 'Ventas',
         'icon' => 'fa-regular fa-file-lines',
-        'href' => route('admin.purchases.index'),
+        'href' => route('admin.sales.index'),
     ],
     [
         'name' => 'Nuevo',
     ],
 ]">
 
-    @livewire('admin.purchase-create')
+    @livewire('admin.sale-create')
 
 </x-admin-layout>

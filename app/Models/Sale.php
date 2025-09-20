@@ -18,14 +18,26 @@ class Sale extends Model
         'observation',
     ];
 
+    protected $casts = [
+        'date' => 'datetime',
+    ];
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);
     }
-
-    public function products()
+    public function quote()
     {
-        return $this->morphToMany(Product::class, 'variantable')
+        return $this->belongsTo(Quote::class);
+    }
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function variants()
+    {
+        return $this->morphToMany(Variant::class, 'variantable')
             ->withPivot('quantity', 'price', 'subtotal')
             ->withTimestamps();
     }

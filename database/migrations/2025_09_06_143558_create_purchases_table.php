@@ -22,7 +22,7 @@ return new class extends Migration
             $table->timestamp('date')
                 ->useCurrent();
 
-            $table->foreignId('purchase_order_id')->constrained()->onDelete('cascade');
+            $table->foreignId('purchase_order_id')->nullable()->constrained()->onDelete('set null');
 
             $table->foreignId('supplier_id')->constrained()->onDelete('cascade');
 

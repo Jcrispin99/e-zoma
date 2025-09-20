@@ -94,16 +94,17 @@
             'name' => 'Movimientos',
             'icon' => 'fa-solid fa-arrows-rotate',
             'href' => '#',
-            'active' => false,
+            'active' => request()->routeIs(['admin.movements.*', 'admin.transfers.*']),
             'submenu' => [
                 [
                     'name' => 'Entradas y salidas',
-                    'href' => '#',
-                    'active' => false,
+                    'href' => route('admin.movements.index'),
+                    'active' => request()->routeIs('admin.movements.index'),
                 ],
                 [
                     'name' => 'Transferencias',
-                    'href' => '#',
+                    'href' => route('admin.transfers.index'),
+                    'active' => request()->routeIs('admin.transfers.index'),
                     'active' => false,
                 ],
             ],

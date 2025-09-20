@@ -12,6 +12,8 @@ use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\QuoteController;
 use App\Http\Controllers\Admin\SaleController;
+use App\Http\Controllers\Admin\MovementController;
+use App\Http\Controllers\Admin\TransferController;
 
 // Dashboard
 
@@ -33,6 +35,10 @@ Route::resource('purchases', PurchaseController::class)->only(['index', 'create'
 Route::resource('customers', CustomerController::class)->except(['show']);
 Route::resource('quotes', QuoteController::class)->only(['index', 'create']);
 Route::resource('sales', SaleController::class)->only(['index', 'create']);
+
+//movimientos
+Route::resource('movements', MovementController::class)->only(['index', 'create']);
+Route::resource('transfers', TransferController::class)->only(['index', 'create']);
 
 // Imagenes
 route::post('variants/{variant}/dropzone', [VariantController::class, 'dropzone'])->name('variants.dropzone');

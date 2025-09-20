@@ -17,9 +17,25 @@ class Movement extends Model
         'reason_id',
     ];
 
-    public function products()
+    protected $casts = [
+        'date' => 'datetime',
+    ];
+
+
+    public function warehouse()
     {
-        return $this->morphToMany(Product::class, 'variantable')
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function reason()
+    {
+        return $this->belongsTo(Reason::class);
+    }
+
+
+    public function variants()
+    {
+        return $this->morphToMany(Variant::class, 'variantable')
             ->withPivot('quantity', 'price', 'subtotal')
             ->withTimestamps();
     }

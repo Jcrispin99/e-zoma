@@ -1,0 +1,154 @@
+<?php
+
+namespace App\Livewire\Admin;
+
+use App\Models\Variant;
+use Livewire\Component;
+use App\Models\Transfer;
+
+class TransferCreate extends Component
+{
+    public $serie = 'T001';
+    public $correlative;
+
+    public $date;
+    public $warehouse_id;
+    public $origin_warehouse_id;
+    public $destination_warehouse_id;
+
+    public $total = 0;
+    public $observation;
+
+    public $variant_id;
+    public $variants = [];
+
+    public function boot()
+    {
+        //Verificar si hay errores de validación previos
+        $this->withValidator(function ($validator) {
+            if ($validator->fails()) {
+
+                $errors = $validator->errors()->toArray();
+
+                $html = "<ul class='text-left'>";
+
+                foreach ($errors as $error) {
+                    $html .= "<li>{$error[0]}</li>";
+                }
+
+                $html .= "</ul>";
+
+                $this->dispatch('swal', [
+                    'icon' => 'error',
+                    'title' => 'Error de validación',
+                    'html' => $html,
+                ]);
+            }
+        });
+    }
+    public function mount()
+    {
+        $this->correlative = Transfer::max('correlative') + 1;
+    }
+    public function updated($property, $value)
+    {
+        if ($property == 'origin_warehouse_id') {
+            $this->reset('destination_warehouse_id');
+        }
+    }
+
+    public function addProduct()
+    {
+        $this->validate([
+            'variant_id' => 'required|exists:variants,id',
+        ], [], [
+            'variant_id' => 'producto',
+        ]);
+
+        $existing = collect($this->variants)->firstWhere('id', $this->variant_id);
+
+        if ($existing) {
+            $this->dispatch('swal', [
+                'icon' => 'warning',
+                'title' => 'El producto ya fue agregado',
+                'text' => 'El producto ya se encuentra en la fila',
+            ]);
+            return;
+        }
+
+        $variant = Variant::with('product')->find($this->variant_id);
+
+        $this->variants[] = [
+            'id' => $variant->id,
+            'name' => $variant->product->name,
+            'quantity' => 1,
+            'price' => $variant->price,
+            'subtotal' => $variant->price,
+        ];
+        $this->reset('variant_id');
+    }
+
+    public function save()
+    {
+        $this->validate(
+            [
+                'serie' => 'required|string|max:10',
+                'correlative' => 'required|numeric|min:1',
+                'date' => 'nullable|date',
+                'origin_warehouse_id' => 'required|exists:warehouses,id',
+                //destino diferente de origen
+                'destination_warehouse_id' => 'required|exists:warehouses,id|different:origin_warehouse_id',
+                'total' => 'required|numeric|min:0',
+                'observation' => 'nullable|string|max:255',
+                'variants' => 'required|array|min:1',
+                'variants.*.id' => 'required|exists:variants,id',
+                'variants.*.quantity' => 'required|numeric|min:1',
+                'variants.*.price' => 'required|numeric|min:0',
+            ],
+            [],
+            [
+                'serie' => 'serie',
+                'correlative' => 'correlativo',
+                'date' => 'fecha',
+                'origin_warehouse_id' => 'almacen origen',
+                'destination_warehouse_id' => 'almacen destino',
+                'total' => 'total',
+                'observation' => 'observación',
+                'variants.*.id' => 'producto',
+                'variants.*.quantity' => 'cantidad',
+                'variants.*.price' => 'precio',
+            ]
+        );
+
+        $transfer = Transfer::create([
+            'serie' => $this->serie,
+            'correlative' => $this->correlative,
+            'date' => $this->date ?? now(),
+            'origin_warehouse_id' => $this->origin_warehouse_id,
+            'destination_warehouse_id' => $this->destination_warehouse_id,
+            'total' => $this->total,
+            'observation' => $this->observation,
+        ]);
+
+        foreach ($this->variants as $variant) {
+            $transfer->variants()->attach($variant['id'], [
+                'quantity' => $variant['quantity'],
+                'price' => $variant['price'],
+                'subtotal' => $variant['quantity'] * $variant['price'],
+            ]);
+        }
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Transferencia creada exitosamente.',
+        ]);
+
+        return redirect()->route('admin.transfers.index');
+    }
+
+    public function render()
+    {
+        return view('livewire.admin.transfer-create');
+    }
+}

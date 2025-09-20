@@ -14,7 +14,10 @@ class Transfer extends Model
         'total',
         'observation',
         'origin_warehouse_id',
-        'desination_warehouse_id',
+        'destination_warehouse_id',
+    ];
+    protected $casts = [
+        'date' => 'datetime',
     ];
 
     public function originWarehouse()
@@ -24,7 +27,7 @@ class Transfer extends Model
 
     public function destinationWarehouse()
     {
-        return $this->belongsTo(Warehouse::class, 'desination_warehouse_id');
+        return $this->belongsTo(Warehouse::class, 'destination_warehouse_id');
     }
 
     public function variants()

@@ -6,6 +6,7 @@ use App\Models\Warehouse;
 use App\Models\Customer;
 use App\Models\Variant;
 use App\Models\Quote;
+use App\Models\Reason;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -45,6 +46,9 @@ Route::post('/warehouses', function (Request $request) {
         ->when($request->search, function ($query, $search) {
             $query->where('name', 'like', "{$search}")
                 ->orWhere('location', 'like', "{$search}");
+        })
+        ->when($request->exclude, function ($query, $exclude) {
+            $query->where('id', '!=', $exclude);
         })
         ->when(
             $request->exists('selected'),
@@ -109,8 +113,7 @@ Route::post('/purchase-orders', function (Request $request) {
             'description' => $purchaseOrder->supplier->name . ' - ' . $purchaseOrder->supplier->document_number,
         ];
     });
-})
-    ->name('api.purchase-orders.index');
+})->name('api.purchase-orders.index');
 
 Route::post('/quotes', function (Request $request) {
     $quotes = Quote::when($request->search, function ($query, $search) {
@@ -153,5 +156,18 @@ Route::post('/quotes', function (Request $request) {
             'description' => $quote->customer->name . ' - ' . $quote->customer->document_number,
         ];
     });
-})
-    ->name('api.quotes.index');
+})->name('api.quotes.index');
+
+Route::post('/reasons', function (Request $request) {
+    return Reason::select('id', 'name')
+        ->when($request->search, function ($query, $search) {
+            $query->where('name', 'like', "%{$search}%");
+        })
+        ->when(
+            $request->exists('selected'),
+            fn($query) => $query->whereIn('id', $request->input('selected', [])),
+            fn($query) => $query->limit(10)
+        )
+        ->where('type', $request->input('type', ''))
+        ->get();
+})->name('api.reasons.index');

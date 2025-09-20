@@ -26,7 +26,7 @@ return new class extends Migration
 
             $table->foreignId('origin_warehouse_id')->constrained('warehouses')->onDelete('cascade');
 
-            $table->foreignId('desination_warehouse_id')->constrained('warehouses')->onDelete('cascade');
+            $table->foreignId('destination_warehouse_id')->constrained('warehouses')->onDelete('cascade');
 
 
             $table->timestamps();

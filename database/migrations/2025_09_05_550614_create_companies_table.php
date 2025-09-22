@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('parent_id')
                 ->nullable()
-                ->constrained('')
+                ->constrained('companies')
                 ->onDelete('set null');
             $table->string('comercial_name');
             $table->string('legal_name');

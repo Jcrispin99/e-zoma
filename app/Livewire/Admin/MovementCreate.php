@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\Inventory;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\Movement;
@@ -80,12 +81,18 @@ class MovementCreate extends Component
 
         $variant = Variant::with('product')->find($this->variant_id);
 
+        $lastRecord = Inventory::where('variant_id', $variant->id)
+            ->where('warehouse_id', $this->warehouse_id)
+            ->latest('id')
+            ->first();
+        $costBalance = $lastRecord ? $lastRecord->cost_balance : 0;
+
         $this->variants[] = [
             'id' => $variant->id,
             'name' => $variant->product->name,
             'quantity' => 1,
-            'price' => $variant->price,
-            'subtotal' => $variant->price,
+            'price' => $costBalance,
+            'subtotal' => 1 * $costBalance,
         ];
         $this->reset('variant_id');
     }
@@ -140,6 +147,40 @@ class MovementCreate extends Component
                 'price' => $variant['price'],
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
+            //Kardex
+            $lastRecord = Inventory::where('variant_id', $variant['id'])
+                ->where('warehouse_id', $this->warehouse_id)
+                ->latest('id')
+                ->first();
+            $lastQuantityBalance = $lastRecord ? $lastRecord->quantity_balance : 0;
+            $lastTotalBalance = $lastRecord ? $lastRecord->total_balance : 0;
+
+            $inventory = new Inventory();
+            $inventory->inventoryable_type = Movement::class;
+            $inventory->inventoryable_id = $movement->id;
+            $inventory->variant_id = $variant['id'];
+            $inventory->warehouse_id = $this->warehouse_id;
+            $inventory->detail = 'Movimiento';
+
+            if ($this->type == 1) {
+                $newQuantityBalance = $lastQuantityBalance + $variant['quantity'];
+                $newTotalBalance = $lastTotalBalance + ($variant['quantity'] * $variant['price']);
+
+                $inventory->quantity_in = $variant['quantity'];
+                $inventory->cost_in = $variant['price'];
+                $inventory->total_in = $variant['quantity'] * $variant['price'];
+            } else {
+                $newQuantityBalance = $lastQuantityBalance - $variant['quantity'];
+                $newTotalBalance = $lastTotalBalance - ($variant['quantity'] * $variant['price']);
+
+                $inventory->quantity_out = $variant['quantity'];
+                $inventory->cost_out = $variant['price'];
+                $inventory->total_out = $variant['quantity'] * $variant['price'];
+            }
+            $inventory->quantity_balance = $newQuantityBalance;
+            $inventory->cost_balance = $newTotalBalance / ($newQuantityBalance ?: 1);
+            $inventory->total_balance = $newTotalBalance;
+            $inventory->save();
         }
 
         session()->flash('swalt', [
@@ -148,7 +189,7 @@ class MovementCreate extends Component
             'text' => 'Cotización creada exitosamente.',
         ]);
 
-        return redirect()->route('admin.quotes.index');
+        return redirect()->route('admin.movements.index');
     }
 
     public function render()

@@ -1,5 +1,5 @@
 <div x-data="{
-    variants: @entangle('variants'),
+    variants: @entangle('variants').live,
 
     total: @entangle('total'),
 
@@ -35,12 +35,14 @@
 
                 <x-wire-input label="Fecha" wire:model="date" type="date" />
 
+
                 <x-wire-select class="lg:col-span-2" label="Almacenes" wire:model="warehouse_id"
                     placeholder="Seleccione un almacén" :async-data="[
                         'api' => route('api.warehouse.index'),
                         'method' => 'POST',
                     ]" option-label="name" option-value="id"
-                    class="flex-1" option-description="description" />
+                    class="flex-1" option-description="description" :disabled="count($variants)" />
+
 
                 <x-wire-select class="lg:col-span-2" label="Motivo" wire:model="reason_id"
                     placeholder="Seleccione un motivo" :async-data="[
@@ -77,7 +79,7 @@
                         <tr class="text-gray-700 border-y bg-blue-50">
                             <th class="px-6 py-2">Producto</th>
                             <th class="px-6 py-2">Cantidad</th>
-                            <th class="px-6 py-2">Precio</th>
+                            <th class="px-6 py-2">Precio costo</th>
                             <th class="px-6 py-2">Subtotal</th>
                             <th class="px-6 py-2"></th>
                         </tr>

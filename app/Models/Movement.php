@@ -32,11 +32,15 @@ class Movement extends Model
         return $this->belongsTo(Reason::class);
     }
 
-
     public function variants()
     {
         return $this->morphToMany(Variant::class, 'variantable')
             ->withPivot('quantity', 'price', 'subtotal')
             ->withTimestamps();
+    }
+
+    public function inventories()
+    {
+        return $this->morphMany(Inventory::class, 'inventoryable');
     }
 }

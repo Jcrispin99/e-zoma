@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\Inventory;
 use App\Models\Purchase;
 use App\Models\Variant;
 use Livewire\Component;
@@ -152,12 +153,48 @@ class PurchaseCreate extends Component
                 'price' => $variant['price'],
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
-        }
 
+            //Kardex
+            $lastRecord = Inventory::where('variant_id', $variant['id'])
+                ->where('warehouse_id', $this->warehouse_id)
+                ->latest('id')
+                ->first();
+            $lastQuantityBalance = $lastRecord ? $lastRecord->quantity_balance : 0;
+            $lastTotalBalance = $lastRecord ? $lastRecord->total_balance : 0;
+
+            $newQuantityBalance = $lastQuantityBalance + $variant['quantity'];
+            $newTotalBalance = $lastTotalBalance + ($variant['quantity'] * $variant['price']);
+            $newCostBalance = $newTotalBalance / ($newQuantityBalance ?: 1);
+
+            Inventory::create([
+                'detail' => 'Compra',
+                'quantity_in' => $variant['quantity'],
+                'cost_in' => $variant['price'],
+                'total_in' => $variant['quantity'] * $variant['price'],
+                'quantity_balance' => $newQuantityBalance,
+                'cost_balance' => $newCostBalance,
+                'total_balance' => $newTotalBalance,
+                'variant_id' => $variant['id'],
+                'warehouse_id' => $this->warehouse_id,
+                'inventoryable_id' => $purchase->id,
+                'inventoryable_type' => Purchase::class,
+            ]);
+            // $purchase->inventories()->create([
+            //     'detail' => 'Compra',
+            //     'quantity_in' => $variant['quantity'],
+            //     'cost_in' => $variant['price'],
+            //     'total_in' => $variant['quantity'] * $variant['price'],
+            //     'quantity_balance' => $newQuantityBalance,
+            //     'cost_balance' => $newCostBalance,
+            //     'total_balance' => $newTotalBalance,
+            //     'variant_id' => $variant['id'],
+            //     'warehouse_id' => $this->warehouse_id,
+            // ]);
+        }
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => '¡Bien hecho!',
-            'text' => 'LA compra creada exitosamente.',
+            'text' => 'La compra fue creada exitosamente.',
         ]);
 
         return redirect()->route('admin.purchases.index');

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Models\Inventory;
 use App\Models\Sale;
 use App\Models\Variant;
 use Livewire\Component;
@@ -157,6 +158,32 @@ class SaleCreate extends Component
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
                 'subtotal' => $variant['quantity'] * $variant['price'],
+            ]);
+
+            //Kardex
+            $lastRecord = Inventory::where('variant_id', $variant['id'])
+                ->where('warehouse_id', $this->warehouse_id)
+                ->latest('id')
+                ->first();
+            $lastQuantityBalance = $lastRecord ? $lastRecord->quantity_balance : 0;
+            $lastTotalBalance = $lastRecord ? $lastRecord->total_balance : 0;
+            $lastCostBalance = $lastRecord?->cost_balance ?? 0;
+
+
+            $newQuantityBalance = $lastQuantityBalance - $variant['quantity'];
+            $newTotalBalance = $lastTotalBalance - ($variant['quantity'] * $lastCostBalance);
+            $newCostBalance = $newTotalBalance / ($newQuantityBalance ?: 1);
+
+            $sale->inventories()->create([
+                'detail' => 'Venta',
+                'quantity_out' => $variant['quantity'],
+                'cost_out' => $lastCostBalance,
+                'total_out' => $variant['quantity'] * $lastCostBalance,
+                'quantity_balance' => $newQuantityBalance,
+                'cost_balance' => $newCostBalance,
+                'total_balance' => $newTotalBalance,
+                'variant_id' => $variant['id'],
+                'warehouse_id' => $this->warehouse_id,
             ]);
         }
 

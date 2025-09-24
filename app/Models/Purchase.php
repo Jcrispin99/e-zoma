@@ -38,4 +38,9 @@ class Purchase extends Model
     {
         return $this->belongsTo(Warehouse::class);
     }
+
+    public function inventories()
+    {
+        return $this->morphMany(Inventory::class, 'inventoryable');
+    }
 }

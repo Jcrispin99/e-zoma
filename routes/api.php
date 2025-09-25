@@ -9,7 +9,8 @@ use App\Models\Quote;
 use App\Models\Reason;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
+use App\Models\Attribute;
+use App\Models\AttributeValue;
 
 // Route::get('/user', function (Request $request) {
 //     return $request->user();
@@ -171,3 +172,31 @@ Route::post('/reasons', function (Request $request) {
         ->where('type', $request->input('type', ''))
         ->get();
 })->name('api.reasons.index');
+
+Route::post('/attributes', function (Request $request) {
+    return Attribute::select('id', 'name')
+        ->when($request->search, function ($query, $search) {
+            $query->where('name', 'like', "%{$search}%");
+        })
+        ->when(
+            $request->exists('selected'),
+            fn($query) => $query->whereIn('id', $request->input('selected', [])),
+            fn($query) => $query->limit(10)
+        )
+        ->get();
+})->name('api.attributes.index');
+
+// Ruta para obtener valores de un atributo específico
+Route::post('/attribute-values/{attributeId}', function (Request $request, $attributeId) {
+    return AttributeValue::select('id', 'value', 'attribute_id')
+        ->where('attribute_id', $attributeId)
+        ->when($request->search, function ($query, $search) {
+            $query->where('value', 'like', "%{$search}%");
+        })
+        ->when(
+            $request->exists('selected'),
+            fn($query) => $query->whereIn('id', $request->input('selected', [])),
+            fn($query) => $query->limit(20)
+        )
+        ->get();
+})->name('api.attribute-values.show');

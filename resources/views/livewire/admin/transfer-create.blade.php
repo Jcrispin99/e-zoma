@@ -39,7 +39,8 @@
                         'api' => route('api.warehouse.index'),
                         'method' => 'POST',
                     ]" option-label="name" option-value="id" class="flex-1"
-                    option-description="description" />
+                    option-description="description" :disabled="count($variants)" />
+
                 <x-wire-select label="Destino" wire:model="destination_warehouse_id" placeholder="Seleccione un almacén"
                     :async-data="[
                         'api' => route('api.warehouse.index'),

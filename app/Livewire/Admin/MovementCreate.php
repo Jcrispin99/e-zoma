@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Facades\Kardex;
 use App\Models\Inventory;
 use App\Models\Variant;
 use Livewire\Component;
@@ -148,39 +149,11 @@ class MovementCreate extends Component
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
             //Kardex
-            $lastRecord = Inventory::where('variant_id', $variant['id'])
-                ->where('warehouse_id', $this->warehouse_id)
-                ->latest('id')
-                ->first();
-            $lastQuantityBalance = $lastRecord ? $lastRecord->quantity_balance : 0;
-            $lastTotalBalance = $lastRecord ? $lastRecord->total_balance : 0;
-
-            $inventory = new Inventory();
-            $inventory->inventoryable_type = Movement::class;
-            $inventory->inventoryable_id = $movement->id;
-            $inventory->variant_id = $variant['id'];
-            $inventory->warehouse_id = $this->warehouse_id;
-            $inventory->detail = 'Movimiento';
-
             if ($this->type == 1) {
-                $newQuantityBalance = $lastQuantityBalance + $variant['quantity'];
-                $newTotalBalance = $lastTotalBalance + ($variant['quantity'] * $variant['price']);
-
-                $inventory->quantity_in = $variant['quantity'];
-                $inventory->cost_in = $variant['price'];
-                $inventory->total_in = $variant['quantity'] * $variant['price'];
-            } else {
-                $newQuantityBalance = $lastQuantityBalance - $variant['quantity'];
-                $newTotalBalance = $lastTotalBalance - ($variant['quantity'] * $variant['price']);
-
-                $inventory->quantity_out = $variant['quantity'];
-                $inventory->cost_out = $variant['price'];
-                $inventory->total_out = $variant['quantity'] * $variant['price'];
+                Kardex::registerEntry($movement, $variant, $this->warehouse_id, 'Movimiento');
+            } else if ($this->type == 2) {
+                Kardex::registerExit($movement, $variant, $this->warehouse_id, 'Movimiento');
             }
-            $inventory->quantity_balance = $newQuantityBalance;
-            $inventory->cost_balance = $newTotalBalance / ($newQuantityBalance ?: 1);
-            $inventory->total_balance = $newTotalBalance;
-            $inventory->save();
         }
 
         session()->flash('swalt', [

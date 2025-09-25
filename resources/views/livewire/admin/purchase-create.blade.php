@@ -57,7 +57,7 @@
                             'api' => route('api.warehouse.index'),
                             'method' => 'POST',
                         ]" option-label="name" option-value="id" class="flex-1"
-                        option-description="description" />
+                        option-description="description" :disabled="count($variants)" />
                 </div>
             </div>
 

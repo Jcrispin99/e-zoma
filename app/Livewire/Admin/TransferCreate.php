@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin;
 
+use App\Facades\Kardex;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\Transfer;
@@ -61,11 +62,16 @@ class TransferCreate extends Component
     {
         $this->validate([
             'variant_id' => 'required|exists:variants,id',
+            'origin_warehouse_id' => 'required|exists:warehouses,id',
+            'destination_warehouse_id' => 'required|exists:warehouses,id|different:origin_warehouse_id',
         ], [], [
             'variant_id' => 'producto',
+            'origin_warehouse_id' => 'almacen origen',
+            'destination_warehouse_id' => 'almacen destino',
         ]);
 
         $existing = collect($this->variants)->firstWhere('id', $this->variant_id);
+
 
         if ($existing) {
             $this->dispatch('swal', [
@@ -77,13 +83,15 @@ class TransferCreate extends Component
         }
 
         $variant = Variant::with('product')->find($this->variant_id);
+        $lastRecord = Kardex::getLastRecord($variant->id, $this->origin_warehouse_id);
+
 
         $this->variants[] = [
             'id' => $variant->id,
             'name' => $variant->product->name,
             'quantity' => 1,
-            'price' => $variant->price,
-            'subtotal' => $variant->price,
+            'price' => $lastRecord['cost'],
+            'subtotal' => $lastRecord['cost'],
         ];
         $this->reset('variant_id');
     }
@@ -136,6 +144,21 @@ class TransferCreate extends Component
                 'price' => $variant['price'],
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
+
+            // registrar salida
+            Kardex::registerExit(
+                $transfer,
+                $variant,
+                $this->origin_warehouse_id,
+                'Transferencia'
+            );
+            // registrar entrada
+            Kardex::registerEntry(
+                $transfer,
+                $variant,
+                $this->destination_warehouse_id,
+                'Transferencia'
+            );
         }
 
         session()->flash('swalt', [

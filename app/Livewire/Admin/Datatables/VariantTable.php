@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Admin\Datatables;
 
+use App\Models\Inventory;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use App\Models\Variant;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 use Rappasoft\LaravelLivewireTables\Views\Columns\ImageColumn;
 
 class VariantTable extends DataTableComponent
@@ -15,6 +17,14 @@ class VariantTable extends DataTableComponent
     public function configure(): void
     {
         $this->setPrimaryKey('id');
+
+        $this->setConfigurableAreas(
+            [
+                'after-wrapper' => [
+                    'admin.variants.modal',
+                ],
+            ]
+        );
     }
 
     public function columns(): array
@@ -40,6 +50,17 @@ class VariantTable extends DataTableComponent
                 ->sortable(),
             Column::make("Precio", "price")
                 ->sortable(),
+            Column::make("Stock", "stock")
+                ->sortable()
+                ->format(function ($value, $row) {
+                    return view(
+                        'admin.variants.stock',
+                        [
+                            'stock' => $value,
+                            'variant' => $row,
+                        ]
+                    );
+                }),
             Column::make("Barcode", "barcode")
                 ->sortable(),
             Column::make("Acciones")
@@ -51,5 +72,24 @@ class VariantTable extends DataTableComponent
     public function builder(): Builder
     {
         return Variant::query()->with(['product', 'images']);
+    }
+
+    //propiedades
+    public $openModal = false;
+    public $inventories = [];
+
+    //metodos
+    public function showStock($variant_id)
+    {
+        $this->openModal = true;
+
+        $latestInventory =  Inventory::where('variant_id', $variant_id)
+            ->select(DB::raw('MAX(id) as id'))
+            ->groupBy('warehouse_id')
+            ->pluck('id');
+
+        $this->inventories = Inventory::whereIn('id', $latestInventory)
+            ->with(['warehouse'])
+            ->get();
     }
 }

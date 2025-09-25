@@ -19,8 +19,6 @@ class ProductFactory extends Factory
         return [
             'name' => fake()->unique()->words(3, true),
             'description' => fake()->paragraph(),
-            'sku' => fake()->unique()->regexify('[A-Z]{3}[0-9]{5}'),
-            'barcode' => fake()->unique()->ean13(),
             'price' => fake()->randomFloat(2, 10, 1000),
             'category_id' => \App\Models\Category::inRandomOrder()->first()->id ?? 1,
         ];

@@ -38,8 +38,7 @@ class ProductTable extends DataTableComponent
             Column::make("Categoria", "category.full_name")
                 ->searchable()
                 ->sortable(),
-            Column::make("Barcode", "barcode")
-                ->sortable(),
+
             Column::make("Precio", "price")
                 ->sortable(),
             Column::make("Acciones")

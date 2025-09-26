@@ -15,11 +15,9 @@ class ProductCreate extends Component
     public $price = '';
     public $category_id = '';
 
-    // Propiedades de atributos
     public $selectedAttributes = [];
     public $selectedAttributeValues = [];
 
-    // Estado del componente
     public $showAttributeSection = false;
 
     protected $rules = [
@@ -52,7 +50,6 @@ class ProductCreate extends Component
 
     public function updatedSelectedAttributes($value, $key)
     {
-        // Cuando cambia un atributo, limpiar sus valores
         if (str_contains($key, '.attribute_id')) {
             $index = explode('.', $key)[0];
             $this->selectedAttributes[$index]['values'] = [];
@@ -61,7 +58,6 @@ class ProductCreate extends Component
 
     public function getVariantsPreview()
     {
-        // Calcular preview de variantes que se generarán
         $combinations = $this->calculateCombinations();
         return count($combinations);
     }
@@ -73,7 +69,7 @@ class ProductCreate extends Component
         });
 
         if (empty($validAttributes)) {
-            return [[]]; // Una variante por defecto
+            return [[]];
         }
 
         $combinations = [[]];
@@ -95,7 +91,6 @@ class ProductCreate extends Component
     {
         $this->validate();
 
-        // Crear el producto
         $product = Product::create([
             'name' => $this->name,
             'description' => $this->description,
@@ -103,7 +98,6 @@ class ProductCreate extends Component
             'category_id' => $this->category_id,
         ]);
 
-        // Generar variantes
         $this->generateVariants($product);
 
         session()->flash('message', 'Producto creado exitosamente con ' . $product->variants()->count() . ' variante(s)');

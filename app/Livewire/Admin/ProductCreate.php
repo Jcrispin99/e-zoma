@@ -16,22 +16,23 @@ class ProductCreate extends Component
     public $category_id = '';
 
     public $selectedAttributes = [];
-    public $selectedAttributeValues = [];
-
-    public $showAttributeSection = false;
+    public $variantsData = [];
 
     protected $rules = [
         'name' => 'required|string|max:255',
         'description' => 'nullable|string',
         'price' => 'required|numeric|min:0',
         'category_id' => 'required|exists:categories,id',
-        'selectedAttributes' => 'array',
-        'selectedAttributeValues' => 'array',
+        'variantsData' => 'array',
+        'variantsData.*.sku' => 'nullable|string',
+        'variantsData.*.price' => 'required|numeric|min:0',
+        'variantsData.*.barcode' => 'nullable|string',
     ];
 
     public function mount()
     {
-        // Ya no necesitamos cargar atributos aquí, se cargarán via API
+        // Inicializamos con una variante por defecto
+        $this->generateVariantsPreview();
     }
 
     public function addAttribute()
@@ -46,20 +47,51 @@ class ProductCreate extends Component
     {
         unset($this->selectedAttributes[$index]);
         $this->selectedAttributes = array_values($this->selectedAttributes);
+        $this->generateVariantsPreview();
     }
 
-    public function updatedSelectedAttributes($value, $key)
+    public function updatedSelectedAttributes()
     {
-        if (str_contains($key, '.attribute_id')) {
-            $index = explode('.', $key)[0];
-            $this->selectedAttributes[$index]['values'] = [];
+        $this->generateVariantsPreview();
+    }
+
+    public function updatedPrice()
+    {
+        // Si el precio base cambia, actualizamos las variantes que no han sido modificadas
+        foreach ($this->variantsData as $index => $variant) {
+            if ($variant['price'] == $this->price) {
+                $this->variantsData[$index]['price'] = $this->price;
+            }
         }
     }
 
-    public function getVariantsPreview()
+    private function generateVariantsPreview()
     {
         $combinations = $this->calculateCombinations();
-        return count($combinations);
+        $this->variantsData = []; // Reiniciamos el array
+
+        if (empty($combinations)) {
+            $this->variantsData[] = [
+                'sku' => '',
+                'price' => $this->price,
+                'barcode' => '',
+                'attribute_values' => [],
+                'description' => 'Default'
+            ];
+            return;
+        }
+
+        foreach ($combinations as $combination) {
+            $attributeValues = AttributeValue::whereIn('id', $combination)->get();
+
+            $this->variantsData[] = [
+                'sku' => $this->generateVariantSku(null, $attributeValues),
+                'price' => $this->price,
+                'barcode' => '',
+                'attribute_values' => $attributeValues->pluck('id')->toArray(),
+                'description' => $attributeValues->pluck('value')->implode(' / ')
+            ];
+        }
     }
 
     private function calculateCombinations()
@@ -69,11 +101,10 @@ class ProductCreate extends Component
         });
 
         if (empty($validAttributes)) {
-            return [[]];
+            return [];
         }
 
         $combinations = [[]];
-
         foreach ($validAttributes as $attribute) {
             $newCombinations = [];
             foreach ($combinations as $combination) {
@@ -98,52 +129,44 @@ class ProductCreate extends Component
             'category_id' => $this->category_id,
         ]);
 
-        $this->generateVariants($product);
-
-        session()->flash('message', 'Producto creado exitosamente con ' . $product->variants()->count() . ' variante(s)');
-
-        return redirect()->route('admin.products.edit', $product);
-    }
-
-    private function generateVariants($product)
-    {
-        $combinations = $this->calculateCombinations();
-
-        foreach ($combinations as $combination) {
+        foreach ($this->variantsData as $variantData) {
             $variant = $product->variants()->create([
-                'sku' => $this->generateVariantSku($product, $combination),
-                'price' => $product->price,
+                'sku' => $variantData['sku'] ?: $this->generateVariantSku($product, AttributeValue::whereIn('id', $variantData['attribute_values'])->get()),
+                'price' => $variantData['price'],
+                'barcode' => $variantData['barcode'],
                 'stock' => 0,
             ]);
 
-            if (!empty($combination)) {
-                $variant->attributeValues()->attach($combination);
+            if (!empty($variantData['attribute_values'])) {
+                $variant->attributeValues()->attach($variantData['attribute_values']);
             }
         }
+
+        session()->flash('message', 'Producto creado exitosamente con ' . count($this->variantsData) . ' variante(s)');
+
+        return redirect()->route('admin.products.index');
     }
 
-    private function generateVariantSku($product, $combination)
+    private function generateVariantSku($product, $attributeValues)
     {
-        $baseSku = 'PROD-' . str_pad($product->id, 3, '0', STR_PAD_LEFT);
+        $productId = $product ? str_pad($product->id, 3, '0', STR_PAD_LEFT) : 'XXX';
+        $baseSku = 'PROD-' . $productId;
 
-        if (empty($combination)) {
+        if ($attributeValues->isEmpty()) {
             return $baseSku . '-DEFAULT';
         }
 
-        $attributeValues = AttributeValue::whereIn('id', $combination)
-            ->get()
-            ->pluck('value')
-            ->map(fn($value) => strtoupper(str_replace(' ', '', $value)))
+        $valueCodes = $attributeValues
+            ->map(fn($value) => strtoupper(substr(str_replace(' ', '', $value->value), 0, 3)))
             ->toArray();
 
-        return $baseSku . '-' . implode('-', $attributeValues);
+        return $baseSku . '-' . implode('-', $valueCodes);
     }
 
     public function render()
     {
         return view('livewire.admin.product-create', [
             'categories' => Category::all(),
-            'variantsCount' => $this->getVariantsPreview()
         ]);
     }
 }

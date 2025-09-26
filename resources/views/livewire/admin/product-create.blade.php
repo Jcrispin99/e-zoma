@@ -74,13 +74,12 @@
                             />
                         </div>
 
-                        <!-- Valores del Atributo -->
                         <div>
                             @if(isset($selectedAttribute['attribute_id']) && $selectedAttribute['attribute_id'])
                                 <x-wire-select 
                                     wire:key="attribute-values-{{ $index }}-{{ $selectedAttribute['attribute_id'] }}"
                                     label="Valores del Atributo" 
-                                    wire:model="selectedAttributes.{{ $index }}.values"
+                                    wire:model.live="selectedAttributes.{{ $index }}.values"
                                     placeholder="Seleccione valores..."
                                     :async-data="[
                                         'api' => route('api.attribute-values.show', ['attributeId' => $selectedAttribute['attribute_id']]),
@@ -101,12 +100,44 @@
             @endforeach
 
             <!-- Preview de variantes -->
-            @if($variantsCount > 0)
+            @if(!empty($variantsData))
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Registro de costos</h3>
+                    <div class="space-y-4">
+                        @foreach($variantsData as $index => $variant)
+                            <div class="border rounded-lg p-4 bg-gray-50">
+                                <p class="font-medium text-gray-800 mb-3">
+                                    Variante: {{ $variant['description'] }}
+                                </p>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <x-wire-input 
+                                        label="SKU"
+                                        wire:model="variantsData.{{ $index }}.sku" 
+                                        placeholder="SKU de la variante"
+                                    />
+                                    <x-wire-input 
+                                        type="number"
+                                        label="Precio" 
+                                        wire:model="variantsData.{{ $index }}.price" 
+                                        placeholder="Precio de la variante"
+                                        step="0.01"
+                                    />
+                                    <x-wire-input 
+                                        label="Código de Barras"
+                                        wire:model="variantsData.{{ $index }}.barcode" 
+                                        placeholder="Código de Barras (EAN, UPC, etc.)"
+                                    />
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @elseif(count($selectedAttributes) > 0)
                 <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <div class="flex items-center">
                         <i class="fas fa-info-circle text-blue-600 mr-2"></i>
                         <span class="text-sm text-blue-800">
-                            Se generarán <strong>{{ $variantsCount }}</strong> variante(s) automáticamente
+                            Seleccione valores para los atributos para generar las variantes.
                         </span>
                     </div>
                 </div>

@@ -6,6 +6,7 @@ use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Quote;
+use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 
 class QuoteTable extends DataTableComponent
 {
@@ -15,6 +16,22 @@ class QuoteTable extends DataTableComponent
     {
         $this->setPrimaryKey('id');
         $this->setDefaultSort('id', 'desc');
+    }
+
+    public function filters(): array
+    {
+        return [
+            DateRangeFilter::make('Fecha')
+                ->config([
+                    'placeholder' => 'Selecionar rango',
+                ])
+                ->filter(function ($query, array $dateRange) {
+                    $query->whereBetween('date', [
+                        $dateRange['minDate'] ?? now()->startOfMonth(),
+                        $dateRange['maxDate'] ?? now()->endOfMonth(),
+                    ]);
+                })
+        ];
     }
 
     public function columns(): array

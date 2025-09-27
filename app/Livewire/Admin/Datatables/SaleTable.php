@@ -6,6 +6,7 @@ use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Sale;
+use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 
 class SaleTable extends DataTableComponent
 {
@@ -14,6 +15,22 @@ class SaleTable extends DataTableComponent
     public function configure(): void
     {
         $this->setPrimaryKey('id');
+    }
+
+    public function filters(): array
+    {
+        return [
+            DateRangeFilter::make('Fecha')
+                ->config([
+                    'placeholder' => 'Selecionar rango',
+                ])
+                ->filter(function ($query, array $dateRange) {
+                    $query->whereBetween('date', [
+                        $dateRange['minDate'] ?? now()->startOfMonth(),
+                        $dateRange['maxDate'] ?? now()->endOfMonth(),
+                    ]);
+                })
+        ];
     }
 
     public function columns(): array

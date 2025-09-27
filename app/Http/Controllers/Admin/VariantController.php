@@ -97,4 +97,9 @@ class VariantController extends Controller
             'path' => $image->path,
         ]);
     }
+
+    public function kardex(Variant $variant)
+    {
+        return view('admin.variants.kardex', compact('variant'));
+    }
 }

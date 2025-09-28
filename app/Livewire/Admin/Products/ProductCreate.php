@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\Products;
 
 use Livewire\Component;
 use App\Models\Product;
@@ -165,7 +165,7 @@ class ProductCreate extends Component
 
     public function render()
     {
-        return view('livewire.admin.product-create', [
+        return view('livewire.admin.products.product-create', [
             'categories' => Category::all(),
         ]);
     }

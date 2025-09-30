@@ -14,6 +14,8 @@ use App\Http\Controllers\Admin\QuoteController;
 use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\MovementController;
 use App\Http\Controllers\Admin\TransferController;
+use App\Http\Controllers\Admin\AttributeController;
+
 
 // Dashboard
 
@@ -26,6 +28,7 @@ Route::resource('products', ProductController::class)->except(['show']);
 Route::resource('variants', VariantController::class)->except(['show', 'create', 'store']);
 Route::get('variants/{variant}/kardex', [VariantController::class, 'kardex'])->name('variants.kardex');
 Route::resource('warehouses', WarehouseController::class)->except(['show']);
+Route::resource('attributes', AttributeController::class)->except(['show']);
 
 // compras
 Route::resource('suppliers', SupplierController::class)->except(['show']);

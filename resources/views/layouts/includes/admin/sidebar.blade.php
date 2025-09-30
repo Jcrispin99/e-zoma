@@ -16,31 +16,33 @@
                 'admin.products.*',
                 'admin.variants.*',
                 'admin.warehouses.*',
+                'admin.attributes.*',
             ]),
             'submenu' => [
                 [
                     'name' => 'Categorías',
-                    'icon' => 'fa-solid fa-box',
                     'href' => route('admin.categories.index'),
                     'active' => request()->routeIs('admin.categories.*'),
                 ],
                 [
                     'name' => 'Productos',
-                    'icon' => 'fa-solid fa-list',
                     'href' => route('admin.products.index'),
                     'active' => request()->routeIs('admin.products.*'),
                 ],
                 [
                     'name' => 'Variantes',
-                    'icon' => 'fa-solid fa-list',
                     'href' => route('admin.variants.index'),
                     'active' => request()->routeIs('admin.variants.*'),
                 ],
                 [
                     'name' => 'Almacenes',
-                    'icon' => 'fa-solid fa-warehouse',
                     'href' => route('admin.warehouses.index'),
                     'active' => request()->routeIs('admin.warehouses.*'),
+                ],
+                [
+                    'name' => 'Atributos',
+                    'href' => route('admin.attributes.index'),
+                    'active' => request()->routeIs('admin.attributes.*'),
                 ],
             ],
         ],

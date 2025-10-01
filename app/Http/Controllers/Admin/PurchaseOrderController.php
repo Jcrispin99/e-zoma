@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PurchaseOrderController extends Controller
 {
@@ -22,5 +23,16 @@ class PurchaseOrderController extends Controller
     public function create()
     {
         return view('admin.purchases-orders.create');
+    }
+
+    /**
+     * Generate a PDF for the specified resource.
+     */
+    public function pdf(PurchaseOrder $purchaseOrder)
+    {
+        $pdf = Pdf::loadView('admin.purchases-orders.pdf', [
+            'purchaseOrder' => $purchaseOrder,
+        ]);
+        return $pdf->download('comprobante-compra-' . $purchaseOrder->id . '.pdf');
     }
 }

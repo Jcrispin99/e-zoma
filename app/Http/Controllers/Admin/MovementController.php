@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Movement;
 use App\Models\Quote;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class MovementController extends Controller
 {
@@ -22,5 +25,16 @@ class MovementController extends Controller
     public function create()
     {
         return view('admin.movements.create');
+    }
+
+    /**
+     * Generate a PDF for the specified resource.
+     */
+    public function pdf(Movement $movement)
+    {
+        $pdf = Pdf::loadView('admin.movements.pdf', [
+            'movement' => $movement,
+        ]);
+        return $pdf->download('movimiento-' . $movement->id . '.pdf');
     }
 }

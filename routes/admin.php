@@ -33,16 +33,28 @@ Route::resource('attributes', AttributeController::class)->except(['show']);
 // compras
 Route::resource('suppliers', SupplierController::class)->except(['show']);
 Route::resource('purchases-orders', PurchaseOrderController::class)->only(['index', 'create']);
+Route::get('purchases-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'pdf'])->name('purchases-orders.pdf');
+
 Route::resource('purchases', PurchaseController::class)->only(['index', 'create']);
+Route::get('purchases/{purchase}/pdf', [PurchaseController::class, 'pdf'])->name('purchases.pdf');
 
 //ventas
 Route::resource('customers', CustomerController::class)->except(['show']);
+
 Route::resource('quotes', QuoteController::class)->only(['index', 'create']);
+Route::get('quotes/{quote}/pdf', [QuoteController::class, 'pdf'])->name('quotes.pdf');
+
 Route::resource('sales', SaleController::class)->only(['index', 'create']);
+Route::get('sales/{sale}/pdf', [SaleController::class, 'pdf'])->name('sales.pdf');
 
 //movimientos
 Route::resource('movements', MovementController::class)->only(['index', 'create']);
+Route::get('movements/{movement}/pdf', [MovementController::class, 'pdf'])->name('movements.pdf');
+
 Route::resource('transfers', TransferController::class)->only(['index', 'create']);
+Route::get('transfers/{transfer}/pdf', [TransferController::class, 'pdf'])->name('transfers.pdf');
+
+
 
 // Imagenes
 route::post('variants/{variant}/dropzone', [VariantController::class, 'dropzone'])->name('variants.dropzone');

@@ -55,4 +55,23 @@ class Variant extends Model
     {
         return $this->morphMany(Image::class, 'imageable');
     }
+
+    /**
+     * Get formatted attribute values for display
+     * Returns formatted string like "Color: Rojo, Talla: M" or empty string if no attributes
+     */
+    public function getFormattedAttributesAttribute(): string
+    {
+        $attributeValues = $this->attributeValues()->with('attribute')->get();
+        
+        if ($attributeValues->isEmpty()) {
+            return '';
+        }
+
+        $formatted = $attributeValues->map(function ($attributeValue) {
+            return $attributeValue->attribute->name . ': ' . $attributeValue->value;
+        })->implode(', ');
+
+        return $formatted;
+    }
 }

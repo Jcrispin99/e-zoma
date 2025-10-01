@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Quote;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class QuoteController extends Controller
 {
@@ -22,5 +23,16 @@ class QuoteController extends Controller
     public function create()
     {
         return view('admin.quotes.create');
+    }
+
+    /**
+     * Generate a PDF for the specified resource.
+     */
+    public function pdf(Quote $quote)
+    {
+        $pdf = Pdf::loadView('admin.quotes.pdf', [
+            'quote' => $quote,
+        ]);
+        return $pdf->download('cotizacion-' . $quote->id . '.pdf');
     }
 }

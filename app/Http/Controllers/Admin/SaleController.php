@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SaleController extends Controller
 {
@@ -22,5 +23,16 @@ class SaleController extends Controller
     public function create()
     {
         return view('admin.sales.create');
+    }
+
+    /**
+     * Generate a PDF for the specified resource.
+     */
+    public function pdf(Sale $sale)
+    {
+        $pdf = Pdf::loadView('admin.sales.pdf', [
+            'sale' => $sale,
+        ]);
+        return $pdf->download('comprobante-venta-' . $sale->id . '.pdf');
     }
 }

@@ -2,11 +2,13 @@
 
 namespace App\Livewire\Admin\Datatables;
 
+use App\Mail\PdfSend;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use App\Models\Purchase;
 use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Mail;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 use Rappasoft\LaravelLivewireTables\Views\Filters\MultiSelectFilter;
 
@@ -16,6 +18,14 @@ class PurchaseTable extends DataTableComponent
     {
         $this->setPrimaryKey('id');
         $this->setDefaultSort('id', 'desc');
+
+        $this->setConfigurableAreas(
+            [
+                'after-wrapper' => [
+                    'admin.mail.modal',
+                ],
+            ]
+        );
     }
 
     public function filters(): array
@@ -77,5 +87,44 @@ class PurchaseTable extends DataTableComponent
     public function builder(): Builder
     {
         return Purchase::query()->with(['supplier', 'warehouse']);
+    }
+
+    //Propiedades
+    public $form = [
+        'open' => false,
+        'document' => '',
+        'client' => '',
+        'email' => '',
+        'model' => null,
+        'view_pdf_patch' => 'admin.purchases.pdf',
+    ];
+
+    //Metodos
+    public function openModal(Purchase $purchase)
+    {
+        $this->form['open'] = true;
+        $this->form['document'] = 'Compra ' . ' ' . $purchase->serie . ' ' . $purchase->correlative;
+        $this->form['client'] =  $purchase->supplier->document_number . ' - ' . $purchase->supplier->name;
+        $this->form['email'] = $purchase->supplier->email;
+        $this->form['model'] = $purchase;
+    }
+
+    public function sendEmail()
+    {
+        $this->validate(
+            [
+                'form.email' => 'required|email',
+            ]
+        );
+
+        //Llamar a un mailable
+        Mail::to($this->form['email'])
+            ->send(new PdfSend($this->form));
+        $this->dispatch('swal', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'El email ha sido enviado correctamente',
+        ]);
+        $this->reset('form');
     }
 }

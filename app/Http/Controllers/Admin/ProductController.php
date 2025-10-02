@@ -119,4 +119,9 @@ class ProductController extends Controller
             'path' => $image->path,
         ]);
     }
+
+    public function import()
+    {
+        return view('admin.products.import');
+    }
 }

@@ -31,7 +31,7 @@ class SaleController extends Controller
     public function pdf(Sale $sale)
     {
         $pdf = Pdf::loadView('admin.sales.pdf', [
-            'sale' => $sale,
+            'model' => $sale,
         ]);
         return $pdf->download('comprobante-venta-' . $sale->id . '.pdf');
     }

@@ -15,14 +15,14 @@
 </head>
 <body>
 
-    <div class="title">Detalle de movimiento #{{ $movement->serie }}-{{ str_pad($movement->correlative, 4, '0', STR_PAD_LEFT) }}</div>
+    <div class="title">Detalle de movimiento #{{ $model->serie }}-{{ str_pad($model->correlative, 4, '0', STR_PAD_LEFT) }}</div>
 
     <div>
-        <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($movement->date)->format('d/m/Y') }}<br>
-        <strong>Tipo:</strong> {{ $movement->type == 1 ? 'Ingreso' : 'Salida' }}<br>
-        <strong>Almacén:</strong> {{ $movement->warehouse->name ?? '—' }}<br>
-        <strong>Motivo:</strong> {{ $movement->reason->name ?? '—' }}<br>
-        <strong>Observación:</strong> {{ $movement->observation ?? '—' }}
+        <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($model->date)->format('d/m/Y') }}<br>
+        <strong>Tipo:</strong> {{ $model->type == 1 ? 'Ingreso' : 'Salida' }}<br>
+        <strong>Almacén:</strong> {{ $model->warehouse->name ?? '—' }}<br>
+        <strong>Motivo:</strong> {{ $model->reason->name ?? '—' }}<br>
+        <strong>Observación:</strong> {{ $model->observation ?? '—' }}
     </div>
 
     <div class="section">
@@ -37,7 +37,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($movement->variants as $i => $variant)
+                @foreach ($model->variants as $i => $variant)
                     <tr>
                         <td>{{ $i + 1 }}</td>
                         <td>{{ $variant->product->name . ($variant->formatted_attributes ? ' (' . $variant->formatted_attributes . ')' : '') }}</td>
@@ -51,7 +51,7 @@
     </div>
 
     <div class="section" style="text-align: right;">
-        <strong>Total: S/ {{ number_format($movement->total, 2) }}</strong>
+        <strong>Total: S/ {{ number_format($model->total, 2) }}</strong>
     </div>
 
 </body>

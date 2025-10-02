@@ -15,13 +15,13 @@
 </head>
 <body>
 
-    <div class="title">Detalle de la Venta #{{ $sale->serie }}-{{ str_pad($sale->correlative, 4, '0', STR_PAD_LEFT) }}</div>
+    <div class="title">Detalle de la Venta #{{ $model->serie }}-{{ str_pad($model->correlative, 4, '0', STR_PAD_LEFT) }}</div>
 
     <div>
-        <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($sale->date)->format('d/m/Y') }}<br>
-        <strong>Cliente:</strong> {{ $sale->customer->name ?? '—' }}<br>
-        <strong>Almacén:</strong> {{ $sale->warehouse->name ?? '—' }}<br>
-        <strong>Observación:</strong> {{ $sale->observation ?? '—' }}
+        <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($model->date)->format('d/m/Y') }}<br>
+        <strong>Cliente:</strong> {{ $model->customer->name ?? '—' }}<br>
+        <strong>Almacén:</strong> {{ $model->warehouse->name ?? '—' }}<br>
+        <strong>Observación:</strong> {{ $model->observation ?? '—' }}
     </div>
 
     <div class="section">
@@ -36,7 +36,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($sale->variants as $i => $variant)
+                @foreach ($model->variants as $i => $variant)
                     <tr>
                         <td>{{ $i + 1 }}</td>
                         <td>{{ $variant->product->name . ($variant->formatted_attributes ? ' (' . $variant->formatted_attributes . ')' : '') }}</td>
@@ -50,7 +50,7 @@
     </div>
 
     <div class="section" style="text-align: right;">
-        <strong>Total: S/ {{ number_format($sale->total, 2) }}</strong>
+        <strong>Total: S/ {{ number_format($model->total, 2) }}</strong>
     </div>
 
 </body>

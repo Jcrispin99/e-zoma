@@ -31,7 +31,7 @@ class QuoteController extends Controller
     public function pdf(Quote $quote)
     {
         $pdf = Pdf::loadView('admin.quotes.pdf', [
-            'quote' => $quote,
+            'model' => $quote,
         ]);
         return $pdf->download('cotizacion-' . $quote->id . '.pdf');
     }

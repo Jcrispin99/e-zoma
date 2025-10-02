@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Admin\Datatables;
 
+use App\Mail\PdfSend;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Quote;
+use Illuminate\Support\Facades\Mail;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 
 class QuoteTable extends DataTableComponent
@@ -16,6 +18,14 @@ class QuoteTable extends DataTableComponent
     {
         $this->setPrimaryKey('id');
         $this->setDefaultSort('id', 'desc');
+
+        $this->setConfigurableAreas(
+            [
+                'after-wrapper' => [
+                    'admin.mail.modal',
+                ],
+            ]
+        );
     }
 
     public function filters(): array
@@ -62,5 +72,45 @@ class QuoteTable extends DataTableComponent
     public function builder(): Builder
     {
         return Quote::query()->with(['customer']);
+    }
+
+    //Propiedades
+    public $form = [
+        'open' => false,
+        'document' => '',
+        'client' => '',
+        'email' => '',
+        'model' => null,
+        'view_pdf_patch' => 'admin.quotes.pdf',
+    ];
+
+    //Metodos
+    public function openModal(Quote $quote)
+    {
+        $this->form['open'] = true;
+        $this->form['document'] = 'Cotización ' . ' ' . $quote->serie . ' ' . $quote->correlative;
+        $this->form['client'] =  $quote->customer->document_number . ' - ' . $quote->customer->name;
+        $this->form['email'] = $quote->customer->email;
+        $this->form['model'] = $quote;
+        $this->form['view_pdf_patch'] = 'admin.quotes.pdf';
+    }
+
+    public function sendEmail()
+    {
+        $this->validate(
+            [
+                'form.email' => 'required|email',
+            ]
+        );
+
+        //Llamar a un mailable
+        Mail::to($this->form['email'])
+            ->send(new PdfSend($this->form));
+        $this->dispatch('swal', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'El email ha sido enviado correctamente',
+        ]);
+        $this->reset('form');
     }
 }

@@ -25,6 +25,8 @@ Route::get('/', function () {
 // inventario
 Route::resource('categories', CategoryController::class)->except(['show']);
 Route::resource('products', ProductController::class)->except(['show']);
+Route::get('products/import', [ProductController::class, 'import'])->name('products.import');
+
 Route::resource('variants', VariantController::class)->except(['show', 'create', 'store']);
 Route::get('variants/{variant}/kardex', [VariantController::class, 'kardex'])->name('variants.kardex');
 Route::resource('warehouses', WarehouseController::class)->except(['show']);

@@ -2,10 +2,12 @@
 
 namespace App\Livewire\Admin\Datatables;
 
+use App\Mail\PdfSend;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\Sale;
+use Illuminate\Support\Facades\Mail;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 
 class SaleTable extends DataTableComponent
@@ -15,6 +17,15 @@ class SaleTable extends DataTableComponent
     public function configure(): void
     {
         $this->setPrimaryKey('id');
+        $this->setDefaultSort('id', 'desc');
+
+        $this->setConfigurableAreas(
+            [
+                'after-wrapper' => [
+                    'admin.mail.modal',
+                ],
+            ]
+        );
     }
 
     public function filters(): array
@@ -67,5 +78,45 @@ class SaleTable extends DataTableComponent
     public function builder(): Builder
     {
         return Sale::query()->with(['quote', 'customer', 'warehouse']);
+    }
+
+    //Propiedades
+    public $form = [
+        'open' => false,
+        'document' => '',
+        'client' => '',
+        'email' => '',
+        'model' => null,
+        'view_pdf_patch' => 'admin.sales.pdf',
+    ];
+
+    //Metodos
+    public function openModal(Sale $sale)
+    {
+        $this->form['open'] = true;
+        $this->form['document'] = 'Venta ' . ' ' . $sale->serie . ' ' . $sale->correlative;
+        $this->form['client'] =  $sale->customer->document_number . ' - ' . $sale->customer->name;
+        $this->form['email'] = $sale->customer->email;
+        $this->form['model'] = $sale;
+        $this->form['view_pdf_patch'] = 'admin.sales.pdf';
+    }
+
+    public function sendEmail()
+    {
+        $this->validate(
+            [
+                'form.email' => 'required|email',
+            ]
+        );
+
+        //Llamar a un mailable
+        Mail::to($this->form['email'])
+            ->send(new PdfSend($this->form));
+        $this->dispatch('swal', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'El email ha sido enviado correctamente',
+        ]);
+        $this->reset('form');
     }
 }

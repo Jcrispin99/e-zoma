@@ -15,12 +15,12 @@
 </head>
 <body>
 
-    <div class="title">Detalle de la Orden de Compra #{{ $quote->serie }}-{{ str_pad($quote->correlative, 4, '0', STR_PAD_LEFT) }}</div>
+    <div class="title">Detalle de la Cotización #{{ $model->serie }}-{{ str_pad($model->correlative, 4, '0', STR_PAD_LEFT) }}</div>
 
     <div>
-        <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($quote->date)->format('d/m/Y') }}<br>
-        <strong>Cliente:</strong> {{ $quote->customer->name ?? '—' }}<br>
-        <strong>Observación:</strong> {{ $quote->observation ?? '—' }}
+        <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($model->date)->format('d/m/Y') }}<br>
+        <strong>Cliente:</strong> {{ $model->customer->name ?? '—' }}<br>
+        <strong>Observación:</strong> {{ $model->observation ?? '—' }}
     </div>
 
     <div class="section">
@@ -35,7 +35,7 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($quote->variants as $i => $variant)
+                @foreach ($model->variants as $i => $variant)
                     <tr>
                         <td>{{ $i + 1 }}</td>
                         <td>{{ $variant->product->name . ($variant->formatted_attributes ? ' (' . $variant->formatted_attributes . ')' : '') }}</td>
@@ -49,7 +49,7 @@
     </div>
 
     <div class="section" style="text-align: right;">
-        <strong>Total: S/ {{ number_format($quote->total, 2) }}</strong>
+        <strong>Total: S/ {{ number_format($model->total, 2) }}</strong>
     </div>
 
 </body>

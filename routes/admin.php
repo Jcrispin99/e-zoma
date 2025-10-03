@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\MovementController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\AttributeController;
+use App\Http\Controllers\Admin\UserController;
 
 
 // Dashboard
@@ -22,6 +23,10 @@ use App\Http\Controllers\Admin\AttributeController;
 Route::get('/', function () {
     return view('admin.dashboard');
 })->name('dashboard');
+
+// Usuario 
+Route::resource('users', UserController::class)->except(['show']);
+
 // inventario
 Route::resource('categories', CategoryController::class)->except(['show']);
 Route::resource('products', ProductController::class)->except(['show']);
@@ -55,8 +60,6 @@ Route::get('movements/{movement}/pdf', [MovementController::class, 'pdf'])->name
 
 Route::resource('transfers', TransferController::class)->only(['index', 'create']);
 Route::get('transfers/{transfer}/pdf', [TransferController::class, 'pdf'])->name('transfers.pdf');
-
-
 
 // Imagenes
 route::post('variants/{variant}/dropzone', [VariantController::class, 'dropzone'])->name('variants.dropzone');

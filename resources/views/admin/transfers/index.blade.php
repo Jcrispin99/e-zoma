@@ -9,6 +9,7 @@
         'icon' => 'fa-regular fa-file-lines',
         'href' => route('admin.transfers.index'),
     ],
+    
 ]">
     <x-slot name="action">
         <x-wire-button href="{{ route('admin.transfers.create') }}" green>

@@ -150,7 +150,8 @@ $links = [
         'type' => 'link',
         'title' => 'Usuarios',
         'icon' => 'fa-solid fa-user',
-
+        'route' => 'admin.users.index',
+        'active' => 'admin.users.*',
     ],
     [
         'type' => 'link',

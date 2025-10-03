@@ -10,6 +10,7 @@ use Illuminate\Database\Seeder;
 use App\Models\Customer;
 use App\Models\Supplier;
 
+
 class DatabaseSeeder extends Seeder
 {
     /**
@@ -19,11 +20,6 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Jhamil Crispin',
-            'email' => 'j99crispin@gmail.com',
-            'password' => bcrypt('12345678'),
-        ]);
 
         $this->call([
             IdentitySeeder::class,
@@ -31,6 +27,7 @@ class DatabaseSeeder extends Seeder
             WarehouseSeeder::class,
             ReasonSeeder::class,
             AttributeSeeder::class,
+            RolesSeeder::class,
         ]);
 
         Customer::factory(50)->create();

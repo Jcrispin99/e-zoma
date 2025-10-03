@@ -16,6 +16,7 @@
         "livewire/livewire": "^3.6.4",
         "maatwebsite/excel": "^3.1",
         "rappasoft/laravel-livewire-tables": "^3.7",
+        "spatie/laravel-permission": "^6.21",
         "wireui/wireui": "^2.4"
     },
     "require-dev": {

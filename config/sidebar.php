@@ -141,10 +141,24 @@ $links = [
         'title' => 'Configuración',
     ],
     [
-        'type' => 'link',
+        'type' => 'group',
         'title' => 'Configuración',
         'icon' => 'fa-solid fa-gear',
+        'route' => '#',
+        'active' =>  ['admin.companies.*'],
+        'items' => [
+            [
+                'type' => 'link',
+                'title' => 'Empresas',
+                'route' => 'admin.companies.index',
+                'active' => 'admin.companies.*',
+            ],
+            [
+                'type' => 'link',
+                'title' => 'Transferencias',
 
+            ],
+        ],
     ],
     [
         'type' => 'link',

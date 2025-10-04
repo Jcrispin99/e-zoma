@@ -16,10 +16,12 @@ class WarehouseSeeder extends Seeder
         Warehouse::create([
             'name' => 'Almacén Central',
             'location' => 'Calle Principal 123, Ciudad',
+            'company_id' => 1,
         ]);
         Warehouse::create([
             'name' => 'Almacén Secundario',
             'location' => 'Avenida Secundaria 456, Ciudad',
+            'company_id' => 1,
         ]);
     }
 }

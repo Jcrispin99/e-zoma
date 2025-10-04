@@ -30,6 +30,8 @@ return new class extends Migration
 
             $table->foreignId('reason_id')->constrained()->onDelete('cascade');
 
+            $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

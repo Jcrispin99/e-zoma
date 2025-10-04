@@ -16,7 +16,7 @@ use App\Http\Controllers\Admin\MovementController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\UserController;
-
+use App\Http\Controllers\Admin\CompanyController;
 
 // Dashboard
 
@@ -66,3 +66,6 @@ route::post('variants/{variant}/dropzone', [VariantController::class, 'dropzone'
 route::post('products/{product}/dropzone', [ProductController::class, 'dropzone'])->name('products.dropzone');
 
 Route::delete('images/{image}', [ImageController::class, 'destroy'])->name('images.destroy');
+
+// Company
+Route::resource('companies', CompanyController::class)->except(['show']);

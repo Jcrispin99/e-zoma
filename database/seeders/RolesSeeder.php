@@ -174,10 +174,14 @@ class RolesSeeder extends Seeder
                 'read_permissions',
             ]);
 
-        User::factory()->create([
+        $user = User::factory()->create([
             'name' => 'Jhamil Crispin',
             'email' => 'j99crispin@gmail.com',
             'password' => bcrypt('12345678'),
-        ])->assignRole('admin');
+        ]);
+
+        $user->assignRole('admin');
+
+        $user->companies()->attach(1);
     }
 }

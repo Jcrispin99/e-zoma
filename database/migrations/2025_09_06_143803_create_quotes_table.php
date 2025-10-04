@@ -27,6 +27,8 @@ return new class extends Migration
 
             $table->string('observation')->nullable();
 
+            $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
+
             $table->timestamps();
         });
     }

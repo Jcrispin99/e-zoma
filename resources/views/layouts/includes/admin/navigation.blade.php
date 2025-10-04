@@ -14,10 +14,11 @@
         </a>
       </div>
       <div class="flex items-center">
+        <div class="ms-3 relative">
+                @livewire('admin.company.company-selector')
+            </div>
            <div class="ms-3 relative">
-            <div class="ms-3 relative">
-    @livewire('admin.company.company-selector')
-</div>
+            
 
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">

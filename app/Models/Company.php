@@ -46,6 +46,11 @@ class Company extends Model
         return $this->hasMany(Company::class, 'parent_id');
     }
 
+    public function isSubsidiary(): bool
+    {
+        return $this->parent_id !== null;
+    }
+    
     public function identity(): BelongsTo
     {
         return $this->belongsTo(Identity::class);

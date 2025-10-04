@@ -50,9 +50,14 @@ class Company extends Model
     {
         return $this->parent_id !== null;
     }
-    
+
     public function identity(): BelongsTo
     {
         return $this->belongsTo(Identity::class);
+    }
+
+    public function users()
+    {
+        return $this->belongsToMany(User::class);
     }
 }

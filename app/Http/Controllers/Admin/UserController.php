@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Company;
 use Illuminate\Http\Request;
 
 class UserController extends Controller
@@ -21,7 +22,8 @@ class UserController extends Controller
      */
     public function create()
     {
-        return view('admin.users.create');
+        $companies = Company::all();
+        return view('admin.users.create', compact('companies'));
     }
 
     /**
@@ -33,11 +35,18 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
+            'companies' => 'nullable|array',
+            'companies.*' => 'exists:companies,id',
         ]);
 
         $data['password'] = bcrypt($data['password']);
 
         $user = User::create($data);
+
+        // Asignar compañías al usuario
+        if (isset($data['companies'])) {
+            $user->companies()->sync($data['companies']);
+        }
 
         session()->flash('swalt', [
             'icon' => 'success',
@@ -61,7 +70,6 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-
         return view('admin.users.edit', compact('user'));
     }
 
@@ -74,6 +82,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8|confirmed',
+            'companies' => 'nullable|array',
+            'companies.*' => 'exists:companies,id',
         ]);
 
         if (!empty($data['password'])) {
@@ -83,6 +93,9 @@ class UserController extends Controller
         }
 
         $user->update($data);
+
+        // Actualizar compañías del usuario
+        $user->companies()->sync($data['companies'] ?? []);
 
         session()->flash('swalt', [
             'icon' => 'success',

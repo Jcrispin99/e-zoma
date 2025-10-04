@@ -33,6 +33,22 @@
 
         <x-wire-input label="Confirmar contraseña" name="password_confirmation" type="password" required placeholder="Confirme la contraseña del usuario" value="{{ old('password_confirmation') }}"/>
     </div>
+    
+     <!-- Selector de Compañías -->
+    <div class="mt-4">
+        <div class="mb-4">
+            <x-wire-select
+                label="Compañías"
+                placeholder="Selecciona una o más compañías"
+                multiselect
+                :options="$companies"
+                option-label="trade_name"
+                option-value="id"
+                wire:model.defer="userCompanies"
+            />
+        </div>
+    </div>
+    
     <div class="flex justify-end mt-4">
         <x-wire-button type="submit" blue>
             Crear

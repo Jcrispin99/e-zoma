@@ -17,9 +17,7 @@
         <div class="ms-3 relative">
                 @livewire('admin.company.company-selector')
             </div>
-           <div class="ms-3 relative">
-            
-
+        <div class="ms-3 relative">
                     <x-dropdown align="right" width="48">
                         <x-slot name="trigger">
                             @if (Laravel\Jetstream\Jetstream::managesProfilePhotos())
@@ -68,7 +66,7 @@
                             </form>
                         </x-slot>
                     </x-dropdown>
-                </div>
+        </div>
         </div>
     </div>
   </div>

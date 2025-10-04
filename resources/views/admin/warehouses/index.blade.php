@@ -10,11 +10,12 @@
         'href' => route('admin.warehouses.index'),
     ],
 ]">
+
     <x-slot name="action">
         <x-wire-button href="{{ route('admin.warehouses.create') }}" green>
             Nuevo
         </x-wire-button>
     </x-slot>
-    @livewire('admin.datatables.warehouse-table')
 
+    @livewire('admin.datatables.warehouse-table')
 </x-admin-layout>

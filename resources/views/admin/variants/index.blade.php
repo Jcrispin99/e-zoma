@@ -18,7 +18,7 @@
             }
 
             .image-product {
-                width: 50rem;
+                width: 2.5rem;
                 height: 2.5rem;
                 object-fit: cover;
                 object-position: center;

@@ -9,10 +9,15 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Movement;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 use Illuminate\Support\Facades\Mail;
+use App\Livewire\Traits\CompanyFilterable;
 
 class MovementTable extends DataTableComponent
 {
-    protected $model = Movement::class;
+    //protected $model = Movement::class;
+
+    use CompanyFilterable;
+
+    protected $listeners = ['company-changed' => '$refresh'];
 
     public function configure(): void
     {
@@ -73,8 +78,16 @@ class MovementTable extends DataTableComponent
 
     public function builder(): Builder
     {
-        return Movement::query()->with(['warehouse', 'reason']);
+        $query = Movement::query()->with(['warehouse', 'reason']);
+        $selectedCompanyIds = session()->get('selected_company_ids', []);
+
+        if (!empty($selectedCompanyIds)) {
+            $query->whereIn('movements.company_id', $selectedCompanyIds);
+        }
+
+        return $query;
     }
+
     //Propiedades
     public $form = [
         'open' => false,

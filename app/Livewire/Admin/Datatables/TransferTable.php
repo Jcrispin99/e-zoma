@@ -9,10 +9,14 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Transfer;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 use Illuminate\Support\Facades\Mail;
+use App\Livewire\Traits\CompanyFilterable;
 
 class TransferTable extends DataTableComponent
 {
-    protected $model = Transfer::class;
+    //protected $model = Transfer::class;
+    use CompanyFilterable;
+
+    protected $listeners = ['company-changed' => '$refresh'];
 
     public function configure(): void
     {
@@ -70,7 +74,15 @@ class TransferTable extends DataTableComponent
 
     public function builder(): Builder
     {
-        return Transfer::query()->with(['originWarehouse', 'destinationWarehouse']);
+        $query = Transfer::query()->with(['originWarehouse', 'destinationWarehouse']);
+
+        $selectedCompanyIds = session()->get('selected_company_ids', []);
+
+        if (!empty($selectedCompanyIds)) {
+            $query->whereIn('transfers.company_id', $selectedCompanyIds);
+        }
+
+        return $query;
     }
     //Propiedades
     public $form = [
@@ -79,7 +91,7 @@ class TransferTable extends DataTableComponent
         'client' => '',
         'email' => '',
         'model' => null,
-        'view_pdf_patch' => 'admin.quotes.pdf',
+        'view_pdf_patch' => 'admin.transfers.pdf',
     ];
 
     //Metodos

@@ -128,6 +128,17 @@ class TransferCreate extends Component
             ]
         );
 
+        $activeCompanyId = session('active_company_id');
+
+        if (!$activeCompanyId) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear una compra.',
+            ]);
+            return redirect()->back();
+        }
+
         $transfer = Transfer::create([
             'serie' => $this->serie,
             'correlative' => $this->correlative,
@@ -136,6 +147,7 @@ class TransferCreate extends Component
             'destination_warehouse_id' => $this->destination_warehouse_id,
             'total' => $this->total,
             'observation' => $this->observation,
+            'company_id' => $activeCompanyId,
         ]);
 
         foreach ($this->variants as $variant) {

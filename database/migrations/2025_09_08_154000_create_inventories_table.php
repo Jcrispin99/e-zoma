@@ -34,7 +34,7 @@ return new class extends Migration
 
             $table->morphs('inventoryable');
 
-            $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
+            //$table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
 
             $table->timestamps();
         });

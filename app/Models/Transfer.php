@@ -15,6 +15,7 @@ class Transfer extends Model
         'observation',
         'origin_warehouse_id',
         'destination_warehouse_id',
+        'company_id',
     ];
     protected $casts = [
         'date' => 'datetime',

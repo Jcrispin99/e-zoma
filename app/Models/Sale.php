@@ -16,6 +16,7 @@ class Sale extends Model
         'warehouse_id',
         'total',
         'observation',
+        'company_id',
     ];
 
     protected $casts = [

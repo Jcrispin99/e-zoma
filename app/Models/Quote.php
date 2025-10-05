@@ -14,6 +14,7 @@ class Quote extends Model
         'customer_id',
         'total',
         'observation',
+        'company_id',
     ];
     protected $casts = [
         'date' => 'datetime',

@@ -11,9 +11,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Mail;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 use Rappasoft\LaravelLivewireTables\Views\Filters\MultiSelectFilter;
+use App\Livewire\Traits\CompanyFilterable;
 
 class PurchaseTable extends DataTableComponent
 {
+    use CompanyFilterable;
+
+    protected $listeners = ['company-changed' => '$refresh'];
+
     public function configure(): void
     {
         $this->setPrimaryKey('id');
@@ -86,7 +91,15 @@ class PurchaseTable extends DataTableComponent
     }
     public function builder(): Builder
     {
-        return Purchase::query()->with(['supplier', 'warehouse']);
+        $query = Purchase::query()->with(['supplier', 'warehouse']);
+
+        $selectedCompanyIds = session()->get('selected_company_ids', []);
+
+        if (!empty($selectedCompanyIds)) {
+            $query->whereIn('purchases.company_id', $selectedCompanyIds);
+        }
+
+        return $query;
     }
 
     //Propiedades

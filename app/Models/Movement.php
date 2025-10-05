@@ -15,6 +15,7 @@ class Movement extends Model
         'total',
         'observation',
         'reason_id',
+        'company_id',
     ];
 
     protected $casts = [

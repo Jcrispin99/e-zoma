@@ -35,7 +35,7 @@
     @stack('css')
 </head>
 
-<body class="font-sans antialiased" wire:navigate>
+<body class="font-sans antialiased">
     @include('layouts.includes.admin.navigation')
     @include('layouts.includes.admin.sidebar')
 

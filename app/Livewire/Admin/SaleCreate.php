@@ -143,6 +143,17 @@ class SaleCreate extends Component
             ]
         );
 
+        $activeCompanyId = session('active_company_id');
+
+        if (!$activeCompanyId) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear una venta.',
+            ]);
+            return redirect()->back();
+        }
+
         $sale = Sale::create([
             'voucher_type' => $this->voucher_type,
             'serie' => $this->serie,
@@ -153,6 +164,7 @@ class SaleCreate extends Component
             'warehouse_id' => $this->warehouse_id,
             'total' => $this->total,
             'observation' => $this->observation,
+            'company_id' => $activeCompanyId,
         ]);
 
         foreach ($this->variants as $variant) {

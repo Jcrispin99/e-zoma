@@ -9,10 +9,15 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Sale;
 use Illuminate\Support\Facades\Mail;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
+use App\Livewire\Traits\CompanyFilterable;
 
 class SaleTable extends DataTableComponent
 {
-    protected $model = Sale::class;
+    use CompanyFilterable;
+
+    protected $listeners = ['company-changed' => '$refresh'];
+
+    //protected $model = Sale::class;
 
     public function configure(): void
     {
@@ -77,7 +82,15 @@ class SaleTable extends DataTableComponent
 
     public function builder(): Builder
     {
-        return Sale::query()->with(['quote', 'customer', 'warehouse']);
+        $query = Sale::query()->with(['quote', 'customer', 'warehouse']);
+
+        $selectedCompanyIds = session()->get('selected_company_ids', []);
+
+        if (!empty($selectedCompanyIds)) {
+            $query->whereIn('sales.company_id', $selectedCompanyIds);
+        }
+
+        return $query;
     }
 
     //Propiedades

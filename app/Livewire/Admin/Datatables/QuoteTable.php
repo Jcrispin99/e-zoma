@@ -9,9 +9,14 @@ use Illuminate\Database\Eloquent\Builder;
 use App\Models\Quote;
 use Illuminate\Support\Facades\Mail;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
+use App\Livewire\Traits\CompanyFilterable;
 
 class QuoteTable extends DataTableComponent
 {
+    use CompanyFilterable;
+
+    protected $listeners = ['company-changed' => '$refresh'];
+
     protected $model = Quote::class;
 
     public function configure(): void
@@ -71,7 +76,12 @@ class QuoteTable extends DataTableComponent
 
     public function builder(): Builder
     {
-        return Quote::query()->with(['customer']);
+        $query = Quote::query()->with(['customer']);
+        $selectedCompanyIds = session()->get('selected_company_ids', []);
+        if ($selectedCompanyIds) {
+            $query->whereIn('company_id', $selectedCompanyIds);
+        }
+        return $query;
     }
 
     //Propiedades

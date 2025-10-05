@@ -9,10 +9,15 @@ use Illuminate\Database\Eloquent\Builder;
 use Rappasoft\LaravelLivewireTables\Views\Filters\DateRangeFilter;
 use App\Mail\PdfSend;
 use Illuminate\Support\Facades\Mail;
+use App\Livewire\Traits\CompanyFilterable;
 
 
 class PurchaseOrderTable extends DataTableComponent
 {
+    use CompanyFilterable;
+
+    protected $listeners = ['company-changed' => '$refresh'];
+
     // protected $model = PurchaseOrder::class;
 
     public function configure(): void
@@ -76,7 +81,7 @@ class PurchaseOrderTable extends DataTableComponent
     }
     public function builder(): Builder
     {
-        return PurchaseOrder::query()->with(['supplier']);
+        return $this->applyCompanyFilter(PurchaseOrder::query()->with(['supplier']));
     }
 
     //Propiedades

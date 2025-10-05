@@ -105,6 +105,17 @@ class PurchaseOrderCreate extends Component
             ]
         );
 
+        $activeCompanyId = session('active_company_id');
+
+        if (!$activeCompanyId) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear una orden de compra.',
+            ]);
+            return;
+        }
+
         $purchaseOrder = PurchaseOrder::create([
             'voucher_type' => $this->voucher_type,
             'serie' => $this->serie,
@@ -113,6 +124,7 @@ class PurchaseOrderCreate extends Component
             'supplier_id' => $this->supplier_id,
             'total' => $this->total,
             'observation' => $this->observation,
+            'company_id' => $activeCompanyId,
         ]);
 
         foreach ($this->variants as $variant) {

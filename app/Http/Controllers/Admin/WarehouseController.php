@@ -35,7 +35,19 @@ class WarehouseController extends Controller
             'location' => 'required|string|max:255',
         ]);
 
-        $warehouse = Warehouse::create($data);
+        $activeCompanyId = session('active_company_id');
+
+        if (!$activeCompanyId) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear un almacén.',
+            ]);
+            return redirect()->back();
+        }
+
+        $warehouse = Warehouse::create($data + ['company_id' => $activeCompanyId]);
+
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => 'Bien',

@@ -8,30 +8,16 @@ use App\Models\Company;
 
 class CompanySelector extends Component
 {
-    /**
-     * IDs de las compañías seleccionadas (visibles en la sesión)
-     */
+
     public $selectedCompanyIds = [];
 
-    /**
-     * ID de la compañía activa (donde se crean los registros)
-     */
     public $activeCompanyId;
 
-    /**
-     * Colección de todas las compañías (padres e hijas) 
-     * a las que el usuario tiene acceso
-     */
     public $companies;
 
-    /**
-     * Nombre de la compañía principal a mostrar
-     */
+
     public $mainCompanyName;
 
-    /**
-     * Se ejecuta cuando el componente se carga por primera vez.
-     */
     public function mount()
     {
         // Cargar todas las compañías del usuario (padres e hijas en una sola colección)
@@ -154,6 +140,7 @@ class CompanySelector extends Component
             'selected_companies' => $this->selectedCompanyIds,
             'active_company' => $this->activeCompanyId,
         ]);
+        $this->js('window.location.reload()');
     }
 
     /**

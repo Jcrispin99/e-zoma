@@ -43,7 +43,11 @@ Route::post('/customers', function (Request $request) {
 })->name('api.customers.index');
 
 Route::post('/warehouses', function (Request $request) {
+    $selectedCompanyIds = $request->input('company_ids', []);
     return Warehouse::select('id', 'name', 'location as description')
+        ->when(!empty($selectedCompanyIds), function ($query) use ($selectedCompanyIds) {
+            $query->whereIn('company_id', $selectedCompanyIds);
+        })
         ->when($request->search, function ($query, $search) {
             $query->where('name', 'like', "{$search}")
                 ->orWhere('location', 'like', "{$search}");

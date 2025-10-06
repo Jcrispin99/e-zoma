@@ -38,6 +38,9 @@
                     :async-data="[
                         'api' => route('api.warehouse.index'),
                         'method' => 'POST',
+                            'params' => [
+                                'company_ids' => session()->get('selected_company_ids', [])
+                            ]
                     ]" option-label="name" option-value="id" class="flex-1"
                     option-description="description" :disabled="count($variants)" />
 
@@ -47,6 +50,7 @@
                         'method' => 'POST',
                         'params' => [
                             'exclude' => $this->origin_warehouse_id,
+                            'company_ids' => session()->get('selected_company_ids', [])
                         ],
                     ]" option-label="name" option-value="id" class="flex-1"
                     option-description="description" />

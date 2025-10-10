@@ -2,9 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
-// Route::get('/', function () {
-//     return view('welcome');
-// });
+use App\Http\Controllers\PosController;
+
+Route::get('/pos', PosController::class);
+
 Route::redirect('/', '/admin');
 
 Route::middleware([

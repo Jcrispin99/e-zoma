@@ -144,7 +144,7 @@ onUnmounted(() => {
 
             <!-- Products Section - Izquierda -->
             <div class="flex-1 overflow-hidden">
-                <ProductList @add-to-cart="addToCart" />
+                <router-view @add-to-cart="addToCart" />
             </div>
         </div>
     </div>

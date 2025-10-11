@@ -39,7 +39,9 @@ export function useCart() {
         if (!product || typeof product !== "object") {
             throw new Error(ERROR_MESSAGES.INVALID_PRODUCT);
         }
-        if (!product.id || !product.name || typeof product.price !== "number") {
+        // Verificamos que el precio no sea nulo o indefinido, en lugar de verificar estrictamente el tipo.
+        // Los precios de la API pueden venir como strings ("10.50") y `typeof` fallaría.
+        if (!product.id || !product.name || product.price == null) {
             throw new Error(ERROR_MESSAGES.INVALID_PRODUCT);
         }
         return true;
@@ -78,7 +80,7 @@ export function useCart() {
                 cartItems.value.push({
                     id: product.id,
                     name: product.name,
-                    price: product.price,
+                    price: parseFloat(product.price), // Aseguramos que el precio sea un número
                     quantity: 1,
                     details: product.details || product.description || "",
                 });
@@ -106,7 +108,7 @@ export function useCart() {
             }
 
             item.quantity = validQuantity;
-            
+
             // Marcar este producto como el último modificado para mantener selección
             lastModifiedProductId.value = productId;
         } catch (err) {

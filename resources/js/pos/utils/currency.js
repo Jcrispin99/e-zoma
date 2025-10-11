@@ -12,7 +12,9 @@ export function formatCurrency(
     currency = POS_CONFIG.CURRENCY,
     locale = POS_CONFIG.LOCALE
 ) {
-    if (typeof value !== "number" || isNaN(value)) {
+    const numericValue = Number(value);
+
+    if (isNaN(numericValue)) {
         return formatCurrency(0, currency, locale);
     }
 
@@ -22,10 +24,10 @@ export function formatCurrency(
             currency: currency,
             minimumFractionDigits: 2,
             maximumFractionDigits: 2,
-        }).format(value);
+        }).format(numericValue);
     } catch (error) {
         console.error("Error formatting currency:", error);
-        return `${currency} ${value.toFixed(2)}`;
+        return `${currency} ${numericValue.toFixed(2)}`;
     }
 }
 

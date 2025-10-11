@@ -320,7 +320,7 @@ onUnmounted(() => {
                                     d="M9 5l7 7-7 7"
                                 />
                             </svg>
-                            <span class="text-sm font-medium text-black"
+                            <span class="text-sm font-medium text-white"
                                 >Pago</span
                             >
                         </div>

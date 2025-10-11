@@ -9,8 +9,11 @@ use App\Http\Controllers\Api\QuoteController;
 use App\Http\Controllers\Api\ReasonController;
 use App\Http\Controllers\Api\AttributeController;
 use App\Http\Controllers\Api\AttributeValueController;
+use App\Http\Controllers\Api\CategoryController;
 use Illuminate\Support\Facades\Route;
 
+
+Route::apiResource('categories', CategoryController::class);
 
 Route::post('/suppliers', [SupplierController::class, 'index'])->name('api.suppliers.index');
 
@@ -19,6 +22,8 @@ Route::post('/customers', [CustomerController::class, 'index'])->name('api.custo
 Route::post('/warehouses', [WarehouseController::class, 'index'])->name('api.warehouse.index');
 
 Route::post('/product', [VariantController::class, 'index'])->name('api.product.index');
+
+Route::post('/product-pos', [VariantController::class, 'getVariantsPos'])->name('api.product.getVariantsPos');
 
 Route::post('/purchase-orders', [PurchaseOrderController::class, 'index'])->name('api.purchase-orders.index');
 

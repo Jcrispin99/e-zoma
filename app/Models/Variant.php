@@ -57,21 +57,12 @@ class Variant extends Model
     }
 
     /**
-     * Get formatted attribute values for display
-     * Returns formatted string like "Color: Rojo, Talla: M" or empty string if no attributes
+     * Accesor para obtener el nombre completo de la variante.
+     * Combina el nombre del producto con los valores de los atributos.
+     *
+     * IMPORTANTE: Para un rendimiento óptimo, asegúrate de cargar las relaciones
+     * 'product' y 'attributeValues' con Eager Loading (->with(['product', 'attributeValues'])).
+     *
+     * @return \Illuminate\Database\Eloquent\Casts\Attribute
      */
-    public function getFormattedAttributesAttribute(): string
-    {
-        $attributeValues = $this->attributeValues()->with('attribute')->get();
-        
-        if ($attributeValues->isEmpty()) {
-            return '';
-        }
-
-        $formatted = $attributeValues->map(function ($attributeValue) {
-            return $attributeValue->attribute->name . ': ' . $attributeValue->value;
-        })->implode(', ');
-
-        return $formatted;
-    }
 }

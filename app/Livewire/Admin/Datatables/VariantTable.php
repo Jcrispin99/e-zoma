@@ -17,7 +17,7 @@ class VariantTable extends DataTableComponent
     public function configure(): void
     {
         $this->setPrimaryKey('id');
-
+        $this->setDefaultSort('id', 'desc');
         $this->setConfigurableAreas(
             [
                 'after-wrapper' => [
@@ -46,6 +46,18 @@ class VariantTable extends DataTableComponent
                 ->sortable()
                 ->searchable()
                 ->format(fn($value, $row) => $value . ' - '),
+            Column::make("Atributos")
+                ->label(function ($row, Column $column) {
+                    return $row->attributeValues->map(function ($attributeValue) {
+                        return $attributeValue->value;
+                    })->implode(' / ');
+                })
+                ->searchable(function (Builder $query, $searchTerm) {
+                    $query->orWhereHas('attributeValues', function ($query) use ($searchTerm) {
+                        $query->where('value', 'like', '%' . $searchTerm . '%');
+                    });
+                })
+                ->html(),
             Column::make("Sku", "sku")
                 ->sortable(),
             Column::make("Precio", "price")
@@ -71,7 +83,7 @@ class VariantTable extends DataTableComponent
     }
     public function builder(): Builder
     {
-        return Variant::query()->with(['product', 'images']);
+        return Variant::query()->with(['product', 'images', 'attributeValues']);
     }
 
     //propiedades

@@ -13,18 +13,30 @@ class VariantController extends Controller
      */
     public function index(Request $request)
     {
-        return Variant::query()
-            ->select('variants.id', 'products.name as name')
-            ->join('products', 'products.id', '=', 'variants.product_id')
+        $variants = Variant::query()
+            ->with(['product', 'attributeValues'])
             ->when($request->search, function ($query, $search) {
-                $query->where('products.name', 'like', "%{$search}%")
-                    ->orWhere('variants.sku', 'like', "%{$search}%");
+                $query->where('sku', 'like', "%{$search}%")
+                    ->orWhereHas('product', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('attributeValues', function ($q) use ($search) {
+                        $q->where('value', 'like', "%{$search}%");
+                    });
             })
             ->when(
                 $request->exists('selected'),
                 fn($query) => $query->whereIn('variants.id', $request->input('selected', [])),
                 fn($query) => $query->limit(10)
             )->get();
+
+        // 3. Transformar el resultado para la API
+        return $variants->map(function ($variant) {
+            $attributesString = $variant->attributeValues->pluck('value')->implode(' - ');
+            $name = $variant->product->name . ($attributesString ? ' - ' . $attributesString : '');
+
+            return ['id' => $variant->id, 'name' => $name];
+        });
     }
 
     /**

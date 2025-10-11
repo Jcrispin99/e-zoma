@@ -30,12 +30,8 @@ class VariantController extends Controller
                 fn($query) => $query->limit(10)
             )->get();
 
-        // 3. Transformar el resultado para la API
         return $variants->map(function ($variant) {
-            $attributesString = $variant->attributeValues->pluck('value')->implode(' - ');
-            $name = $variant->product->name . ($attributesString ? ' - ' . $attributesString : '');
-
-            return ['id' => $variant->id, 'name' => $name];
+            return ['id' => $variant->id, 'name' => $variant->fullName];
         });
     }
 

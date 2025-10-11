@@ -88,7 +88,7 @@ class TransferCreate extends Component
 
         $this->variants[] = [
             'id' => $variant->id,
-            'name' => $variant->product->name,
+            'name' => $variant->fullName,
             'quantity' => 1,
             'price' => $lastRecord['cost'],
             'subtotal' => $lastRecord['cost'],

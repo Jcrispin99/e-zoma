@@ -90,7 +90,7 @@ class MovementCreate extends Component
 
         $this->variants[] = [
             'id' => $variant->id,
-            'name' => $variant->product->name,
+            'name' => $variant->fullName,
             'quantity' => 1,
             'price' => $costBalance,
             'subtotal' => 1 * $costBalance,

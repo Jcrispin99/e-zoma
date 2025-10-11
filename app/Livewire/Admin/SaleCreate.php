@@ -106,7 +106,7 @@ class SaleCreate extends Component
 
         $this->variants[] = [
             'id' => $variant->id,
-            'name' => $variant->product->name,
+            'name' => $variant->fullName,
             'quantity' => 1,
             'price' => $variant->price,
             'subtotal' => $variant->price,

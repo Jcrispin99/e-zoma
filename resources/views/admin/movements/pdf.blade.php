@@ -40,7 +40,7 @@
                 @foreach ($model->variants as $i => $variant)
                     <tr>
                         <td>{{ $i + 1 }}</td>
-                        <td>{{ $variant->product->name . ($variant->formatted_attributes ? ' (' . $variant->formatted_attributes . ')' : '') }}</td>
+                        <td>{{ $variant->fullName }}</td>
                         <td>{{ $variant->pivot->quantity }}</td>
                         <td>S/ {{ number_format($variant->pivot->price, 2) }}</td>
                         <td>S/ {{ number_format($variant->pivot->subtotal, 2) }}</td>

@@ -1,6 +1,6 @@
 <div>
 
-    <x-wire-alert title="{{ $variant->product->name }}" info class="mb-6">
+    <x-wire-alert title="{{ $variant->fullName }}" info class="mb-6">
         <x-slot name="slot" class="italic">
             <p>
                 <span>SKU:</span>

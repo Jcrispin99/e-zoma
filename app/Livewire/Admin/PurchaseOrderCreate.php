@@ -72,7 +72,7 @@ class PurchaseOrderCreate extends Component
 
         $this->variants[] = [
             'id' => $variant->id,
-            'name' => $variant->product->name,
+            'name' => $variant->fullName,
             'quantity' => 1,
             'price' => 0,
             'subtotal' => 0,

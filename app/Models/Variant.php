@@ -65,4 +65,17 @@ class Variant extends Model
      *
      * @return \Illuminate\Database\Eloquent\Casts\Attribute
      */
+    public function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if (!$this->relationLoaded('product') || !$this->relationLoaded('attributeValues')) {
+                    $this->load('product', 'attributeValues');
+                }
+
+                $attributesString = $this->attributeValues->pluck('value')->implode(' - ');
+                return $this->product->name . ($attributesString ? ' - ' . $attributesString : '');
+            }
+        );
+    }
 }

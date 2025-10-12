@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Variant extends Model
 {
@@ -77,5 +78,10 @@ class Variant extends Model
                 return $this->product->name . ($attributesString ? ' - ' . $attributesString : '');
             }
         );
+    }
+
+    public function posOrderLines(): HasMany
+    {
+        return $this->hasMany(PosOrderLine::class);
     }
 }

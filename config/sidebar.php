@@ -134,7 +134,27 @@ $links = [
         'type' => 'group',
         'title' => 'Reportes',
         'icon' => 'fa-solid fa-chart-line',
-
+    ],
+    [
+        'type' => 'group',
+        'title' => 'Pos',
+        'icon' => 'fa-solid fa-chart-line',
+        'route' => '#',
+        'active' => ['admin.posconfig.*'],
+        'items' => [
+            [
+                'type' => 'link',
+                'title' => 'Punto de venta',
+                'route' => 'admin.posconfig.index',
+                'active' => 'admin.posconfig.*',
+            ],
+            [
+                'type' => 'link',
+                'title' => 'Secuencias',
+                'route' => 'admin.sequences.index',
+                'active' => 'admin.sequences.*',
+            ],
+        ],
     ],
     [
         'type' => 'header',

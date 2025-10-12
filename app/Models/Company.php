@@ -60,4 +60,9 @@ class Company extends Model
     {
         return $this->belongsToMany(User::class);
     }
+
+    public function posConfigs(): HasMany
+    {
+        return $this->hasMany(PosConfig::class);
+    }
 }

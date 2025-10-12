@@ -17,7 +17,8 @@ use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CompanyController;
-
+use App\Http\Controllers\Admin\PosConfigController;
+use App\Http\Controllers\Admin\SequenceController;
 // Dashboard
 
 Route::get('/', function () {
@@ -60,6 +61,12 @@ Route::get('movements/{movement}/pdf', [MovementController::class, 'pdf'])->name
 
 Route::resource('transfers', TransferController::class)->only(['index', 'create']);
 Route::get('transfers/{transfer}/pdf', [TransferController::class, 'pdf'])->name('transfers.pdf');
+
+// POS
+Route::resource('posconfig', PosConfigController::class)->except(['show']);
+Route::resource('sequences', SequenceController::class)->except(['show']);
+
+
 
 // Imagenes
 route::post('variants/{variant}/dropzone', [VariantController::class, 'dropzone'])->name('variants.dropzone');

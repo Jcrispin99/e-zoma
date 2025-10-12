@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Warehouse extends Model
 {
@@ -15,5 +16,10 @@ class Warehouse extends Model
     public function inventories()
     {
         return $this->hasMany(Inventory::class);
+    }
+
+    public function posConfigs(): HasMany
+    {
+        return $this->hasMany(PosConfig::class);
     }
 }

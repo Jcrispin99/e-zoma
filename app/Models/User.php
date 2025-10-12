@@ -10,6 +10,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
 use Laravel\Jetstream\HasProfilePhoto;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class User extends Authenticatable
 {
@@ -70,5 +71,10 @@ class User extends Authenticatable
     public function companies()
     {
         return $this->belongsToMany(Company::class, 'company_user');
+    }
+
+    public function posSessions(): HasMany
+    {
+        return $this->hasMany(PosSession::class);
     }
 }

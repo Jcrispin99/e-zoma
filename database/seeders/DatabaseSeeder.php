@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             ReasonSeeder::class,
             AttributeSeeder::class,
             RolesSeeder::class,
+            SequenceSeeder::class,
         ]);
 
         Customer::factory(50)->create();

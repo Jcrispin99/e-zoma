@@ -13,15 +13,13 @@ return new class extends Migration
     {
         Schema::create('sequences', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('prefix');
-            $table->integer('sequence_size');
+            $table->integer('sequence_size')->default(8);
             $table->integer('step')->default(1);
             $table->integer('next_number')->default(1);
             $table->timestamps();
         });
     }
-
+    // 
     /**
      * Reverse the migrations.
      */

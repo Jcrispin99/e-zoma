@@ -29,6 +29,8 @@ return new class extends Migration
 
             $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
 
+            $table->unique(['serie', 'correlative']);
+
             $table->timestamps();
         });
     }

@@ -21,8 +21,6 @@
             @csrf
             @method('put')
 
-            <x-wire-input label="Nombre" name="name" placeholder="Facturas de Venta" value="{{ old('name', $sequence->name) }}" />
-            <x-wire-input label="Prefijo" name="prefix" placeholder="F001-" value="{{ old('prefix', $sequence->prefix) }}" />
             <x-wire-input label="Tamaño de la secuencia" name="sequence_size" placeholder="e.g. 5" type="number" min="1" value="{{ old('sequence_size', $sequence->sequence_size) }}" />
             <x-wire-input label="Paso" name="step" type="number" value="{{ old('step', $sequence->step) }}" />
             <x-wire-input label="Siguiente número" name="next_number" type="number" value="{{ old('next_number', $sequence->next_number) }}" />

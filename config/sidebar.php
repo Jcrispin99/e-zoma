@@ -148,12 +148,6 @@ $links = [
                 'route' => 'admin.posconfig.index',
                 'active' => 'admin.posconfig.*',
             ],
-            [
-                'type' => 'link',
-                'title' => 'Secuencias',
-                'route' => 'admin.sequences.index',
-                'active' => 'admin.sequences.*',
-            ],
         ],
     ],
     [
@@ -165,7 +159,7 @@ $links = [
         'title' => 'Configuración',
         'icon' => 'fa-solid fa-gear',
         'route' => '#',
-        'active' =>  ['admin.companies.*'],
+        'active' =>  ['admin.companies.*', 'admin.sequences.*', 'admin.journals.*'],
         'items' => [
             [
                 'type' => 'link',
@@ -175,8 +169,15 @@ $links = [
             ],
             [
                 'type' => 'link',
-                'title' => 'Transferencias',
-
+                'title' => 'Diarios',
+                'route' => 'admin.journals.index',
+                'active' => 'admin.journals.*',
+            ],
+            [
+                'type' => 'link',
+                'title' => 'Secuencias',
+                'route' => 'admin.sequences.index',
+                'active' => 'admin.sequences.*',
             ],
         ],
     ],

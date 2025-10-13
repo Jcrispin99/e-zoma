@@ -5,12 +5,12 @@ namespace App\Livewire\Admin;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\Quote;
+use App\Services\SequenceService;
+use App\Models\Journal;
 
 class QuoteCreate extends Component
 {
     public $voucher_type = 1;
-    public $serie = 'Q001';
-    public $correlative;
 
     public $date;
     public $customer_id;
@@ -19,6 +19,39 @@ class QuoteCreate extends Component
 
     public $variant_id;
     public $variants = [];
+
+    public $journals;
+    public $journal_id;
+    public $correlative;
+
+    public function mount()
+    {
+        $this->date = now()->format('Y-m-d');
+        $this->variants = [];
+
+        $activeCompanyId = session('active_company_id');
+
+        $this->journals = Journal::where('type', 'quote')
+            ->where('company_id', $activeCompanyId)
+            ->get();
+
+        if ($this->journals->isNotEmpty()) {
+            $this->journal_id = $this->journals->first()->id;
+            $this->getCorrelative();
+        }
+    }
+
+    public function updatedJournalId()
+    {
+        $this->getCorrelative();
+    }
+
+    public function getCorrelative()
+    {
+        $journal = Journal::with('sequence')->find($this->journal_id);
+        $sequence = $journal->sequence;
+        $this->correlative = str_pad($sequence->next_number, $sequence->sequence_size, '0', STR_PAD_LEFT);
+    }
 
     public function boot()
     {
@@ -43,10 +76,6 @@ class QuoteCreate extends Component
                 ]);
             }
         });
-    }
-    public function mount()
-    {
-        $this->correlative = Quote::max('correlative') + 1;
     }
 
     public function addProduct()
@@ -116,10 +145,12 @@ class QuoteCreate extends Component
             return redirect()->back();
         }
 
+        $sequenceData = app(SequenceService::class)->getNextParts($this->journal_id);
+
         $quote = Quote::create([
             'voucher_type' => $this->voucher_type,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
+            'serie' => $sequenceData['serie'],
+            'correlative' => $sequenceData['correlative'],
             'date' => $this->date ?? now(),
             'customer_id' => $this->customer_id,
             'total' => $this->total,

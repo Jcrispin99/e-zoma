@@ -4,11 +4,11 @@ namespace App\Livewire\Admin\Datatables;
 
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
-use App\Models\Sequence;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\Journal;
 
-class SequenceTable extends DataTableComponent
+class JournalTable extends DataTableComponent
 {
+    protected $model = Journal::class;
 
     public function configure(): void
     {
@@ -20,20 +20,20 @@ class SequenceTable extends DataTableComponent
         return [
             Column::make("Id", "id")
                 ->sortable(),
-            Column::make('Journals', 'id')
-                ->label(fn($row) => $row->journals->pluck('code')->implode(', ')),
-            Column::make("Step", "step")
+            Column::make("Name", "name")
                 ->sortable(),
-            Column::make("Next number", "next_number")
+            Column::make("Code", "code")
+                ->sortable(),
+            Column::make("Type", "type")
+                ->sortable(),
+            Column::make("Sequence id", "sequence_id")
+                ->sortable(),
+            Column::make("Company id", "company_id")
                 ->sortable(),
             Column::make("Acciones")
                 ->label(function ($row, Column $column) {
-                    return view('admin.sequences.actions', ['sequence' => $row]);
+                    return view('admin.journals.actions', ['journal' => $row]);
                 })
         ];
-    }
-    public function builder(): Builder
-    {
-        return Sequence::query()->with(['journals']);
     }
 }

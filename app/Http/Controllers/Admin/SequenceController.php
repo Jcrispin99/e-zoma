@@ -30,9 +30,6 @@ class SequenceController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255|unique:sequences,name',
-            'description' => 'nullable|string',
-            'prefix' => 'required|string|max:255',
             'sequence_size' => 'required|integer|min:1',
             'step' => 'required|integer|min:1',
             'next_number' => 'required|integer|min:1',
@@ -43,7 +40,7 @@ class SequenceController extends Controller
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => '¡Bien hecho!',
-            'text' => 'Secuencia ' . $sequence->name . ' ha sido creada',
+            'text' => 'Secuencia ha sido creada',
         ]);
 
         return redirect()->route('admin.sequences.edit', $sequence);
@@ -63,9 +60,6 @@ class SequenceController extends Controller
     public function update(Request $request, Sequence $sequence)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255|unique:sequences,name,' . $sequence->id,
-            'description' => 'nullable|string',
-            'prefix' => 'required|string|max:255',
             'sequence_size' => 'required|integer|min:1',
             'step' => 'required|integer|min:1',
             'next_number' => 'required|integer|min:1',
@@ -76,7 +70,7 @@ class SequenceController extends Controller
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => '¡Bien hecho!',
-            'text' => 'Secuencia ' . $data['name'] . ' ha sido actualizada',
+            'text' => 'Secuencia ha sido actualizada',
         ]);
 
         return redirect()->route('admin.sequences.edit', $sequence);
@@ -89,7 +83,7 @@ class SequenceController extends Controller
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => '¡Bien hecho!',
-            'text' => 'Secuencia ' . $sequence->name . ' ha sido eliminada',
+            'text' => 'Secuencia ha sido eliminada',
         ]);
 
         return redirect()->route('admin.sequences.index');

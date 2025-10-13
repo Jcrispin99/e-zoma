@@ -19,6 +19,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\PosConfigController;
 use App\Http\Controllers\Admin\SequenceController;
+use App\Http\Controllers\Admin\JournalController;
+
 // Dashboard
 
 Route::get('/', function () {
@@ -64,9 +66,10 @@ Route::get('transfers/{transfer}/pdf', [TransferController::class, 'pdf'])->name
 
 // POS
 Route::resource('posconfig', PosConfigController::class)->except(['show']);
+
+// Diarios
+Route::resource('journals', JournalController::class)->except(['show']);
 Route::resource('sequences', SequenceController::class)->except(['show']);
-
-
 
 // Imagenes
 route::post('variants/{variant}/dropzone', [VariantController::class, 'dropzone'])->name('variants.dropzone');

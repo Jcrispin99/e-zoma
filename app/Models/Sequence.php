@@ -8,20 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Sequence extends Model
 {
     protected $fillable = [
-        'name',
-        'prefix',
         'sequence_size',
         'step',
         'next_number',
     ];
 
-    public function posConfigsForReceipts(): HasMany
+    public function journals(): HasMany
     {
-        return $this->hasMany(PosConfig::class, 'receipt_sequence_id');
-    }
-
-    public function posConfigsForInvoices(): HasMany
-    {
-        return $this->hasMany(PosConfig::class, 'invoice_sequence_id');
+        return $this->hasMany(Journal::class);
     }
 }

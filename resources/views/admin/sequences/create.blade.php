@@ -1,4 +1,4 @@
- <x-admin-layout title="Secuencias" :breadcrumbs="[
+<x-admin-layout title="Secuencias" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),
@@ -19,8 +19,6 @@
          <form action="{{ route('admin.sequences.store') }}" method="post" class="space-y-4">
 
              @csrf
-             <x-wire-input label="Nombre" name="name" placeholder="Facturas de Venta" />
-             <x-wire-input label="Prefijo" name="prefix" placeholder="F001-" />
              <x-wire-input label="Tamaño de la secuencia" name="sequence_size" placeholder="e.g. 5" type="number" min="1" />
              <x-wire-input label="Paso" name="step" type="number" value="1" />
              <x-wire-input label="Siguiente número" name="next_number" type="number" value="1" />

@@ -7,6 +7,11 @@ const routes = [
         name: "pos",
         component: ProductList,
     },
+    {
+        path: "/:id",
+        name: "pos-session",
+        component: ProductList,
+    },
 ];
 
 const router = createRouter({

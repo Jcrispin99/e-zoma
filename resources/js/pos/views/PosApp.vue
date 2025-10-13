@@ -1,9 +1,9 @@
 <script setup>
-import { computed, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import ProductList from "../components/ProductList.vue";
 import CartSidebar from "../components/CartSidebar.vue";
 import { useCart } from "../composables/useCart.js";
-import { SYSTEM_STATUS } from "../constants/index.js";
+import { useSessionStore } from "../stores/useSessionStore.js";
 
 // Usar el composable del carrito
 const {
@@ -17,17 +17,105 @@ const {
     clearError,
 } = useCart();
 
+// Store de sesión
+const sessionStore = useSessionStore();
+onMounted(() => {
+    sessionStore.initFromUrl();
+    sessionStore.bootstrap().then(() => {
+        if (
+            sessionStore.session &&
+            sessionStore.session.status === "open" &&
+            Number(sessionStore.session.opening_balance || 0) === 0
+        ) {
+            showOpeningModal.value = true;
+        }
+    });
+});
+
 // Estado de conexión del sistema
-const connectionStatus = computed(() => SYSTEM_STATUS.CONNECTED);
+const connectionStatus = computed(() => (sessionStore.online ? 'Conectado' : 'Desconectado'));
 
 // Limpiar errores cuando el componente se desmonte
 onUnmounted(() => {
     clearError();
 });
+
+// Modal de apertura
+const showOpeningModal = ref(false);
+const openingBalanceInput = ref("0");
+const openingError = ref(null);
+
+async function confirmOpeningBalance() {
+    openingError.value = null;
+    const value = Number(openingBalanceInput.value);
+    if (isNaN(value) || value < 0) {
+        openingError.value = "Monto inválido";
+        return;
+    }
+    try {
+        await sessionStore.setOpeningBalance(value);
+        showOpeningModal.value = false;
+    } catch (e) {
+        openingError.value = "No se pudo guardar el monto";
+    }
+}
+// Modal de cierre
+const showClosingModal = ref(false);
+const closingBalanceInput = ref("0");
+const closingError = ref(null);
+
+async function confirmClosingBalance() {
+    closingError.value = null;
+    const value = Number(closingBalanceInput.value);
+    if (isNaN(value) || value < 0) {
+        closingError.value = "Monto inválido";
+        return;
+    }
+    try {
+        await sessionStore.closeSession(value);
+        showClosingModal.value = false;
+        window.location.href = '/admin/posconfig';
+    } catch (e) {
+        closingError.value = "No se pudo cerrar la sesión";
+    }
+}
 </script>
 
 <template>
     <div class="h-screen flex flex-col bg-gray-50">
+        <!-- Modal Monto de Apertura -->
+        <div
+            v-if="showOpeningModal"
+            class="fixed inset-0 z-50 flex items-center justify-center"
+        >
+            <div class="absolute inset-0 bg-black/40"></div>
+            <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+                <h2 class="text-lg font-semibold mb-2">Monto de apertura</h2>
+                <p class="text-sm text-gray-600 mb-4">Ingresa el efectivo inicial en caja.</p>
+                <input
+                    v-model="openingBalanceInput"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="w-full border rounded px-3 py-2 mb-2"
+                />
+                <p v-if="openingError" class="text-sm text-red-600 mb-2">{{ openingError }}</p>
+                <div class="flex justify-end space-x-2">
+                    <button
+                        class="px-3 py-2 rounded bg-gray-200 text-gray-700"
+                        @click="showOpeningModal = false"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        class="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700"
+                        @click="confirmOpeningBalance"
+                    >
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
         <!-- Header -->
         <header class="bg-white border-b border-gray-200 px-6 py-4">
             <div class="flex items-center justify-between">
@@ -68,6 +156,13 @@ onUnmounted(() => {
 
                 <!-- User Profile and Settings -->
                 <div class="flex items-center space-x-4">
+                    <!-- Cerrar sesión POS -->
+                    <button
+                        class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 text-sm"
+                        @click="showClosingModal = true"
+                    >
+                        Cerrar sesión
+                    </button>
                     <!-- User Profile -->
                     <div class="flex items-center space-x-3">
                         <div class="text-right">
@@ -145,6 +240,40 @@ onUnmounted(() => {
             <!-- Products Section - Izquierda -->
             <div class="flex-1 overflow-hidden">
                 <router-view @add-to-cart="addToCart" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Monto de Cierre -->
+    <div
+        v-if="showClosingModal"
+        class="fixed inset-0 z-50 flex items-center justify-center"
+    >
+        <div class="absolute inset-0 bg-black/40"></div>
+        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h2 class="text-lg font-semibold mb-2">Monto de cierre</h2>
+            <p class="text-sm text-gray-600 mb-4">Ingresa el efectivo al cierre de caja.</p>
+            <input
+                v-model="closingBalanceInput"
+                type="number"
+                min="0"
+                step="0.01"
+                class="w-full border rounded px-3 py-2 mb-2"
+            />
+            <p v-if="closingError" class="text-sm text-red-600 mb-2">{{ closingError }}</p>
+            <div class="flex justify-end space-x-2">
+                <button
+                    class="px-3 py-2 rounded bg-gray-200 text-gray-700"
+                    @click="showClosingModal = false"
+                >
+                    Cancelar
+                </button>
+                <button
+                    class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+                    @click="confirmClosingBalance"
+                >
+                    Confirmar
+                </button>
             </div>
         </div>
     </div>

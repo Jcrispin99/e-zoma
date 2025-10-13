@@ -5,6 +5,9 @@ namespace App\Livewire\Admin\Datatables;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use App\Models\PosConfig;
+use App\Models\PosSession;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Carbon;
 
 class PosconfigTable extends DataTableComponent
 {
@@ -34,6 +37,31 @@ class PosconfigTable extends DataTableComponent
                 ->sortable(),
             Column::make("Is active", "is_active")
                 ->sortable(),
+            Column::make("Acciones")
+                ->label(function ($row, Column $column) {
+                    return view('admin.posconfig.actions', ['posconfig' => $row]);
+                })
         ];
+    }
+
+    public function openSession(int $posConfigId): void
+    {
+        $userId = Auth::id();
+        if (!$userId) {
+            return;
+        }
+
+        /** @var PosConfig $posConfig */
+        $posConfig = PosConfig::query()->findOrFail($posConfigId);
+
+        $session = PosSession::create([
+            'pos_config_id' => $posConfig->id,
+            'user_id' => $userId,
+            'status' => 'open',
+            'opening_balance' => 0,
+            'opened_at' => Carbon::now(),
+        ]);
+
+        $this->redirect('/pos/' . $session->id);
     }
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ReasonController;
 use App\Http\Controllers\Api\AttributeController;
 use App\Http\Controllers\Api\AttributeValueController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\PosSessionController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -34,3 +35,13 @@ Route::post('/reasons', [ReasonController::class, 'index'])->name('api.reasons.i
 Route::post('/attributes', [AttributeController::class, 'index'])->name('api.attributes.index');
 
 Route::post('/attribute-values/{attributeId}', [AttributeValueController::class, 'index'])->name('api.attribute-values.show');
+
+// Rutas de sesiones POS (protegidas por token si está disponible)
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('/pos-sessions/open', [PosSessionController::class, 'open'])->name('api.pos-sessions.open');
+    Route::get('/pos-sessions/{id}/bootstrap', [PosSessionController::class, 'bootstrap'])->name('api.pos-sessions.bootstrap');
+    Route::post('/pos-sessions/{id}/opening-balance', [PosSessionController::class, 'setOpeningBalance'])->name('api.pos-sessions.opening-balance');
+    Route::post('/pos-sessions/{id}/sync', [PosSessionController::class, 'sync'])->name('api.pos-sessions.sync');
+    Route::post('/pos-sessions/{id}/close', [PosSessionController::class, 'close'])->name('api.pos-sessions.close');
+    Route::get('/pos-sessions/{id}/summary', [PosSessionController::class, 'summary'])->name('api.pos-sessions.summary');
+});

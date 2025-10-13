@@ -7,6 +7,11 @@ export const useProductStore = defineStore("products", () => {
     const isLoading = ref(false);
     const error = ref(null);
 
+    function getXsrfToken() {
+        const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : null;
+    }
+
     async function fetchProducts(searchTerm = "", categoryId = null) {
         isLoading.value = true;
         error.value = null;
@@ -21,10 +26,22 @@ export const useProductStore = defineStore("products", () => {
                 params.append("category_id", categoryId);
             }
 
+            // Asegurar cookie CSRF para peticiones stateful
+            if (!getXsrfToken()) {
+                await fetch(`/sanctum/csrf-cookie`, { credentials: "include" });
+            }
+
+            const token = getXsrfToken();
+
             const response = await fetch(
                 `/api/product-pos?${params.toString()}`,
                 {
                     method: "POST",
+                    credentials: "include",
+                    headers: {
+                        Accept: "application/json",
+                        ...(token ? { "X-XSRF-TOKEN": token } : {}),
+                    },
                 }
             );
 

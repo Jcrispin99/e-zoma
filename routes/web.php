@@ -4,7 +4,9 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\PosController;
 
-Route::get('/pos/{posSession}', [PosController::class, '__invoke'])->name('pos.show');
+Route::get('/pos/{posSession}', [PosController::class, '__invoke'])
+    ->middleware(['auth'])
+    ->name('pos.show');
 
 Route::redirect('/', '/admin');
 

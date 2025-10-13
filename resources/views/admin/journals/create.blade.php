@@ -31,9 +31,9 @@
 
             <x-wire-native-select label="Compañía" name="company_id">
                 @foreach ($companies as $company)
-                    <option value="{{ $company->id }}" @selected(old('company_id') == $company->id)>
-                        {{ $company->name }}
-                    </option>
+                <option value="{{ $company->id }}" @selected(old('company_id')==$company->id)>
+                    {{ $company->name }}
+                </option>
                 @endforeach
             </x-wire-native-select>
 

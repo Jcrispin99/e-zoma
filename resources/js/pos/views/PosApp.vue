@@ -1,7 +1,10 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from "vue";
+import { useRoute } from "vue-router";
 import ProductList from "../components/ProductList.vue";
 import CartSidebar from "../components/CartSidebar.vue";
+import OpeningModal from "../components/modals/OpeningModal.vue";
+import ClosingModal from "../components/modals/ClosingModal.vue";
 import { useCart } from "../composables/useCart.js";
 import { useSessionStore } from "../stores/useSessionStore.js";
 
@@ -19,8 +22,15 @@ const {
 
 // Store de sesión
 const sessionStore = useSessionStore();
-onMounted(() => {
+onMounted(async () => {
     sessionStore.initFromUrl();
+    // Prefetch de cookie CSRF para asegurar estado stateful
+    try {
+        await fetch(`/sanctum/csrf-cookie`, { credentials: "include" });
+    } catch (e) {
+        // No bloquear el flujo si falla; el bootstrap manejará el estado
+        console.warn("No se pudo obtener CSRF cookie al inicio:", e);
+    }
     sessionStore.bootstrap().then(() => {
         if (
             sessionStore.session &&
@@ -34,6 +44,11 @@ onMounted(() => {
 
 // Estado de conexión del sistema
 const connectionStatus = computed(() => (sessionStore.online ? 'Conectado' : 'Desconectado'));
+
+// Ocultar el carrito en la ruta de checkout y toda la UI en recibo
+const route = useRoute();
+const isCheckout = computed(() => route.name === 'pos-checkout');
+const isReceipt = computed(() => route.name === 'pos-receipt');
 
 // Limpiar errores cuando el componente se desmonte
 onUnmounted(() => {
@@ -117,7 +132,7 @@ async function confirmClosingBalance() {
             </div>
         </div>
         <!-- Header -->
-        <header class="bg-white border-b border-gray-200 px-6 py-4">
+        <header v-if="!isReceipt" class="bg-white border-b border-gray-200 px-6 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
                     <!-- Logo/Title -->
@@ -147,7 +162,11 @@ async function confirmClosingBalance() {
 
                     <!-- Connection Status -->
                     <div class="flex items-center space-x-2">
-                        <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <div
+                            class="w-2 h-2 rounded-full"
+                            :class="sessionStore.online ? 'bg-green-400' : 'bg-red-400'"
+                            aria-label="Estado de conexión"
+                        ></div>
                         <span class="text-sm text-gray-600">{{
                             connectionStatus
                         }}</span>
@@ -221,9 +240,13 @@ async function confirmClosingBalance() {
         </header>
 
         <!-- Main Content -->
-        <div class="flex flex-1 overflow-hidden">
+        <div v-if="isReceipt" class="flex-1 overflow-auto">
+            <router-view />
+        </div>
+        <div v-else class="flex flex-1 overflow-hidden">
             <!-- Cart Sidebar - Derecha -->
             <div
+                v-if="!isCheckout"
                 class="w-[488px] border-l border-gray-200 bg-white flex-shrink-0"
             >
                 <CartSidebar
@@ -244,37 +267,21 @@ async function confirmClosingBalance() {
         </div>
     </div>
 
-    <!-- Modal Monto de Cierre -->
-    <div
-        v-if="showClosingModal"
-        class="fixed inset-0 z-50 flex items-center justify-center"
-    >
-        <div class="absolute inset-0 bg-black/40"></div>
-        <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-            <h2 class="text-lg font-semibold mb-2">Monto de cierre</h2>
-            <p class="text-sm text-gray-600 mb-4">Ingresa el efectivo al cierre de caja.</p>
-            <input
-                v-model="closingBalanceInput"
-                type="number"
-                min="0"
-                step="0.01"
-                class="w-full border rounded px-3 py-2 mb-2"
-            />
-            <p v-if="closingError" class="text-sm text-red-600 mb-2">{{ closingError }}</p>
-            <div class="flex justify-end space-x-2">
-                <button
-                    class="px-3 py-2 rounded bg-gray-200 text-gray-700"
-                    @click="showClosingModal = false"
-                >
-                    Cancelar
-                </button>
-                <button
-                    class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-                    @click="confirmClosingBalance"
-                >
-                    Confirmar
-                </button>
-            </div>
-        </div>
-    </div>
+    <!-- Modales -->
+    <OpeningModal
+        :show="showOpeningModal"
+        :value="openingBalanceInput"
+        :error="openingError"
+        @update:value="(v) => (openingBalanceInput = v)"
+        @close="showOpeningModal = false"
+        @confirm="confirmOpeningBalance"
+    />
+    <ClosingModal
+        :show="showClosingModal"
+        :value="closingBalanceInput"
+        :error="closingError"
+        @update:value="(v) => (closingBalanceInput = v)"
+        @close="showClosingModal = false"
+        @confirm="confirmClosingBalance"
+    />
 </template>

@@ -12,6 +12,7 @@ use App\Models\PosOrderLine;
 use App\Models\PosPayment;
 use App\Models\PosSession;
 use App\Models\Sale;
+use App\Models\Inventory;
 use App\Models\Variant;
 use App\Services\SequenceService;
 use Illuminate\Http\Request;
@@ -219,13 +220,16 @@ class PosSessionController extends Controller
                 $serie = null;
                 $correlative = null;
                 if ($journal) {
-                    [$serie, $correlative] = $sequenceService->getNextParts($journal->id);
+                    $parts = $sequenceService->getNextParts($journal->id);
+                    $serie = $parts['serie'] ?? null;
+                    $correlative = $parts['correlative'] ?? null;
                 }
 
                 // Crear Sale
                 /** @var Sale $sale */
                 $sale = new Sale();
-                $sale->voucher_type = $order['voucher_type'] === 'invoice' ? 'invoice' : 'receipt';
+                // Sales.voucher_type es entero: 1=receipt, 2=invoice
+                $sale->voucher_type = $order['voucher_type'] === 'invoice' ? 2 : 1;
                 $sale->serie = $serie;
                 $sale->correlative = $correlative;
                 $sale->date = now();
@@ -243,6 +247,43 @@ class PosSessionController extends Controller
                         'price' => $line['price'],
                         'subtotal' => $line['subtotal'],
                     ]);
+
+                    // Registrar movimiento de inventario (salida) por venta en el almacén de la config POS
+                    $prev = Inventory::query()
+                        ->where('variant_id', $line['variant_id'])
+                        ->where('warehouse_id', $posConfig->warehouse_id)
+                        ->orderByDesc('id')
+                        ->first();
+
+                    $prevQty = $prev?->quantity_balance ?? 0;
+                    $prevTotal = $prev?->total_balance ?? 0;
+
+                    $outQty = (int) $line['quantity'];
+                    $outTotal = (float) $line['subtotal'];
+
+                    $newQtyBal = max(0, $prevQty - $outQty);
+                    $newTotalBal = max(0, $prevTotal - $outTotal);
+                    $newCostBal = $newQtyBal > 0 ? $newTotalBal / $newQtyBal : 0;
+
+                    Inventory::create([
+                        'detail' => 'Salida por venta POS',
+                        'quantity_in' => 0,
+                        'cost_in' => 0,
+                        'total_in' => 0,
+                        'quantity_out' => $outQty,
+                        'cost_out' => (float) $line['price'],
+                        'total_out' => $outTotal,
+                        'quantity_balance' => $newQtyBal,
+                        'cost_balance' => $newCostBal,
+                        'total_balance' => $newTotalBal,
+                        'variant_id' => $line['variant_id'],
+                        'warehouse_id' => $posConfig->warehouse_id,
+                        'inventoryable_id' => $sale->id,
+                        'inventoryable_type' => Sale::class,
+                    ]);
+
+                    // Actualizar stock de la variante con el saldo
+                    Variant::query()->where('id', $line['variant_id'])->update(['stock' => $newQtyBal]);
                 }
 
                 $created[] = [

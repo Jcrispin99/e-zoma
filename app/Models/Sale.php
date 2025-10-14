@@ -17,6 +17,7 @@ class Sale extends Model
         'total',
         'observation',
         'company_id',
+        'pos_order_id',
     ];
 
     protected $casts = [

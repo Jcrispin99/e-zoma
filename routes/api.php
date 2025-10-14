@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AttributeController;
 use App\Http\Controllers\Api\AttributeValueController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PosSessionController;
+use App\Http\Controllers\Api\PaymentMethodController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -44,4 +45,5 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/pos-sessions/{id}/sync', [PosSessionController::class, 'sync'])->name('api.pos-sessions.sync');
     Route::post('/pos-sessions/{id}/close', [PosSessionController::class, 'close'])->name('api.pos-sessions.close');
     Route::get('/pos-sessions/{id}/summary', [PosSessionController::class, 'summary'])->name('api.pos-sessions.summary');
+    Route::get('/payment-methods', [PaymentMethodController::class, 'index'])->name('api.payment-methods.index');
 });

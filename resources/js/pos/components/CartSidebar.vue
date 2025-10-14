@@ -1,5 +1,7 @@
 <script setup>
 import { computed, ref, shallowRef, onUnmounted, watch } from "vue";
+import { useRouter, useRoute } from "vue-router";
+import { setCache } from "../composables/useCache.js";
 import { useKeypad } from "../composables/useKeypad.js";
 import { formatCurrency } from "../utils/currency.js";
 import { POS_CONFIG } from "../constants/index.js";
@@ -149,6 +151,23 @@ watch(
 onUnmounted(() => {
     cleanupKeypad();
 });
+
+// Navegar al checkout guardando resumen en cache
+const router = useRouter();
+const route = useRoute();
+function goToCheckout() {
+    try {
+        setCache("pos:checkout", {
+            items: props.cartItems,
+            subtotal: subtotal.value,
+            tax: tax.value,
+            total: total.value,
+        });
+        router.push({ name: "pos-checkout", params: { id: route.params.id } });
+    } catch (e) {
+        console.error("Error navegando a checkout:", e);
+    }
+}
 </script>
 
 <template>
@@ -305,6 +324,9 @@ onUnmounted(() => {
                     <!-- Pago Button -->
                     <button
                         class="flex-1 flex items-center justify-center text-white bg-purple-800"
+                        @click="goToCheckout"
+                        :disabled="cartItems.length === 0"
+                        aria-label="Ir a pago"
                     >
                         <div class="flex flex-col items-center space-y-1">
                             <svg

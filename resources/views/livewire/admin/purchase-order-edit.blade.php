@@ -33,21 +33,21 @@
             <div class="flex items-center gap-2">
                 <x-wire-badge :label="str($purchaseOrder->status)->upper()" :color="$purchaseOrder->status === 'draft' ? 'slate' : ($purchaseOrder->status === 'confirmed' ? 'blue' : ($purchaseOrder->status === 'done' ? 'emerald' : 'rose'))" />
                 @if($purchaseOrder->billing_status)
-                    <x-wire-badge :label="str($purchaseOrder->billing_status)->upper()" :color="$purchaseOrder->billing_status === 'complete' ? 'emerald' : ($purchaseOrder->billing_status === 'partial' ? 'amber' : 'slate')" />
+                <x-wire-badge :label="str($purchaseOrder->billing_status)->upper()" :color="$purchaseOrder->billing_status === 'complete' ? 'emerald' : ($purchaseOrder->billing_status === 'partial' ? 'amber' : 'slate')" />
                 @endif
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 @if ($purchaseOrder->status == 'draft')
-                    <x-wire-button light gray label="Confirmar Orden" wire:click="confirmOrder" />
-                    <x-wire-button light red label="Cancelar" wire:click="cancelOrder" />
+                <x-wire-button light gray label="Confirmar Orden" wire:click="confirmOrder" />
+                <x-wire-button light red label="Cancelar" wire:click="cancelOrder" />
                 @elseif ($purchaseOrder->status == 'confirmed')
-                    @if ($hasPurchase)
-                        <x-wire-button light gray label="Ver factura" wire:click="viewPurchase" />
-                    @else
-                        <x-wire-button light emerald label="Crear Compra" wire:click="createPurchase" />
-                    @endif
-                    <x-wire-button light red label="Cancelar" wire:click="cancelOrder" />
+                @if ($hasPurchase)
+                <x-wire-button light gray label="Ver factura" wire:click="viewPurchase" />
+                @else
+                <x-wire-button light emerald label="Crear Compra" wire:click="createPurchase" />
+                @endif
+                <x-wire-button light red label="Cancelar" wire:click="cancelOrder" />
                 @endif
 
                 <x-wire-button light gray label="Enviar OC por correo" wire:click="openModal({{ $purchaseOrder }})">

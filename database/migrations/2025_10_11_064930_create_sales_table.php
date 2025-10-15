@@ -27,6 +27,10 @@ return new class extends Migration
             $table->foreignId('customer_id')->constrained()->onDelete('cascade');
 
             $table->foreignId('warehouse_id')->constrained()->onDelete('cascade');
+            $table->foreignId('pos_order_id')
+                ->nullable()
+                ->constrained('pos_orders')
+                ->after('warehouse_id');
 
             $table->decimal('total', 10, 2)->default(0.00);
 

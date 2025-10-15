@@ -18,6 +18,7 @@ return new class extends Migration
             $table->integer('quantity');
             $table->decimal('price', 10, 2);
             $table->decimal('subtotal', 10, 2);
+            $table->decimal('tax_rate', 8, 2)->default(0.00);
             $table->timestamps();
         });
     }

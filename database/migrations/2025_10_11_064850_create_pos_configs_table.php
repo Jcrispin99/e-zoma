@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('pos_configs', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('company_id')->constrained()->after('id');
             $table->string('name');
             $table->foreignId('warehouse_id')->constrained('warehouses');
             $table->foreignId('receipt_sequence_id')->constrained('sequences');

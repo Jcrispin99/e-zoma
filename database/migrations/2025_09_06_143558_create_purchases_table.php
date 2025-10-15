@@ -34,7 +34,20 @@ return new class extends Migration
 
             $table->string('observation')->nullable();
 
+            // Estados de ciclo de compra y pago
+            $table->enum('status', ['draft', 'posted', 'cancelled'])->default('draft');
+            $table->enum('payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
+
+            // Datos de factura del proveedor (opcional)
+            $table->string('vendor_bill_number')->nullable();
+            $table->date('vendor_bill_date')->nullable();
+
             $table->timestamps();
+
+            // Índices y unicidad útil
+            $table->index(['status']);
+            $table->index(['payment_status']);
+            $table->unique(['company_id', 'voucher_type', 'serie', 'correlative'], 'purchase_unique_company_voucher_serie_corr');
         });
     }
 

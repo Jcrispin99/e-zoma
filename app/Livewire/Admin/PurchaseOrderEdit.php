@@ -9,10 +9,15 @@ use App\Models\Warehouse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PdfSend;
 
 class PurchaseOrderEdit extends Component
 {
     public PurchaseOrder $purchaseOrder;
+
+    public bool $hasPurchase = false;
+    public ?int $purchaseId = null;
 
     public $voucher_type = 1;
     public $serie = 'A';
@@ -25,6 +30,16 @@ class PurchaseOrderEdit extends Component
 
     public $variant_id;
     public $variants = [];
+
+    //Propiedades para el modal de envío de correo
+    public $form = [
+        'open' => false,
+        'document' => '',
+        'client' => '',
+        'email' => '',
+        'model' => null,
+        'view_pdf_patch' => 'admin.purchases-orders.pdf',
+    ];
 
     public function boot()
     {
@@ -47,7 +62,7 @@ class PurchaseOrderEdit extends Component
 
     public function mount(PurchaseOrder $purchaseOrder)
     {
-        $this->purchaseOrder = $purchaseOrder->load('variants.product', 'variants.attributeValues');
+        $this->purchaseOrder = $purchaseOrder->load('variants.product', 'variants.attributeValues', 'purchase');
 
         // Pre-cargar datos base
         $this->voucher_type = $purchaseOrder->voucher_type;
@@ -64,44 +79,31 @@ class PurchaseOrderEdit extends Component
                 'name' => $variant->fullName,
                 'quantity' => $variant->pivot->quantity,
                 'price' => $variant->pivot->price,
+                'tax_rate' => (int) $variant->pivot->tax_rate, // Forzar a entero para que coincida con el select
                 'subtotal' => $variant->pivot->subtotal,
             ];
         })->toArray();
 
+        // Cargar total
+        $this->total = $this->purchaseOrder->total;
 
-
-        // Calcular total inicial desde las líneas
-        $this->total = collect($this->variants)
-            ->reduce(fn($carry, $v) => $carry + ($v['quantity'] * $v['price']), 0);
+        // Detectar si ya existe una compra (factura) asociada
+        $this->hasPurchase = (bool) $this->purchaseOrder->purchase;
+        $this->purchaseId = optional($this->purchaseOrder->purchase)->id;
     }
 
     public function addProduct()
     {
-        $this->validate([
-            'variant_id' => 'required|exists:variants,id',
-        ], [], [
-            'variant_id' => 'producto',
-        ]);
+        $variant = Variant::find($this->variant_id);
 
-        $existing = collect($this->variants)->firstWhere('id', $this->variant_id);
-        if ($existing) {
-            $this->dispatch('swal', [
-                'icon' => 'warning',
-                'title' => 'El producto ya fue agregado',
-                'text' => 'El producto ya se encuentra en la fila',
-            ]);
-            return;
-        }
-
-        $variant = Variant::with('product')->find($this->variant_id);
         $this->variants[] = [
             'id' => $variant->id,
-            'name' => $variant->product->name,
+            'name' => $variant->fullName,
             'quantity' => 1,
-            'price' => 0,
-            'subtotal' => 0,
+            'price' => $variant->purchase_price ?? 0,
+            'tax_rate' => 18, // IGV por defecto
+            'subtotal' => $variant->purchase_price ?? 0,
         ];
-        $this->reset('variant_id');
     }
 
     public function save()
@@ -150,10 +152,12 @@ class PurchaseOrderEdit extends Component
         // Sincronizar líneas de la OC
         $syncData = [];
         foreach ($this->variants as $variant) {
+            $subtotal = $variant['quantity'] * $variant['price'];
             $syncData[$variant['id']] = [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
-                'subtotal' => $variant['quantity'] * $variant['price'],
+                'tax_rate' => $variant['tax_rate'],
+                'subtotal' => $subtotal,
             ];
         }
         $this->purchaseOrder->variants()->sync($syncData);
@@ -174,6 +178,92 @@ class PurchaseOrderEdit extends Component
         ]);
 
         return redirect()->route('admin.purchases-orders.index');
+    }
+
+    public function confirmOrder()
+    {
+        if ($this->purchaseOrder->status !== 'draft') {
+            return;
+        }
+
+        $this->purchaseOrder->update([
+            'status' => 'confirmed',
+            'confirmed_at' => now(),
+        ]);
+
+        $this->dispatch('swal', [
+            'icon' => 'success',
+            'title' => '¡Orden Confirmada!',
+            'text' => 'La orden de compra ha sido confirmada y ya no se puede editar.',
+        ]);
+    }
+
+    public function cancelOrder()
+    {
+        if ($this->purchaseOrder->status === 'done' || $this->purchaseOrder->status === 'cancelled') {
+            return;
+        }
+
+        $this->purchaseOrder->update([
+            'status' => 'cancelled',
+            'cancelled_at' => now(),
+        ]);
+
+        $this->dispatch('swal', [
+            'icon' => 'warning',
+            'title' => '¡Orden Cancelada!',
+            'text' => 'La orden de compra ha sido cancelada.',
+        ]);
+    }
+
+    public function createPurchase()
+    {
+        // Si ya existe factura asociada, redirigir a la edición de la compra
+        if ($this->hasPurchase && $this->purchaseId) {
+            return redirect('/admin/purchases/' . $this->purchaseId . '/edit');
+        }
+
+        // Redirigir a la página de creación de compras, pasando el ID de la orden de compra
+        return redirect()->route('admin.purchases.create', ['purchase_order_id' => $this->purchaseOrder->id]);
+    }
+
+    public function viewPurchase()
+    {
+        if (! $this->hasPurchase || ! $this->purchaseId) {
+            return;
+        }
+
+        // Redirigir a la edición de la compra existente (aunque ahora no exista la ruta/componente)
+        return redirect('/admin/purchases/' . $this->purchaseId . '/edit');
+    }
+
+    //Métodos para el modal de envío de correo
+    public function openModal(PurchaseOrder $purchaseOrder)
+    {
+        $this->form['open'] = true;
+        $this->form['document'] = 'Orden de Compra ' . ' ' . $purchaseOrder->serie . ' ' . $purchaseOrder->correlative;
+        $this->form['client'] =  $purchaseOrder->supplier->document_number . ' - ' . $purchaseOrder->supplier->name;
+        $this->form['email'] = $purchaseOrder->supplier->email;
+        $this->form['model'] = $purchaseOrder;
+    }
+
+    public function sendEmail()
+    {
+        $this->validate(
+            [
+                'form.email' => 'required|email',
+            ]
+        );
+
+        //Llamar a un mailable
+        Mail::to($this->form['email'])
+            ->send(new PdfSend($this->form));
+        $this->dispatch('swal', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'El email ha sido enviado correctamente',
+        ]);
+        $this->reset('form');
     }
 
     public function render()

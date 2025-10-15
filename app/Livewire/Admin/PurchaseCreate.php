@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Facades\Kardex;
 use App\Models\Purchase;
 use App\Models\Variant;
+use App\Models\Warehouse;
 use Livewire\Component;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,46 @@ class PurchaseCreate extends Component
 
     public $variant_id;
     public $variants = [];
+
+    public function mount($purchase_order_id = null)
+    {
+        $this->purchase_order_id = $purchase_order_id;
+        $this->date = now()->format('Y-m-d');
+
+        if ($this->purchase_order_id) {
+            $purchaseOrder = PurchaseOrder::find($this->purchase_order_id);
+            if ($purchaseOrder) {
+                $this->supplier_id = $purchaseOrder->supplier_id;
+                // El modelo PurchaseOrder no tiene warehouse_id, se asignará más abajo.
+
+                $purchaseOrder->load('supplier', 'variants');
+
+                $this->variants = $purchaseOrder->variants->map(function ($variant) {
+                    return [
+                        'id' => $variant->id,
+                        'name' => $variant->fullName,
+                        'quantity' => $variant->pivot->quantity,
+                        'price' => $variant->pivot->price,
+                        'tax_rate' => $variant->pivot->tax_rate,
+                        'subtotal' => $variant->pivot->subtotal,
+                    ];
+                })->toArray();
+            }
+        }
+
+        // Si después de la lógica anterior no hay un almacén,
+        // se asigna el primero de la compañía activa.
+        if (!$this->warehouse_id) {
+            $activeCompanyId = session('active_company_id');
+
+            if ($activeCompanyId) {
+                $firstWarehouse = Warehouse::where('company_id', $activeCompanyId)
+                    ->orderBy('id', 'asc')
+                    ->first();
+                $this->warehouse_id = $firstWarehouse?->id;
+            }
+        }
+    }
 
     public function boot()
     {
@@ -66,9 +107,10 @@ class PurchaseCreate extends Component
                 $this->variants = $purchaseOrder->variants->map(function ($variant) {
                     return [
                         'id' => $variant->id,
-                        'name' => $variant->product->name,
+                        'name' => $variant->fullName,
                         'quantity' => $variant->pivot->quantity,
                         'price' => $variant->pivot->price,
+                        'tax_rate' => $variant->pivot->tax_rate,
                         'subtotal' => $variant->pivot->subtotal,
                     ];
                 })->toArray();
@@ -106,6 +148,7 @@ class PurchaseCreate extends Component
             'name' => $variant->fullName,
             'quantity' => 1,
             'price' => $lastRecord['cost'],
+            'tax_rate' => 18,
             'subtotal' => $lastRecord['cost'] * 1,
         ];
         $this->reset('variant_id');
@@ -128,6 +171,7 @@ class PurchaseCreate extends Component
                 'variants.*.id' => 'required|exists:variants,id',
                 'variants.*.quantity' => 'required|numeric|min:1',
                 'variants.*.price' => 'required|numeric|min:0',
+                'variants.*.tax_rate' => 'required|numeric|min:0',
             ],
             [],
             [
@@ -137,6 +181,7 @@ class PurchaseCreate extends Component
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
                 'variants.*.price' => 'precio',
+                'variants.*.tax_rate' => 'IGV',
             ]
         );
 
@@ -168,6 +213,7 @@ class PurchaseCreate extends Component
             $purchase->variants()->attach($variant['id'], [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
+                'tax_rate' => $variant['tax_rate'],
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
 

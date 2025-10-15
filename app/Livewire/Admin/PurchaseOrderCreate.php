@@ -76,6 +76,7 @@ class PurchaseOrderCreate extends Component
             'name' => $variant->fullName,
             'quantity' => 1,
             'price' => 0,
+            'tax_rate' => 0, // Valor inicial para el impuesto
             'subtotal' => 0,
         ];
         $this->reset('variant_id');
@@ -94,6 +95,7 @@ class PurchaseOrderCreate extends Component
                 'variants.*.id' => 'required|exists:variants,id',
                 'variants.*.quantity' => 'required|numeric|min:1',
                 'variants.*.price' => 'required|numeric|min:0',
+                'variants.*.tax_rate' => 'required|numeric|in:0,10,18', // Validar impuesto
             ],
             [],
             [
@@ -103,6 +105,7 @@ class PurchaseOrderCreate extends Component
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
                 'variants.*.price' => 'precio',
+                'variants.*.tax_rate' => 'impuesto', // Mensaje para impuesto
             ]
         );
 
@@ -117,13 +120,20 @@ class PurchaseOrderCreate extends Component
             return;
         }
 
+        // Calcular el total en el backend para seguridad
+        $totalCalculado = 0;
+        foreach ($this->variants as $variant) {
+            $subtotal = $variant['quantity'] * $variant['price'];
+            $totalCalculado += $subtotal * (1 + $variant['tax_rate'] / 100);
+        }
+
         $purchaseOrder = PurchaseOrder::create([
             'voucher_type' => $this->voucher_type,
             'serie' => $this->serie,
             'correlative' => $this->correlative,
             'date' => $this->date ?? now(),
             'supplier_id' => $this->supplier_id,
-            'total' => $this->total,
+            'total' => $totalCalculado, // Usar el total calculado en el backend
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
         ]);
@@ -132,6 +142,7 @@ class PurchaseOrderCreate extends Component
             $purchaseOrder->variants()->attach($variant['id'], [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
+                'tax_rate' => $variant['tax_rate'], // Guardar el impuesto
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
         }

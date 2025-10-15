@@ -17,7 +17,6 @@ class Purchase extends Model
         'total',
         'observation',
         'company_id',
-        // nuevos campos
         'status',
         'payment_status',
         'vendor_bill_number',
@@ -42,7 +41,7 @@ class Purchase extends Model
     public function variants()
     {
         return $this->morphToMany(Variant::class, 'variantable')
-            ->withPivot('quantity', 'price', 'subtotal')
+            ->withPivot('quantity', 'price', 'tax_rate', 'subtotal')
             ->withTimestamps();
     }
 

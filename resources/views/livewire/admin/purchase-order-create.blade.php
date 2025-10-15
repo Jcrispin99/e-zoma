@@ -1,6 +1,5 @@
 <div x-data="{
     variants: @entangle('variants'),
-
     total: @entangle('total'),
 
     removeVariant(index) {
@@ -9,13 +8,14 @@
 
     init() {
         this.$watch('variants', (newVariants) => {
-
             let total = 0;
             newVariants.forEach(variant => {
-                total += variant.quantity * variant.price;
+                const subtotal = variant.quantity * variant.price;
+                const tax = subtotal * (variant.tax_rate / 100);
+                total += subtotal + tax;
             });
             this.total = total;
-        });
+        }, { deep: true });
     }
 }">
 
@@ -62,6 +62,7 @@
                             <th class="px-6 py-2">Producto</th>
                             <th class="px-6 py-2">Cantidad</th>
                             <th class="px-6 py-2">Precio</th>
+                            <th class="px-6 py-2">Impuesto</th>
                             <th class="px-6 py-2">Subtotal</th>
                             <th class="px-6 py-2"></th>
                         </tr>
@@ -76,6 +77,13 @@
                                 <td class="px-4 py-1">
                                     <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20" />
                                 </td>
+                                <td class="px-4 py-1">
+                                    <select x-model="variant.tax_rate" class="form-select block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        <option value="0">Inafecto</option>
+                                        <option value="10">IGV 10%</option>
+                                        <option value="18">IGV 18%</option>
+                                    </select>
+                                </td>
                                 <td class="px-4 py-1" x-text="(variant.quantity * variant.price).toFixed(2)"></td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
@@ -84,7 +92,7 @@
                         </template>
                         <template x-if="variants.length === 0">
                             <tr>
-                                <td colspan="5" class="text-center text-gray-500 py-4">No hay productos agregados
+                                <td colspan="6" class="text-center text-gray-500 py-4">No hay productos agregados
                                 </td>
                             </tr>
                         </template>

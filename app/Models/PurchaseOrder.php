@@ -48,16 +48,17 @@ class PurchaseOrder extends Model
     public function variants()
     {
         return $this->morphToMany(Variant::class, 'variantable')
-            ->withPivot('quantity', 'price', 'subtotal')
+            ->withPivot('quantity', 'price', 'tax_rate', 'subtotal')
             ->withTimestamps();
     }
 
-    public function purchases()
+    public function purchase()
     {
-        return $this->hasMany(Purchase::class);
+        // Una orden de compra puede tener una compra (factura) asociada
+        return $this->hasOne(Purchase::class, 'purchase_order_id');
     }
 
-    public function isBilled(): bool
+    public function getSubtotalAttribute()
     {
         return $this->billing_status === 'complete';
     }

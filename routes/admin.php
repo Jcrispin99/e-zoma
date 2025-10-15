@@ -49,7 +49,9 @@ Route::get('purchases-orders/{purchaseOrder}/edit', \App\Livewire\Admin\Purchase
 
 Route::get('purchases-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'pdf'])->name('purchases-orders.pdf');
 
-Route::resource('purchases', PurchaseController::class)->only(['index', 'create']);
+Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+Route::get('purchases/create/{purchase_order_id?}', \App\Livewire\Admin\PurchaseCreate::class)->name('purchases.create');
+Route::get('purchases/{purchase}/edit', \App\Livewire\Admin\PurchaseEdit::class)->name('purchases.edit');
 Route::get('purchases/{purchase}/pdf', [PurchaseController::class, 'pdf'])->name('purchases.pdf');
 
 //ventas

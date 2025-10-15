@@ -1,4 +1,8 @@
 <div class="flex items-center space-x-4">
+    <x-wire-button href="{{ route('admin.purchases-orders.edit', $purchaseOrder) }}" blue xs>
+        Editar
+    </x-wire-button>
+
     <x-wire-button green wire:click="openModal({{ $purchaseOrder->id }})">
         <i class="fa-solid fa-envelope"></i>
     </x-wire-button>

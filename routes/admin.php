@@ -42,7 +42,11 @@ Route::resource('attributes', AttributeController::class)->except(['show']);
 
 // compras
 Route::resource('suppliers', SupplierController::class)->except(['show']);
-Route::resource('purchases-orders', PurchaseOrderController::class)->only(['index', 'create']);
+
+Route::get('purchases-orders', [PurchaseOrderController::class, 'index'])->name('purchases-orders.index');
+Route::get('purchases-orders/create', [PurchaseOrderController::class, 'create'])->name('purchases-orders.create');
+Route::get('purchases-orders/{purchaseOrder}/edit', \App\Livewire\Admin\PurchaseOrderEdit::class)->name('purchases-orders.edit');
+
 Route::get('purchases-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'pdf'])->name('purchases-orders.pdf');
 
 Route::resource('purchases', PurchaseController::class)->only(['index', 'create']);

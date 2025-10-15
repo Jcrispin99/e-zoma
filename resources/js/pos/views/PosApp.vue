@@ -43,12 +43,14 @@ onMounted(async () => {
 });
 
 // Estado de conexión del sistema
-const connectionStatus = computed(() => (sessionStore.online ? 'Conectado' : 'Desconectado'));
+const connectionStatus = computed(() =>
+    sessionStore.online ? "Conectado" : "Desconectado"
+);
 
 // Ocultar el carrito en la ruta de checkout y toda la UI en recibo
 const route = useRoute();
-const isCheckout = computed(() => route.name === 'pos-checkout');
-const isReceipt = computed(() => route.name === 'pos-receipt');
+const isCheckout = computed(() => route.name === "pos-checkout");
+const isReceipt = computed(() => route.name === "pos-receipt");
 
 // Limpiar errores cuando el componente se desmonte
 onUnmounted(() => {
@@ -89,7 +91,7 @@ async function confirmClosingBalance() {
     try {
         await sessionStore.closeSession(value);
         showClosingModal.value = false;
-        window.location.href = '/admin/posconfig';
+        window.location.href = "/admin/posconfig";
     } catch (e) {
         closingError.value = "No se pudo cerrar la sesión";
     }
@@ -104,9 +106,13 @@ async function confirmClosingBalance() {
             class="fixed inset-0 z-50 flex items-center justify-center"
         >
             <div class="absolute inset-0 bg-black/40"></div>
-            <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <div
+                class="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6"
+            >
                 <h2 class="text-lg font-semibold mb-2">Monto de apertura</h2>
-                <p class="text-sm text-gray-600 mb-4">Ingresa el efectivo inicial en caja.</p>
+                <p class="text-sm text-gray-600 mb-4">
+                    Ingresa el efectivo inicial en caja.
+                </p>
                 <input
                     v-model="openingBalanceInput"
                     type="number"
@@ -114,7 +120,9 @@ async function confirmClosingBalance() {
                     step="0.01"
                     class="w-full border rounded px-3 py-2 mb-2"
                 />
-                <p v-if="openingError" class="text-sm text-red-600 mb-2">{{ openingError }}</p>
+                <p v-if="openingError" class="text-sm text-red-600 mb-2">
+                    {{ openingError }}
+                </p>
                 <div class="flex justify-end space-x-2">
                     <button
                         class="px-3 py-2 rounded bg-gray-200 text-gray-700"
@@ -132,7 +140,10 @@ async function confirmClosingBalance() {
             </div>
         </div>
         <!-- Header -->
-        <header v-if="!isReceipt" class="bg-white border-b border-gray-200 px-6 py-4">
+        <header
+            v-if="!isReceipt"
+            class="bg-white border-b border-gray-200 px-6 py-4"
+        >
             <div class="flex items-center justify-between">
                 <div class="flex items-center space-x-4">
                     <!-- Logo/Title -->
@@ -164,7 +175,11 @@ async function confirmClosingBalance() {
                     <div class="flex items-center space-x-2">
                         <div
                             class="w-2 h-2 rounded-full"
-                            :class="sessionStore.online ? 'bg-green-400' : 'bg-red-400'"
+                            :class="
+                                sessionStore.online
+                                    ? 'bg-green-400'
+                                    : 'bg-red-400'
+                            "
                             aria-label="Estado de conexión"
                         ></div>
                         <span class="text-sm text-gray-600">{{

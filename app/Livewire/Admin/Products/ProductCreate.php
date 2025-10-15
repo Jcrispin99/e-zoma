@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Models\Variant;
 
 class ProductCreate extends Component
 {
@@ -133,7 +134,7 @@ class ProductCreate extends Component
             $variant = $product->variants()->create([
                 'sku' => $variantData['sku'] ?: $this->generateVariantSku($product, AttributeValue::whereIn('id', $variantData['attribute_values'])->get()),
                 'price' => $variantData['price'],
-                'barcode' => $variantData['barcode'],
+                'barcode' => $variantData['barcode'] ?: Variant::generateUniqueBarcode(),
                 'stock' => 0,
             ]);
 

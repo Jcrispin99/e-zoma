@@ -84,4 +84,17 @@ class Variant extends Model
     {
         return $this->hasMany(PosOrderLine::class);
     }
+
+    /**
+     * Genera un código de barras único de 8 dígitos
+     */
+    public static function generateUniqueBarcode(): string
+    {
+        do {
+            // Generar un número aleatorio de 8 dígitos
+            $barcode = str_pad(mt_rand(10000000, 99999999), 8, '0', STR_PAD_LEFT);
+        } while (self::where('barcode', $barcode)->exists());
+
+        return $barcode;
+    }
 }

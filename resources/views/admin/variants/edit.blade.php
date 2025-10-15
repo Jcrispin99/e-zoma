@@ -31,9 +31,12 @@
             @method('put')
 
             <x-wire-input label="Nombre" name="name" placeholder="Nombre del producto"
-                value="{{ old('name', $variant->product) }}" />
-            <x-wire-input label="SKU" name="sku" placeholder="sku del producto"
+                value="{{ old('name', $variant->product->name) }}" readonly />
+            <x-wire-input label="SKU" name="sku" placeholder="SKU del producto"
                 value="{{ old('sku', $variant->sku) }}" />
+
+            <x-wire-input label="Código de Barras" name="barcode" placeholder="Código de barras (opcional)"
+                value="{{ old('barcode', $variant->barcode) }}" />
 
             <x-wire-input type="number" label="Precio" name="price" placeholder="Precio del producto"
                 value="{{ old('price', $variant->price) }}" />

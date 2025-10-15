@@ -26,6 +26,14 @@ class PurchaseOrderController extends Controller
     }
 
     /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(PurchaseOrder $purchaseOrder)
+    {
+        return view('admin.purchases-orders.edit', compact('purchaseOrder'));
+    }
+
+    /**
      * Generate a PDF for the specified resource.
      */
     public function pdf(PurchaseOrder $purchaseOrder)

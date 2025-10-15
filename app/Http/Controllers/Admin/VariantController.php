@@ -34,14 +34,18 @@ class VariantController extends Controller
      */
     public function update(Request $request, Variant $variant)
     {
-        $data = $request->validate([
-            'product_id' => 'required',
-            'sku' => 'required',
-            'barcode' => 'required',
+        $request->validate([
+            'barcode' => 'nullable',
             'price' => 'required',
         ]);
 
-        $variant->update($request->all());
+        // Generar código de barras si no se proporciona
+        $data = $request->all();
+        if (empty($data['barcode'])) {
+            $data['barcode'] = Variant::generateUniqueBarcode();
+        }
+
+        $variant->update($data);
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => 'Bien',

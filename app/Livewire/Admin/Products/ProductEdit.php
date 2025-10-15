@@ -227,7 +227,7 @@ class ProductEdit extends Component
                 $variant->update([
                     'sku' => $variantData['sku'],
                     'price' => $variantData['price'],
-                    'barcode' => $variantData['barcode'],
+                    'barcode' => $variantData['barcode'] ?: Variant::generateUniqueBarcode(),
                     // No actualizar stock aquí, se maneja por separado
                 ]);
                 
@@ -238,7 +238,7 @@ class ProductEdit extends Component
                 $variant = $product->variants()->create([
                     'sku' => $variantData['sku'] ?: $this->generateVariantSku($product, AttributeValue::whereIn('id', $variantData['attribute_values'])->get()),
                     'price' => $variantData['price'],
-                    'barcode' => $variantData['barcode'],
+                    'barcode' => $variantData['barcode'] ?: Variant::generateUniqueBarcode(),
                     'stock' => 0,
                 ]);
                 

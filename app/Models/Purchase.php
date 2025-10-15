@@ -17,15 +17,26 @@ class Purchase extends Model
         'total',
         'observation',
         'company_id',
+        // nuevos campos
+        'status',
+        'payment_status',
+        'vendor_bill_number',
+        'vendor_bill_date',
     ];
 
     protected $casts = [
         'date' => 'datetime',
+        'vendor_bill_date' => 'date',
     ];
 
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function purchaseOrder()
+    {
+        return $this->belongsTo(PurchaseOrder::class);
     }
 
     public function variants()

@@ -7,6 +7,7 @@ use App\Models\Purchase;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\PurchaseOrder;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseCreate extends Component
 {
@@ -173,6 +174,21 @@ class PurchaseCreate extends Component
             //Kardex
             Kardex::registerEntry($purchase, $variant, $this->warehouse_id, 'Compra');
         }
+
+        // Marcar la compra como publicada (posted) y estado de pago inicial
+        $purchase->update([
+            'status' => 'posted',
+            // Si no está definido, dejar en 'unpaid' como estado inicial
+            'payment_status' => $purchase->payment_status ?? 'unpaid',
+        ]);
+
+        // Recalcular métricas de la OC relacionada (si aplica)
+        if ($purchase->purchase_order_id) {
+            $po = $purchase->purchaseOrder;
+            if ($po) {
+                $this->recalcPoMetrics($po);
+            }
+        }
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => '¡Bien hecho!',
@@ -185,5 +201,43 @@ class PurchaseCreate extends Component
     public function render()
     {
         return view('livewire.admin.purchase-create');
+    }
+
+    /**
+     * Recalcular totales e indicadores de facturación de la Orden de Compra.
+     */
+    private function recalcPoMetrics(PurchaseOrder $po): void
+    {
+        // Cantidad ordenada (suma de líneas del PO)
+        $orderedQty = DB::table('variantables')
+            ->where('variantable_type', PurchaseOrder::class)
+            ->where('variantable_id', $po->id)
+            ->sum('quantity');
+
+        // Cantidad facturada (suma de líneas de compras no canceladas asociadas al PO)
+        $billedQty = DB::table('variantables')
+            ->join('purchases', 'variantables.variantable_id', '=', 'purchases.id')
+            ->where('variantables.variantable_type', Purchase::class)
+            ->where('purchases.purchase_order_id', $po->id)
+            ->where('purchases.status', '<>', 'cancelled')
+            ->sum('variantables.quantity');
+
+        // Cantidad de compras (excluyendo canceladas)
+        $purchasesCount = Purchase::query()
+            ->where('purchase_order_id', $po->id)
+            ->where('status', '<>', 'cancelled')
+            ->count();
+
+        $billingStatus = $billedQty <= 0
+            ? 'none'
+            : ($billedQty < $orderedQty ? 'partial' : 'complete');
+
+        $po->update([
+            'ordered_qty_total' => (float) $orderedQty,
+            'billed_qty_total' => (float) $billedQty,
+            'purchases_count' => $purchasesCount,
+            'billing_status' => $billingStatus,
+            'billed_at' => $billingStatus === 'complete' ? now() : null,
+        ]);
     }
 }

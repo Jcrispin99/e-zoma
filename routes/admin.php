@@ -27,7 +27,7 @@ Route::get('/', function () {
     return view('admin.dashboard');
 })->name('dashboard');
 
-// Usuario 
+// Usuario
 Route::resource('users', UserController::class)->except(['show']);
 
 // inventario
@@ -59,8 +59,10 @@ Route::resource('customers', CustomerController::class)->except(['show']);
 
 Route::resource('quotes', QuoteController::class)->only(['index', 'create']);
 Route::get('quotes/{quote}/pdf', [QuoteController::class, 'pdf'])->name('quotes.pdf');
+Route::get('quotes/{quote}/edit', \App\Livewire\Admin\QuoteEdit::class)->name('quotes.edit');
 
 Route::resource('sales', SaleController::class)->only(['index', 'create']);
+Route::get('sales/{sale}/edit', \App\Livewire\Admin\SaleEdit::class)->name('sales.edit');
 Route::get('sales/{sale}/pdf', [SaleController::class, 'pdf'])->name('sales.pdf');
 
 //movimientos

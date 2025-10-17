@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Sale;
 
 class Quote extends Model
 {
@@ -15,6 +16,7 @@ class Quote extends Model
         'total',
         'observation',
         'company_id',
+        'status',
     ];
     protected $casts = [
         'date' => 'datetime',
@@ -30,5 +32,10 @@ class Quote extends Model
         return $this->morphToMany(Variant::class, 'variantable')
             ->withPivot('quantity', 'price', 'subtotal')
             ->withTimestamps();
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
     }
 }

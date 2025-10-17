@@ -10,6 +10,7 @@ class Sale extends Model
         'voucher_type',
         'serie',
         'correlative',
+        'journal_id',
         'date',
         'quote_id',
         'customer_id',
@@ -18,6 +19,13 @@ class Sale extends Model
         'observation',
         'company_id',
         'pos_order_id',
+        'status',
+        'payment_status',
+        'original_sale_id',
+        'reason_id',
+        'original_document_type_code',
+        'original_serie',
+        'original_correlative',
     ];
 
     protected $casts = [
@@ -35,6 +43,21 @@ class Sale extends Model
     public function warehouse()
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    public function journal()
+    {
+        return $this->belongsTo(Journal::class);
+    }
+
+    public function originalSale()
+    {
+        return $this->belongsTo(Sale::class, 'original_sale_id');
+    }
+
+    public function reason()
+    {
+        return $this->belongsTo(Reason::class);
     }
 
     public function variants()

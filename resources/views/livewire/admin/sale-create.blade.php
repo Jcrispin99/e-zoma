@@ -28,47 +28,40 @@
                     <option value="1">Factura</option>
                     <option value="2">Boleta</option>
                 </x-wire-native-select>
+                <x-wire-native-select label="Serie" wire:model="journal_id">
+                    <option value="">Seleccione serie</option>
+                    @foreach($journals as $journal)
+                    <option value="{{ $journal->id }}">{{ $journal->name }} ({{ $journal->code }})</option>
+                    @endforeach
+                </x-wire-native-select>
+                <x-wire-input label="Fecha" wire:model.live="date" type="date" />
 
-                <div class="grid grid-cols-2 gap-2">
-                    <x-wire-input label="Serie" wire:model="serie" placeholder="Serie del comprobante" disabled />
-                    <x-wire-input label="Correlativo" wire:model="correlative" placeholder="Correlativo del comprobante"
-                        disabled />
-                </div>
-                <x-wire-input label="Fecha" wire:model="date" type="date" />
-
-                <x-wire-select label="Cotización" wire:model.live="quote_id" placeholder="Seleccione una cotización"
-                    :async-data="[
+                <x-wire-select label="Cotización" wire:model.live="quote_id" placeholder="Seleccione una cotización" :async-data="[
                         'api' => route('api.quotes.index'),
                         'method' => 'POST',
-                    ]" option-label="name" option-value="id" option-description="description"
-                    class="flex-1" />
+                    ]" option-label="name" option-value="id" option-description="description" class="flex-1" />
 
                 <div class="col-span-2">
-                    <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente"
-                        :async-data="[
+                    <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente" :async-data="[
                             'api' => route('api.customers.index'),
                             'method' => 'POST',
-                        ]" option-label="name" option-value="id" class="flex-1"
-                        option-description="description" />
+                        ]" option-label="name" option-value="id" class="flex-1" option-description="description" />
                 </div>
                 <div class="col-span-2">
-                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén"
-                        :async-data="[
+                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén" :async-data="[
                             'api' => route('api.warehouse.index'),
                             'method' => 'POST',
                             'params' => [
                                 'company_ids' => session()->get('selected_company_ids', [])
                             ]
-                        ]" option-label="name" option-value="id" class="flex-1"
-                        option-description="description" />
+                        ]" option-label="name" option-value="id" class="flex-1" option-description="description" />
                 </div>
             </div>
 
 
 
             <div class="lg:flex lg:space-x-4">
-                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"
-                    :async-data="[
+                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto" :async-data="[
                         'api' => route('api.product.index'),
                         'method' => 'POST',
                     ]" option-label="name" option-value="id" class="flex-1" />
@@ -101,8 +94,7 @@
                                     <x-wire-input type="number" x-model="variant.quantity" />
                                 </td>
                                 <td class="px-4 py-1">
-                                    <x-wire-input type="number" x-model="variant.price" step="0.01"
-                                        class="w-20" />
+                                    <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20" />
                                 </td>
                                 <td class="px-4 py-1" x-text="(variant.quantity * variant.price).toFixed(2)"></td>
                                 <td class="px-4 py-1">

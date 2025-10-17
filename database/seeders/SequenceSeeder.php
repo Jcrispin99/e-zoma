@@ -18,12 +18,16 @@ class SequenceSeeder extends Seeder
 
         foreach ($companies as $company) {
             $journals = [
-                ['name' => 'Cotizaciones', 'type' => 'quote', 'code' => 'COT'],
-                ['name' => 'Factura F001', 'type' => 'sale', 'code' => 'F001'],
-                ['name' => 'Boleta B001', 'type' => 'sale', 'code' => 'B001'],
-                ['name' => 'Órdenes de Compra', 'type' => 'purchase-order', 'code' => 'OC'],
-                ['name' => 'Compras', 'type' => 'purchase', 'code' => 'COMP'],
-                ['name' => 'Cuadre de Caja', 'type' => 'cash', 'code' => 'CAJA'],
+                ['name' => 'Cotizaciones', 'type' => 'quote', 'code' => 'COT', 'document_type_code' => null],
+                ['name' => 'Factura F001', 'type' => 'sale', 'code' => 'F001', 'document_type_code' => '01'],
+                ['name' => 'Boleta B001', 'type' => 'sale', 'code' => 'B001', 'document_type_code' => '03'],
+                ['name' => 'Nota de Crédito Factura', 'type' => 'sale', 'code' => 'NCF001', 'document_type_code' => '07'],
+                ['name' => 'Nota de Crédito Boleta', 'type' => 'sale', 'code' => 'NCB001', 'document_type_code' => '07'],
+                ['name' => 'Nota de Débito Factura', 'type' => 'sale', 'code' => 'NDF001', 'document_type_code' => '08'],
+                ['name' => 'Nota de Débito Boleta', 'type' => 'sale', 'code' => 'NDB001', 'document_type_code' => '08'],
+                ['name' => 'Órdenes de Compra', 'type' => 'purchase-order', 'code' => 'OC', 'document_type_code' => null],
+                ['name' => 'Compras', 'type' => 'purchase', 'code' => 'COMP', 'document_type_code' => null],
+                ['name' => 'Cuadre de Caja', 'type' => 'cash', 'code' => 'CAJA', 'document_type_code' => null],
             ];
 
             foreach ($journals as $journalData) {
@@ -34,14 +38,19 @@ class SequenceSeeder extends Seeder
                     'next_number' => 1,
                 ]);
 
-                // Crear el diario y asociarlo a la nueva secuencia
-                Journal::create([
-                    'name' => $journalData['name'],
-                    'type' => $journalData['type'],
-                    'code' => $journalData['code'],
-                    'sequence_id' => $sequence->id,
-                    'company_id' => $company->id,
-                ]);
+                // Crear/actualizar el diario y asociarlo a la nueva secuencia
+                Journal::updateOrCreate(
+                    [
+                        'company_id' => $company->id,
+                        'code' => $journalData['code'],
+                    ],
+                    [
+                        'name' => $journalData['name'],
+                        'type' => $journalData['type'],
+                        'document_type_code' => $journalData['document_type_code'],
+                        'sequence_id' => $sequence->id,
+                    ]
+                );
             }
         }
     }

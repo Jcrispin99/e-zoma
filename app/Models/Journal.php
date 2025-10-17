@@ -13,6 +13,7 @@ class Journal extends Model
         'name',
         'code',
         'type',
+        'document_type_code',
         'sequence_id',
         'company_id',
     ];

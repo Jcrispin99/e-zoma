@@ -24,17 +24,18 @@ class DatabaseSeeder extends Seeder
         $this->call([
             IdentitySeeder::class,
             CompanySeeder::class,
-            CategorySeder::class,
+            // CategorySeder::class,
             WarehouseSeeder::class,
             ReasonSeeder::class,
             AttributeSeeder::class,
             RolesSeeder::class,
             SequenceSeeder::class,
+            PaymentMethodSeeder::class,
         ]);
 
         Customer::factory(50)->create();
         Supplier::factory(50)->create();
-        Product::factory(100)->create();
-        Variant::factory(100)->create();
+        //Product::factory(100)->create();
+        //Variant::factory(100)->create();
     }
 }

@@ -15,11 +15,9 @@ class QuoteController extends Controller
     {
         $quotes = Quote::when($request->search, function ($query, $search) {
 
-            //OC-123
             $parts = explode('-', $search);
 
             if (count($parts) == 1) {
-                //buscar por nombre de proveedor
                 $query->whereHas('customer', function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
                         ->orWhere('document_number', 'like', "%{$search}%");
@@ -28,10 +26,8 @@ class QuoteController extends Controller
             }
 
             if (count($parts) == 2) {
-
                 $serie = $parts[0];
                 $correlative = ltrim($parts[1], '0');
-
                 $query->where('serie', $serie)
                     ->where('correlative', 'LIKE', "%{$correlative}%");
                 return;
@@ -43,6 +39,7 @@ class QuoteController extends Controller
                 fn($query) => $query->limit(10)
             )
             ->with(['customer'])
+            ->whereDoesntHave('sales')
             ->orderBy('created_at', 'desc')
             ->get();
 

@@ -8,18 +8,20 @@ use App\Models\Sale;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\Quote;
+use App\Models\Journal;
+use App\Services\SequenceService;
 use App\Services\KardexServices;
 
 class SaleCreate extends Component
 {
     public $voucher_type = 1;
-    public $serie = 'F001';
-
-    public $correlative = 0;
+    public $correlative = '';
 
     public $date;
 
     public $quote_id;
+
+    protected $queryString = ['quote_id'];
 
     public $warehouse_id;
 
@@ -29,6 +31,9 @@ class SaleCreate extends Component
 
     public $variant_id;
     public $variants = [];
+
+    public $journals = [];
+    public $journal_id;
 
     public function boot()
     {
@@ -57,7 +62,49 @@ class SaleCreate extends Component
 
     public function mount()
     {
-        $this->correlative = Quote::max('correlative') + 1;
+        $activeCompanyId = session('active_company_id');
+        $this->date = now();
+
+        $this->journals = Journal::where('type', 'sale')
+            ->where('company_id', $activeCompanyId)
+            ->with('sequence')
+            ->orderBy('name')
+            ->get();
+
+        $journalsCol = collect($this->journals);
+        if ($journalsCol->isNotEmpty()) {
+            $first = $journalsCol->first();
+            $this->journal_id = $first ? $first->id : null;
+            $this->updatePreview();
+        }
+
+        // Cargar datos desde cotización si viene en la URL
+        if ($this->quote_id) {
+            $quote = Quote::with('variants.product')->find($this->quote_id);
+            if ($quote) {
+                if ($quote->sales()->exists() || (($quote->status ?? null) === 'converted')) {
+                    $this->dispatch('swal', [
+                        'icon' => 'warning',
+                        'title' => 'Cotización ya convertida',
+                        'text' => 'Esta cotización ya tiene una venta vinculada.',
+                    ]);
+                    $this->quote_id = null;
+                } else {
+                    $this->voucher_type = $quote->voucher_type;
+                    $this->customer_id = $quote->customer_id;
+                    $this->variants = $quote->variants->map(function ($variant) {
+                        return [
+                            'id' => $variant->id,
+                            'name' => $variant->fullName,
+                            'quantity' => $variant->pivot->quantity,
+                            'price' => $variant->pivot->price,
+                            'subtotal' => $variant->pivot->subtotal,
+                        ];
+                    })->toArray();
+                    $this->total = $quote->total;
+                }
+            }
+        }
     }
 
 
@@ -66,6 +113,15 @@ class SaleCreate extends Component
         if ($property == 'quote_id') {
             $quote = Quote::find($value);
             if ($quote) {
+                if ($quote->sales()->exists() || (($quote->status ?? null) === 'converted')) {
+                    $this->dispatch('swal', [
+                        'icon' => 'warning',
+                        'title' => 'Cotización ya convertida',
+                        'text' => 'Esta cotización ya tiene una venta vinculada.',
+                    ]);
+                    $this->quote_id = null;
+                    return;
+                }
 
                 $this->voucher_type = $quote->voucher_type;
                 $this->customer_id = $quote->customer_id;
@@ -114,13 +170,51 @@ class SaleCreate extends Component
         $this->reset('variant_id');
     }
 
+    public function updatedJournalId()
+    {
+        $this->updatePreview();
+    }
+
+    protected function updatePreview()
+    {
+        if (!$this->journal_id) {
+            $this->correlative = '';
+            return;
+        }
+
+        $journal = collect($this->journals)->first(function ($j) {
+            if (is_array($j)) {
+                return ($j['id'] ?? null) == $this->journal_id;
+            }
+            return ($j->id ?? null) == $this->journal_id;
+        });
+
+        // Obtener datos de secuencia según sea array u objeto
+        if (is_array($journal)) {
+            $sequence = $journal['sequence'] ?? null;
+            $next = $sequence['next_number'] ?? null;
+            $size = $sequence['sequence_size'] ?? null;
+        } else {
+            $sequence = $journal ? $journal->sequence : null;
+            $next = $sequence ? $sequence->next_number : null;
+            $size = $sequence ? $sequence->sequence_size : null;
+        }
+
+        if (!$next || !$size) {
+            $this->correlative = '';
+            return;
+        }
+
+        // Previsualizar correlativo sin consumir la secuencia
+        $this->correlative = str_pad((string)$next, (int)$size, '0', STR_PAD_LEFT);
+    }
+
     public function save()
     {
         $this->validate(
             [
                 'voucher_type' => 'required|in:1,2',
-                'serie' => 'required|string|max:10',
-                'correlative' => 'required|numeric|max:14',
+                'journal_id' => 'required|exists:journals,id',
                 'date' => 'nullable|date',
                 'quote_id' => 'nullable|exists:quotes,id',
                 'customer_id' => 'required|exists:customers,id',
@@ -135,6 +229,7 @@ class SaleCreate extends Component
             [],
             [
                 'voucher_type' => 'tipo de comprobante',
+                'journal_id' => 'serie',
                 'customer_id' => 'cliente',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
@@ -154,10 +249,13 @@ class SaleCreate extends Component
             return redirect()->back();
         }
 
+        // Obtener serie y correlativo con consumo de secuencia
+        $parts = app(SequenceService::class)->getNextParts($this->journal_id);
+
         $sale = Sale::create([
             'voucher_type' => $this->voucher_type,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
+            'serie' => $parts['serie'],
+            'correlative' => $parts['correlative'],
             'date' => $this->date ?? now(),
             'quote_id' => $this->quote_id,
             'customer_id' => $this->customer_id,
@@ -165,6 +263,7 @@ class SaleCreate extends Component
             'total' => $this->total,
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
+            'journal_id' => $this->journal_id,
         ]);
 
         foreach ($this->variants as $variant) {
@@ -178,10 +277,27 @@ class SaleCreate extends Component
             Kardex::registerExit($sale, $variant, $this->warehouse_id, 'Venta');
         }
 
+        if ($this->quote_id) {
+            $quote = Quote::find($this->quote_id);
+            if ($quote && ($quote->sales()->exists() || (($quote->status ?? null) === 'converted'))) {
+                session()->flash('swalt', [
+                    'icon' => 'error',
+                    'title' => 'Cotización convertida',
+                    'text' => 'Ya existe una venta vinculada a esta cotización. No se puede crear otra.',
+                ]);
+                return redirect()->back();
+            }
+        }
+
+        // tras crear la venta y registrar salidas de inventario
+        if ($this->quote_id && isset($quote) && $quote) {
+            $quote->update(['status' => 'converted']);
+        }
+
         session()->flash('swalt', [
             'icon' => 'success',
-            'title' => '¡Bien hecho!',
-            'text' => 'LA venta creada exitosamente.',
+            'title' => 'Venta creada',
+            'text' => 'El documento de venta fue creado correctamente.',
         ]);
 
         return redirect()->route('admin.sales.index');

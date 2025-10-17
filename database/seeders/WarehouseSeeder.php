@@ -14,14 +14,14 @@ class WarehouseSeeder extends Seeder
     public function run(): void
     {
         Warehouse::create([
-            'name' => 'Almacén Central',
+            'name' => 'IK01',
             'location' => 'Calle Principal 123, Ciudad',
             'company_id' => 1,
         ]);
         Warehouse::create([
-            'name' => 'Almacén Secundario',
+            'name' => 'IK02',
             'location' => 'Avenida Secundaria 456, Ciudad',
-            'company_id' => 1,
+            'company_id' => 2,
         ]);
     }
 }

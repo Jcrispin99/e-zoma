@@ -156,6 +156,7 @@ class QuoteCreate extends Component
             'total' => $this->total,
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
+            'status' => 'draft',
         ]);
 
         foreach ($this->variants as $variant) {

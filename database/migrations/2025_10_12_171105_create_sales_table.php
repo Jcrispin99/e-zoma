@@ -19,6 +19,9 @@ return new class extends Migration
             $table->string('serie');
             $table->string('correlative');
 
+            // Diario contable (define tipo de comprobante: 01/03/07)
+            $table->foreignId('journal_id')->constrained('journals')->onDelete('cascade');
+
             $table->timestamp('date')
                 ->useCurrent();
 
@@ -38,7 +41,25 @@ return new class extends Migration
 
             $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
 
+            // Estados de ciclo de venta y pago (alineado con Odoo)
+            $table->enum('status', ['draft', 'posted', 'cancelled'])->default('draft');
+            $table->enum('payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
+
+            // Vínculo a documento original para Notas de Crédito (SUNAT 07)
+            $table->foreignId('original_sale_id')->nullable()->constrained('sales')->onDelete('set null');
+            $table->foreignId('reason_id')->nullable()->constrained('reasons')->onDelete('set null');
+            $table->string('original_document_type_code', 2)->nullable(); // 01/03 del doc original
+            $table->string('original_serie')->nullable();
+            $table->string('original_correlative')->nullable();
+
             $table->timestamps();
+
+            // Índices y unicidad
+            $table->index(['status']);
+            $table->index(['payment_status']);
+            $table->index(['journal_id']);
+            $table->index(['original_sale_id']);
+            $table->unique(['company_id', 'voucher_type', 'serie', 'correlative'], 'sale_unique_company_voucher_serie_corr');
         });
     }
 

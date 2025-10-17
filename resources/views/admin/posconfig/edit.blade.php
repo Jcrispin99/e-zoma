@@ -16,7 +16,7 @@
 
     <x-wire-card>
 
-        <form action="{{ route('admin.posconfig.update', 1) }}" method="post" class="space-y-4">
+        <form action="{{ route('admin.posconfig.update', $posConfig) }}" method="post" class="space-y-4">
 
             @csrf
             @method('put')
@@ -51,20 +51,32 @@
                     @endforeach
                 </x-wire-native-select>
 
-                <x-wire-native-select label="Secuencia de Recibos" name="receipt_sequence_id">
-                    <option value="">Seleccione una secuencia</option>
-                    @foreach ($sequences as $sequence)
-                    <option value="{{ $sequence->id }}" @selected(old('receipt_sequence_id', $posConfig->receipt_sequence_id)==$sequence->id)>
-                        {{ $sequence->name }} ({{ $sequence->prefix }})
+                <x-wire-native-select label="Diario de Boletas" name="receipt_journal_id">
+                    <option value="">Seleccione un diario</option>
+                    @foreach ($journals as $journal)
+                    <option value="{{ $journal->id }}" @selected(old('receipt_journal_id', $posConfig->receipt_journal_id)==$journal->id)>
+                        {{ $journal->name }} ({{ $journal->code }})
+                        @php
+                            $seq = $journal->sequence;
+                        @endphp
+                        @if($seq)
+                            — Secuencia: #{{ $seq->id }} Próximo {{ str_pad($seq->next_number, $seq->sequence_size, '0', STR_PAD_LEFT) }}
+                        @endif
                     </option>
                     @endforeach
                 </x-wire-native-select>
 
-                <x-wire-native-select label="Secuencia de Facturas" name="invoice_sequence_id">
-                    <option value="">Seleccione una secuencia</option>
-                    @foreach ($sequences as $sequence)
-                    <option value="{{ $sequence->id }}" @selected(old('invoice_sequence_id', $posConfig->invoice_sequence_id)==$sequence->id)>
-                        {{ $sequence->name }} ({{ $sequence->prefix }})
+                <x-wire-native-select label="Diario de Facturas" name="invoice_journal_id">
+                    <option value="">Seleccione un diario</option>
+                    @foreach ($journals as $journal)
+                    <option value="{{ $journal->id }}" @selected(old('invoice_journal_id', $posConfig->invoice_journal_id)==$journal->id)>
+                        {{ $journal->name }} ({{ $journal->code }})
+                        @php
+                            $seq = $journal->sequence;
+                        @endphp
+                        @if($seq)
+                            — Secuencia: #{{ $seq->id }} Próximo {{ str_pad($seq->next_number, $seq->sequence_size, '0', STR_PAD_LEFT) }}
+                        @endif
                     </option>
                     @endforeach
                 </x-wire-native-select>

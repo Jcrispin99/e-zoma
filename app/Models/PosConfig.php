@@ -15,8 +15,8 @@ class PosConfig extends Model
         'name',
         'company_id',
         'warehouse_id',
-        'receipt_sequence_id',
-        'invoice_sequence_id',
+        'receipt_journal_id',
+        'invoice_journal_id',
         'default_customer_id',
         'is_active',
     ];
@@ -31,14 +31,14 @@ class PosConfig extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
-    public function receiptSequence(): BelongsTo
+    public function receiptJournal(): BelongsTo
     {
-        return $this->belongsTo(Sequence::class, 'receipt_sequence_id');
+        return $this->belongsTo(Journal::class, 'receipt_journal_id');
     }
 
-    public function invoiceSequence(): BelongsTo
+    public function invoiceJournal(): BelongsTo
     {
-        return $this->belongsTo(Sequence::class, 'invoice_sequence_id');
+        return $this->belongsTo(Journal::class, 'invoice_journal_id');
     }
 
     public function defaultCustomer(): BelongsTo

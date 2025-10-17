@@ -66,7 +66,6 @@ class SaleCreate extends Component
         $this->date = now();
 
         $this->journals = Journal::where('type', 'sale')
-            ->where('company_id', $activeCompanyId)
             ->with('sequence')
             ->orderBy('name')
             ->get();

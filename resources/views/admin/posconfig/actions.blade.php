@@ -1,13 +1,12 @@
 <div class="flex items-center space-x-2">
-    <!-- Abrir caja -->
+    <!-- Abrir/Continuar caja -->
     <x-wire-button xs primary wire:click="openSession({{ $posconfig->id }})">
-        Abrir caja
+        {{ ($hasOpen ?? false) ? 'Continuar venta' : 'Abrir caja' }}
     </x-wire-button>
 
     <x-wire-button href="{{ route('admin.posconfig.edit', $posconfig->id) }}" blue xs>
         Editar
     </x-wire-button>
-
 
     <form action="{{ route('admin.posconfig.destroy', $posconfig->id) }}" method="post" class="delete-form">
         @csrf

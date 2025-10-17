@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\PosConfig;
-use Illuminate\Http\Request;
 use App\Models\Company;
-use App\Models\Warehouse;
 use App\Models\Customer;
+use App\Models\Journal;
+use App\Models\PosConfig;
 use App\Models\Sequence;
+use App\Models\Warehouse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 
 
@@ -30,9 +32,9 @@ class PosConfigController extends Controller
         $companies = Company::all();
         $warehouses = Warehouse::all();
         $customers = Customer::all();
-        $sequences = Sequence::all();
+        $journals = Journal::where('type', 'sale')->with('sequence')->get();
 
-        return view('admin.posconfig.create', compact('companies', 'warehouses', 'customers', 'sequences'));
+        return view('admin.posconfig.create', compact('companies', 'warehouses', 'customers', 'journals'));
     }
 
     /**
@@ -44,12 +46,19 @@ class PosConfigController extends Controller
             'name' => 'required|string|max:255',
             'company_id' => 'required|exists:companies,id',
             'warehouse_id' => 'required|exists:warehouses,id',
-            'receipt_sequence_id' => 'required|exists:sequences,id',
-            'invoice_sequence_id' => 'required|exists:sequences,id',
+            'receipt_journal_id' => 'required|exists:journals,id',
+            'invoice_journal_id' => 'required|exists:journals,id',
             'default_customer_id' => 'required|exists:customers,id',
             'is_active' => 'boolean',
         ]);
 
+        // Guardar journal_id directamente y mantener sequence_id sincronizado
+        $receiptJournal = Journal::find($data['receipt_journal_id']);
+        $invoiceJournal = Journal::find($data['invoice_journal_id']);
+        
+        $data['receipt_sequence_id'] = $receiptJournal->sequence_id;
+        $data['invoice_sequence_id'] = $invoiceJournal->sequence_id;
+        
         $posConfig = PosConfig::create($data);
 
         session()->flash('swalt', [
@@ -69,9 +78,9 @@ class PosConfigController extends Controller
         $companies = Company::all();
         $warehouses = Warehouse::all();
         $customers = Customer::all();
-        $sequences = Sequence::all();
+        $journals = Journal::where('type', 'sale')->with('sequence')->get();
 
-        return view('admin.posconfig.edit', compact('posConfig', 'companies', 'warehouses', 'customers', 'sequences'));
+        return view('admin.posconfig.edit', compact('posConfig', 'companies', 'warehouses', 'customers', 'journals'));
     }
 
     /**
@@ -83,12 +92,19 @@ class PosConfigController extends Controller
             'name' => 'required|string|max:255',
             'company_id' => 'required|exists:companies,id',
             'warehouse_id' => 'required|exists:warehouses,id',
-            'receipt_sequence_id' => 'required|exists:sequences,id',
-            'invoice_sequence_id' => 'required|exists:sequences,id',
+            'receipt_journal_id' => 'required|exists:journals,id',
+            'invoice_journal_id' => 'required|exists:journals,id',
             'default_customer_id' => 'required|exists:customers,id',
             'is_active' => 'boolean',
         ]);
 
+        // Guardar journal_id directamente y mantener sequence_id sincronizado
+        $receiptJournal = Journal::find($data['receipt_journal_id']);
+        $invoiceJournal = Journal::find($data['invoice_journal_id']);
+        
+        $data['receipt_sequence_id'] = $receiptJournal->sequence_id;
+        $data['invoice_sequence_id'] = $invoiceJournal->sequence_id;
+        
         $posConfig->update($data);
 
         session()->flash('swalt', [
@@ -98,42 +114,5 @@ class PosConfigController extends Controller
         ]);
 
         return redirect()->route('admin.posconfig.edit', $posConfig);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(PosConfig $posConfig)
-    {
-        // Verificar si tiene sesiones relacionadas
-        $sessionsCount = $posConfig->sessions()->count();
-
-        if ($sessionsCount > 0) {
-            session()->flash('swalt', [
-                'icon' => 'error',
-                'title' => 'No se puede eliminar',
-                'text' => "No se puede eliminar la configuración de POS porque tiene {$sessionsCount} sesión(es) relacionada.",
-            ]);
-
-            return redirect()->route('admin.posconfig.index');
-        }
-
-        try {
-            $posConfig->delete();
-
-            session()->flash('swalt', [
-                'icon' => 'success',
-                'title' => '¡Bien hecho!',
-                'text' => 'Configuración de POS ha sido eliminada correctamente',
-            ]);
-        } catch (\Exception $e) {
-            session()->flash('swalt', [
-                'icon' => 'error',
-                'title' => 'Error',
-                'text' => 'Error al eliminar la configuración: ' . $e->getMessage(),
-            ]);
-        }
-
-        return redirect()->route('admin.posconfig.index');
     }
 }

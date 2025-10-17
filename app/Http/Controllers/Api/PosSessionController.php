@@ -5,20 +5,19 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Inventory;
 use App\Models\Journal;
-use App\Models\PosConfig;
 use App\Models\PosOrder;
 use App\Models\PosOrderLine;
 use App\Models\PosPayment;
 use App\Models\PosSession;
 use App\Models\Sale;
-use App\Models\Inventory;
 use App\Models\Variant;
+use App\Models\PosConfig;
 use App\Services\SequenceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Carbon;
 
 class PosSessionController extends Controller
 {
@@ -45,6 +44,7 @@ class PosSessionController extends Controller
             'opening_balance' => $session->opening_balance,
         ]);
     }
+
     public function open(Request $request)
     {
         $validated = $request->validate([
@@ -59,6 +59,29 @@ class PosSessionController extends Controller
 
         /** @var PosConfig $posConfig */
         $posConfig = PosConfig::query()->findOrFail($validated['pos_config_id']);
+
+        // Si ya existe una sesión abierta para esta caja, continuar en esa
+        $existing = PosSession::query()
+            ->where('pos_config_id', $posConfig->id)
+            ->where('status', 'open')
+            ->whereNull('closed_at')
+            ->orderByDesc('opened_at')
+            ->first();
+
+        if ($existing) {
+            return response()->json([
+                'message' => 'Ya existe una sesión abierta para esta caja',
+                'id' => $existing->id,
+                'status' => $existing->status,
+                'opened_at' => $existing->opened_at,
+                'opening_balance' => $existing->opening_balance,
+                'pos_config' => [
+                    'id' => $posConfig->id,
+                    'name' => $posConfig->name,
+                ],
+                'redirect_url' => url('/pos/' . $existing->id),
+            ], 409);
+        }
 
         $session = PosSession::create([
             'pos_config_id' => $posConfig->id,
@@ -88,11 +111,12 @@ class PosSessionController extends Controller
 
         $posConfig = $session->posConfig;
 
-        $receiptSeqId = $posConfig->receipt_sequence_id;
-        $invoiceSeqId = $posConfig->invoice_sequence_id;
+        // Usar journals configurados directamente
+        $receiptJournalId = $posConfig->receipt_journal_id;
+        $invoiceJournalId = $posConfig->invoice_journal_id;
 
-        $receiptJournal = $receiptSeqId ? Journal::query()->where('sequence_id', $receiptSeqId)->first() : null;
-        $invoiceJournal = $invoiceSeqId ? Journal::query()->where('sequence_id', $invoiceSeqId)->first() : null;
+        $receiptJournal = $receiptJournalId ? Journal::query()->find($receiptJournalId) : null;
+        $invoiceJournal = $invoiceJournalId ? Journal::query()->find($invoiceJournalId) : null;
 
         $defaultCustomer = $posConfig->defaultCustomer ?? ($posConfig->default_customer_id ? Customer::query()->find($posConfig->default_customer_id) : null);
 
@@ -131,15 +155,15 @@ class PosSessionController extends Controller
                 'default_customer_id' => $posConfig->default_customer_id,
             ],
             'sequences' => [
-                'receipt' => $receiptSeqId ? [
-                    'sequence_id' => $receiptSeqId,
-                    'journal_id' => optional($receiptJournal)->id,
-                    'serie_code' => optional($receiptJournal)->code,
+                'receipt' => $receiptJournal ? [
+                    'sequence_id' => $receiptJournal->sequence_id,
+                    'journal_id' => $receiptJournal->id,
+                    'serie_code' => $receiptJournal->code,
                 ] : null,
-                'invoice' => $invoiceSeqId ? [
-                    'sequence_id' => $invoiceSeqId,
-                    'journal_id' => optional($invoiceJournal)->id,
-                    'serie_code' => optional($invoiceJournal)->code,
+                'invoice' => $invoiceJournal ? [
+                    'sequence_id' => $invoiceJournal->sequence_id,
+                    'journal_id' => $invoiceJournal->id,
+                    'serie_code' => $invoiceJournal->code,
                 ] : null,
             ],
             'default_customer' => $defaultCustomer ? [
@@ -185,6 +209,7 @@ class PosSessionController extends Controller
                     'status' => 'synced',
                 ]);
 
+                // Guardar líneas del pedido POS
                 foreach ($order['lines'] as $line) {
                     PosOrderLine::create([
                         'pos_order_id' => $posOrder->id,
@@ -195,7 +220,8 @@ class PosSessionController extends Controller
                     ]);
                 }
 
-                foreach ($order['payments'] ?? [] as $payment) {
+                // Guardar pagos del pedido POS
+                foreach (($order['payments'] ?? []) as $payment) {
                     PosPayment::create([
                         'pos_order_id' => $posOrder->id,
                         'payment_method_id' => $payment['payment_method_id'],
@@ -205,16 +231,17 @@ class PosSessionController extends Controller
 
                 // Generar Venta con correlativo según voucher_type
                 $journal = null;
-                if ($order['voucher_type'] === 'receipt' && $posConfig->receipt_sequence_id) {
-                    $journal = Journal::query()
-                        ->where('sequence_id', $posConfig->receipt_sequence_id)
-                        ->where('company_id', $posConfig->company_id)
-                        ->first();
-                } elseif ($order['voucher_type'] === 'invoice' && $posConfig->invoice_sequence_id) {
-                    $journal = Journal::query()
-                        ->where('sequence_id', $posConfig->invoice_sequence_id)
-                        ->where('company_id', $posConfig->company_id)
-                        ->first();
+                if ($order['voucher_type'] === 'receipt' && $posConfig->receipt_journal_id) {
+                    $journal = Journal::query()->find($posConfig->receipt_journal_id);
+                } elseif ($order['voucher_type'] === 'invoice' && $posConfig->invoice_journal_id) {
+                    $journal = Journal::query()->find($posConfig->invoice_journal_id);
+                }
+
+                if (!$journal) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Diario no configurado para el tipo de documento (receipt/invoice).',
+                    ], 422);
                 }
 
                 $serie = null;
@@ -238,6 +265,7 @@ class PosSessionController extends Controller
                 $sale->company_id = $posConfig->company_id;
                 $sale->total = $order['total_amount'];
                 $sale->pos_order_id = $posOrder->id;
+                $sale->journal_id = $journal->id; // Asegurar FK al diario
                 $sale->save();
 
                 // Asociar variantes a la venta (pivot con quantity y price)
@@ -247,8 +275,10 @@ class PosSessionController extends Controller
                         'price' => $line['price'],
                         'subtotal' => $line['subtotal'],
                     ]);
+                }
 
-                    // Registrar movimiento de inventario (salida) por venta en el almacén de la config POS
+                // Registrar movimiento de inventario (salida) por venta en el almacén de la config POS
+                foreach ($order['lines'] as $line) {
                     $prev = Inventory::query()
                         ->where('variant_id', $line['variant_id'])
                         ->where('warehouse_id', $posConfig->warehouse_id)
@@ -256,34 +286,17 @@ class PosSessionController extends Controller
                         ->first();
 
                     $prevQty = $prev?->quantity_balance ?? 0;
-                    $prevTotal = $prev?->total_balance ?? 0;
+                    $newBalance = $prevQty - abs($line['quantity']);
 
-                    $outQty = (int) $line['quantity'];
-                    $outTotal = (float) $line['subtotal'];
-
-                    $newQtyBal = max(0, $prevQty - $outQty);
-                    $newTotalBal = max(0, $prevTotal - $outTotal);
-                    $newCostBal = $newQtyBal > 0 ? $newTotalBal / $newQtyBal : 0;
-
-                    Inventory::create([
-                        'detail' => 'Salida por venta POS',
-                        'quantity_in' => 0,
-                        'cost_in' => 0,
-                        'total_in' => 0,
-                        'quantity_out' => $outQty,
-                        'cost_out' => (float) $line['price'],
-                        'total_out' => $outTotal,
-                        'quantity_balance' => $newQtyBal,
-                        'cost_balance' => $newCostBal,
-                        'total_balance' => $newTotalBal,
+                    Inventory::query()->create([
                         'variant_id' => $line['variant_id'],
                         'warehouse_id' => $posConfig->warehouse_id,
+                        'quantity_in' => 0,
+                        'quantity_out' => abs($line['quantity']),
+                        'quantity_balance' => $newBalance,
                         'inventoryable_id' => $sale->id,
                         'inventoryable_type' => Sale::class,
                     ]);
-
-                    // Actualizar stock de la variante con el saldo
-                    Variant::query()->where('id', $line['variant_id'])->update(['stock' => $newQtyBal]);
                 }
 
                 $created[] = [
@@ -293,14 +306,21 @@ class PosSessionController extends Controller
                     'correlative' => $sale->correlative,
                 ];
             }
+
             DB::commit();
+
+            return response()->json([
+                'status' => 'ok',
+                'synced' => $created,
+            ]);
         } catch (\Throwable $e) {
             DB::rollBack();
-            Log::error('POS sync error: ' . $e->getMessage(), ['exception' => $e]);
-            return response()->json(['message' => 'Error al sincronizar órdenes', 'error' => $e->getMessage()], 422);
-        }
 
-        return response()->json(['synced' => $created]);
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function close(Request $request, int $id)

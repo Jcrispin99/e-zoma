@@ -32,7 +32,6 @@ class QuoteCreate extends Component
         $activeCompanyId = session('active_company_id');
 
         $this->journals = Journal::where('type', 'quote')
-            ->where('company_id', $activeCompanyId)
             ->get();
 
         if ($this->journals->isNotEmpty()) {

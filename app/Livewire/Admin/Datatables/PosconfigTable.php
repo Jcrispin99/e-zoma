@@ -29,9 +29,9 @@ class PosconfigTable extends DataTableComponent
                 ->sortable(),
             Column::make("Warehouse id", "warehouse_id")
                 ->sortable(),
-            Column::make("Receipt sequence id", "receipt_sequence_id")
+            Column::make("Receipt journal id", "receipt_journal_id")
                 ->sortable(),
-            Column::make("Invoice sequence id", "invoice_sequence_id")
+            Column::make("Invoice journal id", "invoice_journal_id")
                 ->sortable(),
             Column::make("Default customer id", "default_customer_id")
                 ->sortable(),
@@ -39,7 +39,12 @@ class PosconfigTable extends DataTableComponent
                 ->sortable(),
             Column::make("Acciones")
                 ->label(function ($row, Column $column) {
-                    return view('admin.posconfig.actions', ['posconfig' => $row]);
+                    $hasOpen = PosSession::query()
+                        ->where('pos_config_id', $row->id)
+                        ->where('status', 'open')
+                        ->whereNull('closed_at')
+                        ->exists();
+                    return view('admin.posconfig.actions', ['posconfig' => $row, 'hasOpen' => $hasOpen]);
                 })
         ];
     }
@@ -53,6 +58,19 @@ class PosconfigTable extends DataTableComponent
 
         /** @var PosConfig $posConfig */
         $posConfig = PosConfig::query()->findOrFail($posConfigId);
+
+        // Si hay una sesión abierta para esta caja, continuar en esa
+        $existing = PosSession::query()
+            ->where('pos_config_id', $posConfig->id)
+            ->where('status', 'open')
+            ->whereNull('closed_at')
+            ->orderByDesc('opened_at')
+            ->first();
+
+        if ($existing) {
+            $this->redirect('/pos/' . $existing->id);
+            return;
+        }
 
         $session = PosSession::create([
             'pos_config_id' => $posConfig->id,

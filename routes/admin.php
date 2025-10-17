@@ -73,7 +73,9 @@ Route::resource('transfers', TransferController::class)->only(['index', 'create'
 Route::get('transfers/{transfer}/pdf', [TransferController::class, 'pdf'])->name('transfers.pdf');
 
 // POS
-Route::resource('posconfig', PosConfigController::class)->except(['show']);
+Route::resource('posconfig', PosConfigController::class)->except(['show'])->parameters([
+    'posconfig' => 'posConfig'
+]);
 
 // Diarios
 Route::resource('journals', JournalController::class)->except(['show']);

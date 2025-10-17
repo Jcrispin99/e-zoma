@@ -16,7 +16,7 @@
 
     <x-wire-card>
 
-        <form action="{{ route('admin.posconfig.update', $posConfig) }}" method="post" class="space-y-4">
+        <form action="{{ route('admin.posconfig.update', 1) }}" method="post" class="space-y-4">
 
             @csrf
             @method('put')

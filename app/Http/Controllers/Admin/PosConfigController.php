@@ -32,8 +32,6 @@ class PosConfigController extends Controller
         $customers = Customer::all();
         $sequences = Sequence::all();
 
-
-
         return view('admin.posconfig.create', compact('companies', 'warehouses', 'customers', 'sequences'));
     }
 
@@ -61,14 +59,6 @@ class PosConfigController extends Controller
         ]);
 
         return redirect()->route('admin.posconfig.edit', $posConfig);
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(PosConfig $posConfig)
-    {
-        //
     }
 
     /**
@@ -115,13 +105,34 @@ class PosConfigController extends Controller
      */
     public function destroy(PosConfig $posConfig)
     {
-        $posConfig->delete();
+        // Verificar si tiene sesiones relacionadas
+        $sessionsCount = $posConfig->sessions()->count();
 
-        session()->flash('swalt', [
-            'icon' => 'success',
-            'title' => '¡Bien hecho!',
-            'text' => 'Configuración de POS ha sido eliminada',
-        ]);
+        if ($sessionsCount > 0) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'No se puede eliminar',
+                'text' => "No se puede eliminar la configuración de POS porque tiene {$sessionsCount} sesión(es) relacionada.",
+            ]);
+
+            return redirect()->route('admin.posconfig.index');
+        }
+
+        try {
+            $posConfig->delete();
+
+            session()->flash('swalt', [
+                'icon' => 'success',
+                'title' => '¡Bien hecho!',
+                'text' => 'Configuración de POS ha sido eliminada correctamente',
+            ]);
+        } catch (\Exception $e) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'Error al eliminar la configuración: ' . $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('admin.posconfig.index');
     }

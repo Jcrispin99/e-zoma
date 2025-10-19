@@ -10,10 +10,10 @@
         'href' => route('admin.quotes.index'),
     ],
     [
-        'name' => 'Nuevo',
+        'name' => 'Editar',
     ],
 ]">
-
-    @livewire('admin.quotes.quote-create')
-
+    <x-wire-card>
+        @livewire('admin.quotes.quote-edit', ['quote' => $quote])
+    </x-wire-card>
 </x-admin-layout>

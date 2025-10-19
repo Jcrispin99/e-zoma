@@ -1,25 +1,56 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\quotes;
 
 use App\Models\Variant;
 use Livewire\Component;
-use App\Models\PurchaseOrder;
-use Illuminate\Support\Facades\DB;
+use App\Models\Quote;
+use App\Services\SequenceService;
+use App\Models\Journal;
 
-class PurchaseOrderCreate extends Component
+class QuoteCreate extends Component
 {
     public $voucher_type = 1;
-    public $serie = 'A';
-    public $correlative;
 
     public $date;
-    public $supplier_id;
+    public $customer_id;
     public $total = 0;
     public $observation;
 
     public $variant_id;
     public $variants = [];
+
+    public $journals;
+    public $journal_id;
+    public $correlative;
+
+    public function mount()
+    {
+        $this->date = now()->format('Y-m-d');
+        $this->variants = [];
+
+        $activeCompanyId = session('active_company_id');
+
+        $this->journals = Journal::where('type', 'quote')
+            ->get();
+
+        if ($this->journals->isNotEmpty()) {
+            $this->journal_id = $this->journals->first()->id;
+            $this->getCorrelative();
+        }
+    }
+
+    public function updatedJournalId()
+    {
+        $this->getCorrelative();
+    }
+
+    public function getCorrelative()
+    {
+        $journal = Journal::with('sequence')->find($this->journal_id);
+        $sequence = $journal->sequence;
+        $this->correlative = str_pad($sequence->next_number, $sequence->sequence_size, '0', STR_PAD_LEFT);
+    }
 
     public function boot()
     {
@@ -44,10 +75,6 @@ class PurchaseOrderCreate extends Component
                 ]);
             }
         });
-    }
-    public function mount()
-    {
-        $this->correlative = PurchaseOrder::max('correlative') + 1;
     }
 
     public function addProduct()
@@ -75,9 +102,8 @@ class PurchaseOrderCreate extends Component
             'id' => $variant->id,
             'name' => $variant->fullName,
             'quantity' => 1,
-            'price' => 0,
-            'tax_rate' => 0, // Valor inicial para el impuesto
-            'subtotal' => 0,
+            'price' => $variant->price,
+            'subtotal' => $variant->price,
         ];
         $this->reset('variant_id');
     }
@@ -88,88 +114,69 @@ class PurchaseOrderCreate extends Component
             [
                 'voucher_type' => 'required|in:1,2',
                 'date' => 'nullable|date',
-                'supplier_id' => 'required|exists:suppliers,id',
+                'customer_id' => 'required|exists:customers,id',
                 'total' => 'required|numeric|min:0',
                 'observation' => 'nullable|string|max:255',
                 'variants' => 'required|array|min:1',
                 'variants.*.id' => 'required|exists:variants,id',
                 'variants.*.quantity' => 'required|numeric|min:1',
                 'variants.*.price' => 'required|numeric|min:0',
-                'variants.*.tax_rate' => 'required|numeric|in:0,10,18', // Validar impuesto
             ],
             [],
             [
                 'voucher_type' => 'tipo de comprobante',
-                'supplier_id' => 'proveedor',
+                'customer_id' => 'cliente',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
                 'variants.*.price' => 'precio',
-                'variants.*.tax_rate' => 'impuesto', // Mensaje para impuesto
             ]
         );
 
         $activeCompanyId = session('active_company_id');
 
         if (!$activeCompanyId) {
-            $this->dispatch('swal', [
+            session()->flash('swalt', [
                 'icon' => 'error',
                 'title' => 'Error',
-                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear una orden de compra.',
+                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear una compra.',
             ]);
-            return;
+            return redirect()->back();
         }
 
-        // Calcular el total en el backend para seguridad
-        $totalCalculado = 0;
-        foreach ($this->variants as $variant) {
-            $subtotal = $variant['quantity'] * $variant['price'];
-            $totalCalculado += $subtotal * (1 + $variant['tax_rate'] / 100);
-        }
+        $sequenceData = app(SequenceService::class)->getNextParts($this->journal_id);
 
-        $purchaseOrder = PurchaseOrder::create([
+        $quote = Quote::create([
             'voucher_type' => $this->voucher_type,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
+            'serie' => $sequenceData['serie'],
+            'correlative' => $sequenceData['correlative'],
             'date' => $this->date ?? now(),
-            'supplier_id' => $this->supplier_id,
-            'total' => $totalCalculado, // Usar el total calculado en el backend
+            'customer_id' => $this->customer_id,
+            'total' => $this->total,
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
+            'status' => 'draft',
         ]);
 
         foreach ($this->variants as $variant) {
-            $purchaseOrder->variants()->attach($variant['id'], [
+            $quote->variants()->attach($variant['id'], [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
-                'tax_rate' => $variant['tax_rate'], // Guardar el impuesto
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
         }
 
-        // Calcular cantidad ordenada desde las líneas (pivot) y confirmar la OC
-        $orderedQty = DB::table('variantables')
-            ->where('variantable_type', PurchaseOrder::class)
-            ->where('variantable_id', $purchaseOrder->id)
-            ->sum('quantity');
-
-        $purchaseOrder->update([
-            'status' => 'confirmed',
-            'confirmed_at' => now(),
-            'ordered_qty_total' => (float) $orderedQty,
-        ]);
-
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => '¡Bien hecho!',
-            'text' => 'Orden de compra creada exitosamente.',
+            'text' => 'Cotización creada exitosamente.',
         ]);
 
-        return redirect()->route('admin.purchases-orders.index');
+        return redirect()->route('admin.quotes.index');
     }
 
     public function render()
     {
-        return view('livewire.admin.purchase-order-create');
+        return view('livewire.admin.quotes.quote-create');
     }
 }

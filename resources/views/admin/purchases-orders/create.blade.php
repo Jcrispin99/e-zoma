@@ -14,6 +14,6 @@
     ],
 ]">
 
-    @livewire('admin.purchase-order-create')
+    @livewire('admin.purchaseOrders.purchase-order-create')
 
 </x-admin-layout>

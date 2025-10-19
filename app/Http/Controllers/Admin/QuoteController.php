@@ -25,6 +25,11 @@ class QuoteController extends Controller
         return view('admin.quotes.create');
     }
 
+    public function edit(Quote $quote)
+    {
+        return view('admin.quotes.edit', compact('quote'));
+    }
+
     /**
      * Generate a PDF for the specified resource.
      */

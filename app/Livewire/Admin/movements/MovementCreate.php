@@ -1,56 +1,29 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\movements;
 
+use App\Facades\Kardex;
+use App\Models\Inventory;
 use App\Models\Variant;
 use Livewire\Component;
-use App\Models\Quote;
-use App\Services\SequenceService;
-use App\Models\Journal;
+use App\Models\Movement;
 
-class QuoteCreate extends Component
+class MovementCreate extends Component
 {
-    public $voucher_type = 1;
+    public $type = 1;
+    public $serie = 'M001';
+    public $correlative;
 
     public $date;
-    public $customer_id;
+    public $warehouse_id;
+
+    public $reason_id;
+
     public $total = 0;
     public $observation;
 
     public $variant_id;
     public $variants = [];
-
-    public $journals;
-    public $journal_id;
-    public $correlative;
-
-    public function mount()
-    {
-        $this->date = now()->format('Y-m-d');
-        $this->variants = [];
-
-        $activeCompanyId = session('active_company_id');
-
-        $this->journals = Journal::where('type', 'quote')
-            ->get();
-
-        if ($this->journals->isNotEmpty()) {
-            $this->journal_id = $this->journals->first()->id;
-            $this->getCorrelative();
-        }
-    }
-
-    public function updatedJournalId()
-    {
-        $this->getCorrelative();
-    }
-
-    public function getCorrelative()
-    {
-        $journal = Journal::with('sequence')->find($this->journal_id);
-        $sequence = $journal->sequence;
-        $this->correlative = str_pad($sequence->next_number, $sequence->sequence_size, '0', STR_PAD_LEFT);
-    }
 
     public function boot()
     {
@@ -76,6 +49,17 @@ class QuoteCreate extends Component
             }
         });
     }
+    public function mount()
+    {
+        $this->correlative = Movement::max('correlative') + 1;
+    }
+
+    public function updated($property, $value)
+    {
+        if ($property == 'type') {
+            $this->reset('reason_id');
+        }
+    }
 
     public function addProduct()
     {
@@ -98,12 +82,18 @@ class QuoteCreate extends Component
 
         $variant = Variant::with('product')->find($this->variant_id);
 
+        $lastRecord = Inventory::where('variant_id', $variant->id)
+            ->where('warehouse_id', $this->warehouse_id)
+            ->latest('id')
+            ->first();
+        $costBalance = $lastRecord ? $lastRecord->cost_balance : 0;
+
         $this->variants[] = [
             'id' => $variant->id,
             'name' => $variant->fullName,
             'quantity' => 1,
-            'price' => $variant->price,
-            'subtotal' => $variant->price,
+            'price' => $costBalance,
+            'subtotal' => 1 * $costBalance,
         ];
         $this->reset('variant_id');
     }
@@ -112,9 +102,12 @@ class QuoteCreate extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
+                'type' => 'required|in:1,2',
+                'serie' => 'required|string|max:10',
+                'correlative' => 'required|numeric|min:1',
                 'date' => 'nullable|date',
-                'customer_id' => 'required|exists:customers,id',
+                'warehouse_id' => 'required|exists:warehouses,id',
+                'reason_id' => 'required|exists:reasons,id',
                 'total' => 'required|numeric|min:0',
                 'observation' => 'nullable|string|max:255',
                 'variants' => 'required|array|min:1',
@@ -124,8 +117,13 @@ class QuoteCreate extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
-                'customer_id' => 'cliente',
+                'type' => 'tipo de movimiento',
+                'serie' => 'serie',
+                'correlative' => 'correlativo',
+                'date' => 'fecha',
+                'warehouse_id' => 'almacen',
+                'reason_id' => 'motivo',
+                'total' => 'total',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
@@ -144,26 +142,30 @@ class QuoteCreate extends Component
             return redirect()->back();
         }
 
-        $sequenceData = app(SequenceService::class)->getNextParts($this->journal_id);
-
-        $quote = Quote::create([
-            'voucher_type' => $this->voucher_type,
-            'serie' => $sequenceData['serie'],
-            'correlative' => $sequenceData['correlative'],
+        $movement = Movement::create([
+            'type' => $this->type,
+            'serie' => $this->serie,
+            'correlative' => $this->correlative,
             'date' => $this->date ?? now(),
-            'customer_id' => $this->customer_id,
+            'warehouse_id' => $this->warehouse_id,
+            'reason_id' => $this->reason_id,
             'total' => $this->total,
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
-            'status' => 'draft',
         ]);
 
         foreach ($this->variants as $variant) {
-            $quote->variants()->attach($variant['id'], [
+            $movement->variants()->attach($variant['id'], [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
                 'subtotal' => $variant['quantity'] * $variant['price'],
             ]);
+            //Kardex
+            if ($this->type == 1) {
+                Kardex::registerEntry($movement, $variant, $this->warehouse_id, 'Movimiento');
+            } else if ($this->type == 2) {
+                Kardex::registerExit($movement, $variant, $this->warehouse_id, 'Movimiento');
+            }
         }
 
         session()->flash('swalt', [
@@ -172,11 +174,11 @@ class QuoteCreate extends Component
             'text' => 'Cotización creada exitosamente.',
         ]);
 
-        return redirect()->route('admin.quotes.index');
+        return redirect()->route('admin.movements.index');
     }
 
     public function render()
     {
-        return view('livewire.admin.quote-create');
+        return view('livewire.admin.movements.movement-create');
     }
 }

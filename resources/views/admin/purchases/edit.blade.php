@@ -10,10 +10,10 @@
         'href' => route('admin.purchases.index'),
     ],
     [
-        'name' => 'Nuevo',
+        'name' => 'Editar',
     ],
 ]">
-
-    @livewire('admin.purchases.purchase-create')
-
+    <x-wire-card>
+        @livewire('admin.purchases.purchase-edit', ['purchase' => $purchase])
+    </x-wire-card>
 </x-admin-layout>

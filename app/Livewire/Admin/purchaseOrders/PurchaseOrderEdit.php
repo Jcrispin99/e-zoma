@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\purchaseOrders;
 
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
@@ -31,7 +31,6 @@ class PurchaseOrderEdit extends Component
     public $variant_id;
     public $variants = [];
 
-    //Propiedades para el modal de envío de correo
     public $form = [
         'open' => false,
         'document' => '',
@@ -64,7 +63,6 @@ class PurchaseOrderEdit extends Component
     {
         $this->purchaseOrder = $purchaseOrder->load('variants.product', 'variants.attributeValues', 'purchase');
 
-        // Pre-cargar datos base
         $this->voucher_type = $purchaseOrder->voucher_type;
         $this->serie = $purchaseOrder->serie;
         $this->correlative = $purchaseOrder->correlative;
@@ -72,19 +70,17 @@ class PurchaseOrderEdit extends Component
         $this->supplier_id = $purchaseOrder->supplier_id;
         $this->observation = $purchaseOrder->observation;
 
-        // Mapear líneas existentes a estructura de variants del form
         $this->variants = $purchaseOrder->variants->map(function ($variant) {
             return [
                 'id' => $variant->id,
                 'name' => $variant->fullName,
                 'quantity' => $variant->pivot->quantity,
                 'price' => $variant->pivot->price,
-                'tax_rate' => (int) $variant->pivot->tax_rate, // Forzar a entero para que coincida con el select
+                'tax_rate' => (int) $variant->pivot->tax_rate,
                 'subtotal' => $variant->pivot->subtotal,
             ];
         })->toArray();
 
-        // Cargar total
         $this->total = $this->purchaseOrder->total;
 
         // Detectar si ya existe una compra (factura) asociada
@@ -268,6 +264,6 @@ class PurchaseOrderEdit extends Component
 
     public function render()
     {
-        return view('livewire.admin.purchase-order-edit');
+        return view('livewire.admin.purchaseOrders.purchase-order-edit');
     }
 }

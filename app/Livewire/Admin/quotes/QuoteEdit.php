@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\quotes;
 
 use Livewire\Component;
 use App\Models\Quote;
@@ -176,6 +176,6 @@ class QuoteEdit extends Component
 
     public function render()
     {
-        return view('livewire.admin.quote-edit');
+        return view('livewire.admin.quotes.quote-edit');
     }
 }

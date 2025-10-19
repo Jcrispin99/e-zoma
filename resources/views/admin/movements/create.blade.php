@@ -14,6 +14,6 @@
     ],
 ]">
 
-    @livewire('admin.movement-create')
+    @livewire('admin.movements.movement-create')
 
 </x-admin-layout>

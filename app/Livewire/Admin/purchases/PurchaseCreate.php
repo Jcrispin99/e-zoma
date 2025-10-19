@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\purchases;
 
 use App\Facades\Kardex;
 use App\Models\Purchase;
@@ -246,7 +246,7 @@ class PurchaseCreate extends Component
 
     public function render()
     {
-        return view('livewire.admin.purchase-create');
+        return view('livewire.admin.purchases.purchase-create');
     }
 
     /**

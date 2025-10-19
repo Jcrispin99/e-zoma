@@ -43,23 +43,17 @@ Route::resource('attributes', AttributeController::class)->except(['show']);
 // compras
 Route::resource('suppliers', SupplierController::class)->except(['show']);
 
-Route::get('purchases-orders', [PurchaseOrderController::class, 'index'])->name('purchases-orders.index');
-Route::get('purchases-orders/create', [PurchaseOrderController::class, 'create'])->name('purchases-orders.create');
-Route::get('purchases-orders/{purchaseOrder}/edit', \App\Livewire\Admin\PurchaseOrderEdit::class)->name('purchases-orders.edit');
-
+Route::resource('purchases-orders', PurchaseOrderController::class)->parameters(['purchases-orders' => 'purchaseOrder'])->only(['index', 'create', 'edit']);
 Route::get('purchases-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'pdf'])->name('purchases-orders.pdf');
 
-Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
-Route::get('purchases/create/{purchase_order_id?}', \App\Livewire\Admin\PurchaseCreate::class)->name('purchases.create');
-Route::get('purchases/{purchase}/edit', \App\Livewire\Admin\PurchaseEdit::class)->name('purchases.edit');
+Route::resource('purchases', PurchaseController::class)->only(['index', 'create', 'edit']);
 Route::get('purchases/{purchase}/pdf', [PurchaseController::class, 'pdf'])->name('purchases.pdf');
 
 //ventas
 Route::resource('customers', CustomerController::class)->except(['show']);
 
-Route::resource('quotes', QuoteController::class)->only(['index', 'create']);
+Route::resource('quotes', QuoteController::class)->only(['index', 'create', 'edit']);
 Route::get('quotes/{quote}/pdf', [QuoteController::class, 'pdf'])->name('quotes.pdf');
-Route::get('quotes/{quote}/edit', \App\Livewire\Admin\QuoteEdit::class)->name('quotes.edit');
 
 Route::resource('sales', SaleController::class)->only(['index', 'create']);
 Route::get('sales/{sale}/edit', \App\Livewire\Admin\SaleEdit::class)->name('sales.edit');

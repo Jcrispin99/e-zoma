@@ -17,6 +17,11 @@ class PurchaseController extends Controller
         return view('admin.purchases.index');
     }
 
+    public function edit(Purchase $purchase)
+    {
+        return view('admin.purchases.edit', compact('purchase'));
+    }
+
     /**
      * Show the form for creating a new resource.
      */

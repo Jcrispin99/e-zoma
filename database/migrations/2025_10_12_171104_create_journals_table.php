@@ -16,14 +16,14 @@ return new class extends Migration
             $table->string('name');
             $table->string('code');
             $table->string('type');
-            // Código de tipo de comprobante SUNAT (ej. 01 = Factura, 03 = Boleta)
+
             $table->string('document_type_code', 2)->nullable();
 
             $table->foreignId('sequence_id')->constrained('sequences');
-            $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
+            $table->foreignId('company_id')->nullable()->constrained('companies')->onDelete('cascade');
 
             $table->timestamps();
-
+            $table->unique('code');
             $table->unique(['company_id', 'code']);
             $table->index(['document_type_code']);
         });

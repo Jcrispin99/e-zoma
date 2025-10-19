@@ -33,23 +33,23 @@
             <div class="flex items-center gap-2">
                 <x-wire-badge :label="str($purchase->status)->upper()" :color="$purchase->status === 'draft' ? 'slate' : ($purchase->status === 'posted' ? 'emerald' : 'rose')" />
                 @if($purchase->payment_status)
-                    <x-wire-badge :label="str($purchase->payment_status)->upper()" :color="$purchase->payment_status === 'paid' ? 'emerald' : ($purchase->payment_status === 'partial' ? 'amber' : 'slate')" />
+                <x-wire-badge :label="str($purchase->payment_status)->upper()" :color="$purchase->payment_status === 'paid' ? 'emerald' : ($purchase->payment_status === 'partial' ? 'amber' : 'slate')" />
                 @endif
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
                 @if($purchase->status === 'draft')
-                    <x-wire-button light emerald label="Contabilizar" wire:click="post" wire:loading.attr="disabled" />
-                    <x-wire-button light red label="Cancelar" wire:click="cancel" wire:loading.attr="disabled" />
+                <x-wire-button light emerald label="Contabilizar" wire:click="post" wire:loading.attr="disabled" />
+                <x-wire-button light red label="Cancelar" wire:click="cancel" wire:loading.attr="disabled" />
                 @elseif($purchase->status === 'posted')
-                    <x-wire-button light emerald label="Registrar pago" wire:click="markPaid" wire:loading.attr="disabled" />
-                    <x-wire-button light red label="Anular" wire:click="cancel" wire:loading.attr="disabled" />
+                <x-wire-button light emerald label="Registrar pago" wire:click="markPaid" wire:loading.attr="disabled" />
+                <x-wire-button light red label="Anular" wire:click="cancel" wire:loading.attr="disabled" />
                 @elseif($purchase->status === 'cancelled')
-                    <x-wire-button light gray label="Reabrir" wire:click="reopen" wire:loading.attr="disabled" />
+                <x-wire-button light gray label="Reabrir" wire:click="reopen" wire:loading.attr="disabled" />
                 @endif
 
                 @if($purchase->purchase_order_id)
-                    <x-wire-button light gray label="Ver OC" :href="route('admin.purchases-orders.edit', $purchase->purchase_order_id)" />
+                <x-wire-button light gray label="Ver OC" :href="route('admin.purchases-orders.edit', $purchase->purchase_order_id)" />
                 @endif
 
                 <x-wire-button light gray label="Enviar factura por correo" wire:click="openModal({{ $purchase }})">
@@ -57,6 +57,7 @@
                 </x-wire-button>
 
                 <x-wire-button light gray href="{{ route('admin.purchases.pdf', $purchase) }}">
+
                     descargar
                 </x-wire-button>
 

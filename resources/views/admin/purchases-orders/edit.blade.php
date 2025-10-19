@@ -14,6 +14,6 @@
     ],
 ]">
 
-    @livewire('admin.purchase-order-edit', ['purchaseOrder' => $purchaseOrder])
+    @livewire('admin.purchaseOrders.purchase-order-edit', ['purchaseOrder' => $purchaseOrder])
 
 </x-admin-layout>

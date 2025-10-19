@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\purchases;
 
 use App\Facades\Kardex;
 use App\Models\Purchase;
@@ -346,7 +346,7 @@ class PurchaseEdit extends Component
 
     public function render()
     {
-        return view('livewire.admin.purchase-edit');
+        return view('livewire.admin.purchases.purchase-edit');
     }
 
     // ===== Métodos para el modal de envío de correo =====

@@ -2,15 +2,20 @@
 
 namespace App\Livewire\Admin\purchaseOrders;
 
+use App\Models\Journal;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
+use App\Services\SequenceService;
 
 class PurchaseOrderCreate extends Component
 {
     public $voucher_type = 1;
     public $serie = 'A';
+
+    public $journals = [];
+    public $journal_id;
     public $correlative;
 
     public $date;
@@ -48,6 +53,19 @@ class PurchaseOrderCreate extends Component
     public function mount()
     {
         $this->correlative = PurchaseOrder::max('correlative') + 1;
+        $this->date = now()->format('Y-m-d');
+
+        $this->journals = Journal::where('type', 'purchase-order')
+            ->with('sequence')
+            ->orderBy('name')
+            ->get();
+
+        $journalsCol = collect($this->journals);
+        if ($journalsCol->isNotEmpty()) {
+            $first = $journalsCol->first();
+            $this->journal_id = $first ? $first->id : null;
+            $this->updatePreview();
+        }
     }
 
     public function addProduct()
@@ -80,6 +98,45 @@ class PurchaseOrderCreate extends Component
             'subtotal' => 0,
         ];
         $this->reset('variant_id');
+    }
+
+    public function updatedJournalId()
+    {
+        $this->updatePreview();
+    }
+
+    protected function updatePreview()
+    {
+        if (!$this->journal_id) {
+            $this->correlative = '';
+            return;
+        }
+
+        $journal = collect($this->journals)->first(function ($j) {
+            if (is_array($j)) {
+                return ($j['id'] ?? null) == $this->journal_id;
+            }
+            return ($j->id ?? null) == $this->journal_id;
+        });
+
+        // Obtener datos de secuencia según sea array u objeto
+        if (is_array($journal)) {
+            $sequence = $journal['sequence'] ?? null;
+            $next = $sequence['next_number'] ?? null;
+            $size = $sequence['sequence_size'] ?? null;
+        } else {
+            $sequence = $journal ? $journal->sequence : null;
+            $next = $sequence ? $sequence->next_number : null;
+            $size = $sequence ? $sequence->sequence_size : null;
+        }
+
+        if (!$next || !$size) {
+            $this->correlative = '';
+            return;
+        }
+
+        // Previsualizar correlativo sin consumir la secuencia
+        $this->correlative = str_pad((string)$next, (int)$size, '0', STR_PAD_LEFT);
     }
 
     public function save()
@@ -127,15 +184,21 @@ class PurchaseOrderCreate extends Component
             $totalCalculado += $subtotal * (1 + $variant['tax_rate'] / 100);
         }
 
+        // Obtener serie y correlativo con consumo de secuencia
+        $parts = app(SequenceService::class)->getNextParts($this->journal_id);
+
         $purchaseOrder = PurchaseOrder::create([
             'voucher_type' => $this->voucher_type,
             'serie' => $this->serie,
             'correlative' => $this->correlative,
+            'serie' => $parts['serie'],
+            'correlative' => $parts['correlative'],
             'date' => $this->date ?? now(),
             'supplier_id' => $this->supplier_id,
             'total' => $totalCalculado, // Usar el total calculado en el backend
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
+            'journal_id' => $this->journal_id,
         ]);
 
         foreach ($this->variants as $variant) {

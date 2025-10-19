@@ -16,8 +16,9 @@ return new class extends Migration
             $table->foreignId('company_id')->constrained()->after('id');
             $table->string('name');
             $table->foreignId('warehouse_id')->constrained('warehouses');
-            $table->foreignId('receipt_sequence_id')->constrained('sequences');
-            $table->foreignId('invoice_sequence_id')->constrained('sequences');
+            // Reemplazar sequence_ids por journal_ids
+            $table->foreignId('receipt_journal_id')->constrained('journals');
+            $table->foreignId('invoice_journal_id')->constrained('journals');
             $table->foreignId('default_customer_id')->constrained('customers');
             $table->boolean('is_active')->default(true);
             $table->timestamps();

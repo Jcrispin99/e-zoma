@@ -24,6 +24,7 @@ return new class extends Migration
             $table->foreignId('customer_id')->constrained()->onDelete('cascade');
 
             $table->decimal('total', 10, 2)->default(0.00);
+            $table->string('status')->nullable()->default('draft');
 
             $table->string('observation')->nullable();
 

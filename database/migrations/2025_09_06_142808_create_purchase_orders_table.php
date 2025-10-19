@@ -30,6 +30,8 @@ return new class extends Migration
 
             $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
 
+            $table->foreignId('journal_id')->nullable()->constrained()->onDelete('set null');
+
             // Ciclo global del PO
             $table->enum('status', ['draft', 'confirmed', 'done', 'cancelled'])->default('draft');
             $table->enum('receiving_status', ['none', 'partial', 'complete'])->default('none');

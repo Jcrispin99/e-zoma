@@ -7,12 +7,8 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Journal;
 use App\Models\PosConfig;
-use App\Models\Sequence;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
-
-
 
 class PosConfigController extends Controller
 {
@@ -52,13 +48,6 @@ class PosConfigController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Guardar journal_id directamente y mantener sequence_id sincronizado
-        $receiptJournal = Journal::find($data['receipt_journal_id']);
-        $invoiceJournal = Journal::find($data['invoice_journal_id']);
-        
-        $data['receipt_sequence_id'] = $receiptJournal->sequence_id;
-        $data['invoice_sequence_id'] = $invoiceJournal->sequence_id;
-        
         $posConfig = PosConfig::create($data);
 
         session()->flash('swalt', [
@@ -98,13 +87,6 @@ class PosConfigController extends Controller
             'is_active' => 'boolean',
         ]);
 
-        // Guardar journal_id directamente y mantener sequence_id sincronizado
-        $receiptJournal = Journal::find($data['receipt_journal_id']);
-        $invoiceJournal = Journal::find($data['invoice_journal_id']);
-        
-        $data['receipt_sequence_id'] = $receiptJournal->sequence_id;
-        $data['invoice_sequence_id'] = $invoiceJournal->sequence_id;
-        
         $posConfig->update($data);
 
         session()->flash('swalt', [

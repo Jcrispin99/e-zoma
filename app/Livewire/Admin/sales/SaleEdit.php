@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\sales;
 
 use App\Facades\Kardex;
 use App\Models\Sale;
@@ -271,6 +271,6 @@ class SaleEdit extends Component
 
     public function render()
     {
-        return view('livewire.admin.sale-edit');
+        return view('livewire.admin.sales.sale-edit');
     }
 }

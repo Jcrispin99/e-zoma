@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\transfers;
 
 use App\Facades\Kardex;
 use App\Models\Variant;
@@ -184,6 +184,6 @@ class TransferCreate extends Component
 
     public function render()
     {
-        return view('livewire.admin.transfer-create');
+        return view('livewire.admin.transfers.transfer-create');
     }
 }

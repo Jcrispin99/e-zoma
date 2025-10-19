@@ -25,6 +25,11 @@ class SaleController extends Controller
         return view('admin.sales.create');
     }
 
+    public function edit(Sale $sale)
+    {
+        return view('admin.sales.edit', compact('sale'));
+    }
+
     /**
      * Generate a PDF for the specified resource.
      */

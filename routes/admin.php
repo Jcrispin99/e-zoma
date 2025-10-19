@@ -55,8 +55,7 @@ Route::resource('customers', CustomerController::class)->except(['show']);
 Route::resource('quotes', QuoteController::class)->only(['index', 'create', 'edit']);
 Route::get('quotes/{quote}/pdf', [QuoteController::class, 'pdf'])->name('quotes.pdf');
 
-Route::resource('sales', SaleController::class)->only(['index', 'create']);
-Route::get('sales/{sale}/edit', \App\Livewire\Admin\SaleEdit::class)->name('sales.edit');
+Route::resource('sales', SaleController::class)->only(['index', 'create', 'edit']);
 Route::get('sales/{sale}/pdf', [SaleController::class, 'pdf'])->name('sales.pdf');
 
 //movimientos

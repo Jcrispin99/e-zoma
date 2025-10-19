@@ -1,19 +1,18 @@
-<x-admin-layout title="Transferencias" :breadcrumbs="[
+<x-admin-layout title="Ventas" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),
         'icon' => 'fa-solid fa-gauge',
     ],
     [
-        'name' => 'Transferencias',
+        'name' => 'Ventas',
         'icon' => 'fa-regular fa-file-lines',
-        'href' => route('admin.transfers.index'),
+        'href' => route('admin.sales.index'),
     ],
     [
-        'name' => 'Nuevo',
+        'name' => 'Editar',
     ],
 ]">
-
-    @livewire('admin.transfers.transfer-create')
+    @livewire('admin.sales.sale-edit', compact('sale'))
 
 </x-admin-layout>

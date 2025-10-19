@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin;
+namespace App\Livewire\Admin\sales;
 
 use App\Facades\Kardex;
 use App\Models\Inventory;
@@ -304,6 +304,6 @@ class SaleCreate extends Component
 
     public function render()
     {
-        return view('livewire.admin.sale-create');
+        return view('livewire.admin.sales.sale-create');
     }
 }

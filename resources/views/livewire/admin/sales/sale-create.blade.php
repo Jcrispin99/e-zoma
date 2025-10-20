@@ -24,10 +24,6 @@
         <form wire:submit="save" class="space-y-4">
 
             <div class="grid lg:grid-cols-4 gap-4">
-                <x-wire-native-select label="Tipo de Documento" wire:model="voucher_type">
-                    <option value="1">Factura</option>
-                    <option value="2">Boleta</option>
-                </x-wire-native-select>
                 <x-wire-native-select label="Serie" wire:model="journal_id">
                     <option value="">Seleccione serie</option>
                     @foreach($journals as $journal)

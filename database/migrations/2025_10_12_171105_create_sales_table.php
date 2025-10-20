@@ -14,8 +14,6 @@ return new class extends Migration
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
 
-            $table->integer('voucher_type');
-
             $table->string('serie');
             $table->string('correlative');
 
@@ -59,7 +57,7 @@ return new class extends Migration
             $table->index(['payment_status']);
             $table->index(['journal_id']);
             $table->index(['original_sale_id']);
-            $table->unique(['company_id', 'voucher_type', 'serie', 'correlative'], 'sale_unique_company_voucher_serie_corr');
+            $table->unique(['company_id', 'journal_id', 'serie', 'correlative'], 'sale_unique_company_journal_serie_corr');
         });
     }
 

@@ -15,7 +15,6 @@ class SaleEdit extends Component
 {
     public Sale $sale;
 
-    public $voucher_type = 1;
     public $serie;
     public $correlative;
     public $date;
@@ -44,7 +43,6 @@ class SaleEdit extends Component
     {
         $this->sale = $sale->load('variants.product', 'variants.attributeValues', 'customer', 'warehouse');
 
-        $this->voucher_type = $sale->voucher_type;
         $this->serie = $sale->serie;
         $this->correlative = $sale->correlative;
         $this->date = optional($sale->date)->format('Y-m-d');
@@ -101,7 +99,6 @@ class SaleEdit extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
                 'date' => 'nullable|date',
                 'customer_id' => 'required|exists:customers,id',
                 'warehouse_id' => 'required|exists:warehouses,id',
@@ -114,7 +111,6 @@ class SaleEdit extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
                 'customer_id' => 'cliente',
                 'warehouse_id' => 'almacén',
                 'observation' => 'observación',
@@ -131,7 +127,6 @@ class SaleEdit extends Component
         $this->total = $computedTotal;
 
         $this->sale->update([
-            'voucher_type' => $this->voucher_type,
             'serie' => $this->serie,
             'correlative' => $this->correlative,
             'date' => $this->date ?? now(),

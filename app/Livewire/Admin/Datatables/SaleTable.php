@@ -54,7 +54,7 @@ class SaleTable extends DataTableComponent
         return [
             Column::make("Id", "id")
                 ->sortable(),
-            Column::make("Voucher type", "voucher_type")
+            Column::make("Journal", "journal.name")
                 ->sortable(),
             Column::make("Serie", "serie")
                 ->sortable(),
@@ -82,7 +82,7 @@ class SaleTable extends DataTableComponent
 
     public function builder(): Builder
     {
-        $query = Sale::query()->with(['quote', 'customer', 'warehouse']);
+        $query = Sale::query()->with(['quote', 'customer', 'warehouse', 'journal']);
 
         $selectedCompanyIds = session()->get('selected_company_ids', []);
 

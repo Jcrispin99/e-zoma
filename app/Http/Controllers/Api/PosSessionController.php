@@ -255,8 +255,6 @@ class PosSessionController extends Controller
                 // Crear Sale
                 /** @var Sale $sale */
                 $sale = new Sale();
-                // Sales.voucher_type es entero: 1=receipt, 2=invoice
-                $sale->voucher_type = $order['voucher_type'] === 'invoice' ? 2 : 1;
                 $sale->serie = $serie;
                 $sale->correlative = $correlative;
                 $sale->date = now();

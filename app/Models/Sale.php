@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Sale extends Model
 {
     protected $fillable = [
-        'voucher_type',
         'serie',
         'correlative',
         'journal_id',

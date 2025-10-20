@@ -14,7 +14,6 @@ use App\Services\KardexServices;
 
 class SaleCreate extends Component
 {
-    public $voucher_type = 1;
     public $correlative = '';
 
     public $date;
@@ -89,7 +88,6 @@ class SaleCreate extends Component
                     ]);
                     $this->quote_id = null;
                 } else {
-                    $this->voucher_type = $quote->voucher_type;
                     $this->customer_id = $quote->customer_id;
                     $this->variants = $quote->variants->map(function ($variant) {
                         return [
@@ -122,7 +120,6 @@ class SaleCreate extends Component
                     return;
                 }
 
-                $this->voucher_type = $quote->voucher_type;
                 $this->customer_id = $quote->customer_id;
 
                 $this->variants = $quote->variants->map(function ($variant) {
@@ -212,7 +209,6 @@ class SaleCreate extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
                 'journal_id' => 'required|exists:journals,id',
                 'date' => 'nullable|date',
                 'quote_id' => 'nullable|exists:quotes,id',
@@ -227,7 +223,6 @@ class SaleCreate extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
                 'journal_id' => 'serie',
                 'customer_id' => 'cliente',
                 'observation' => 'observación',
@@ -251,8 +246,8 @@ class SaleCreate extends Component
         // Obtener serie y correlativo con consumo de secuencia
         $parts = app(SequenceService::class)->getNextParts($this->journal_id);
 
+        // Derivar voucher_type según el journal seleccionado (01 factura, 03 boleta)
         $sale = Sale::create([
-            'voucher_type' => $this->voucher_type,
             'serie' => $parts['serie'],
             'correlative' => $parts['correlative'],
             'date' => $this->date ?? now(),

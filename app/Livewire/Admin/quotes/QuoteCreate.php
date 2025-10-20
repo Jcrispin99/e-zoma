@@ -10,8 +10,6 @@ use App\Models\Journal;
 
 class QuoteCreate extends Component
 {
-    public $voucher_type = 1;
-
     public $date;
     public $customer_id;
     public $total = 0;
@@ -20,36 +18,38 @@ class QuoteCreate extends Component
     public $variant_id;
     public $variants = [];
 
-    public $journals;
-    public $journal_id;
     public $correlative;
+    public $journals = [];
+    public $journal_id;
 
     public function mount()
     {
         $this->date = now()->format('Y-m-d');
         $this->variants = [];
 
-        $activeCompanyId = session('active_company_id');
-
+        // 1. Cargar journals de tipo 'quote' con sus secuencias para evitar N+1
         $this->journals = Journal::where('type', 'quote')
+            ->with('sequence')
             ->get();
 
+        // 2. Establecer el primer journal como predeterminado y actualizar la vista previa
         if ($this->journals->isNotEmpty()) {
             $this->journal_id = $this->journals->first()->id;
-            $this->getCorrelative();
+            $this->updatePreview();
         }
     }
 
     public function updatedJournalId()
     {
-        $this->getCorrelative();
+        $this->updatePreview();
     }
 
-    public function getCorrelative()
+    // 3. Renombrado a updatePreview y optimizado para no hacer más queries a la BD
+    public function updatePreview()
     {
-        $journal = Journal::with('sequence')->find($this->journal_id);
-        $sequence = $journal->sequence;
-        $this->correlative = str_pad($sequence->next_number, $sequence->sequence_size, '0', STR_PAD_LEFT);
+        $journal = $this->journals->firstWhere('id', $this->journal_id);
+        $sequence = $journal?->sequence;
+        $this->correlative = $sequence ? str_pad($sequence->next_number, $sequence->sequence_size, '0', STR_PAD_LEFT) : '';
     }
 
     public function boot()
@@ -112,7 +112,7 @@ class QuoteCreate extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
+                'journal_id' => 'required|exists:journals,id',
                 'date' => 'nullable|date',
                 'customer_id' => 'required|exists:customers,id',
                 'total' => 'required|numeric|min:0',
@@ -124,7 +124,7 @@ class QuoteCreate extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
+                'journal_id' => 'serie',
                 'customer_id' => 'cliente',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
@@ -147,7 +147,7 @@ class QuoteCreate extends Component
         $sequenceData = app(SequenceService::class)->getNextParts($this->journal_id);
 
         $quote = Quote::create([
-            'voucher_type' => $this->voucher_type,
+            'journal_id' => $this->journal_id, // 4. Guardar el journal_id
             'serie' => $sequenceData['serie'],
             'correlative' => $sequenceData['correlative'],
             'date' => $this->date ?? now(),

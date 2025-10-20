@@ -54,8 +54,6 @@ class QuoteTable extends DataTableComponent
         return [
             Column::make("Id", "id")
                 ->sortable(),
-            Column::make("Voucher type", "voucher_type")
-                ->sortable(),
             Column::make("Serie", "serie")
                 ->sortable(),
             Column::make("Correlative", "correlative")
@@ -76,7 +74,7 @@ class QuoteTable extends DataTableComponent
 
     public function builder(): Builder
     {
-        $query = Quote::query()->with(['customer']);
+        $query = Quote::query()->with(['customer', 'journal']);
         $selectedCompanyIds = session()->get('selected_company_ids', []);
         if ($selectedCompanyIds) {
             $query->whereIn('company_id', $selectedCompanyIds);

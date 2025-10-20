@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\quotes;
 
+use App\Models\Journal;
 use Livewire\Component;
 use App\Models\Quote;
 use App\Models\Variant;
@@ -12,8 +13,9 @@ class QuoteEdit extends Component
 {
     public Quote $quote;
 
-    public $voucher_type = 1;
-    public $serie;
+    public $journals = [];
+    public $journal_id;
+
     public $correlative;
     public $date;
     public $customer_id;
@@ -35,9 +37,12 @@ class QuoteEdit extends Component
     public function mount(Quote $quote)
     {
         $this->quote = $quote->load('variants.product', 'variants.attributeValues', 'customer');
-
-        $this->voucher_type = $quote->voucher_type;
-        $this->serie = $quote->serie;
+        
+        // 1. Cargar los journals de tipo 'quote' para mostrarlos en el select (aunque esté deshabilitado)
+        $this->journals = Journal::where('type', 'quote')->get();
+        
+        // 2. Asignar el journal_id y el correlativo desde la cotización existente
+        $this->journal_id = $quote->journal_id;
         $this->correlative = $quote->correlative;
         $this->date = optional($quote->date)->format('Y-m-d');
         $this->customer_id = $quote->customer_id;
@@ -90,7 +95,6 @@ class QuoteEdit extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
                 'date' => 'nullable|date',
                 'customer_id' => 'required|exists:customers,id',
                 'total' => 'required|numeric|min:0',
@@ -102,7 +106,6 @@ class QuoteEdit extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
                 'customer_id' => 'cliente',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
@@ -117,10 +120,8 @@ class QuoteEdit extends Component
         }
         $this->total = $computedTotal;
 
+        // 3. Actualizar solo los campos editables. La serie y el correlativo no deben cambiar.
         $this->quote->update([
-            'voucher_type' => $this->voucher_type,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
             'date' => $this->date ?? now(),
             'customer_id' => $this->customer_id,
             'total' => $this->total,

@@ -13,10 +13,11 @@ return new class extends Migration
     {
         Schema::create('quotes', function (Blueprint $table) {
             $table->id();
-            $table->integer('voucher_type');
 
             $table->string('serie');
             $table->string('correlative');
+
+            $table->foreignId('journal_id')->constrained('journals')->onDelete('cascade');
 
             $table->timestamp('date')
                 ->useCurrent();

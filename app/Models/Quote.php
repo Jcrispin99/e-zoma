@@ -8,7 +8,7 @@ use App\Models\Sale;
 class Quote extends Model
 {
     protected $fillable = [
-        'voucher_type',
+        'journal_id',
         'serie',
         'correlative',
         'date',
@@ -21,6 +21,11 @@ class Quote extends Model
     protected $casts = [
         'date' => 'datetime',
     ];
+    
+    public function journal()
+    {
+        return $this->belongsTo(Journal::class);
+    }
 
     public function customer()
     {

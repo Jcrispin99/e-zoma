@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('purchases', function (Blueprint $table) {
             $table->id();
 
-            $table->integer('voucher_type');
-
             $table->string('serie');
             $table->string('correlative');
+
+            $table->foreignId('journal_id')->constrained('journals')->onDelete('cascade');
 
             $table->timestamp('date')
                 ->useCurrent();
@@ -47,7 +47,7 @@ return new class extends Migration
             // Índices y unicidad útil
             $table->index(['status']);
             $table->index(['payment_status']);
-            $table->unique(['company_id', 'voucher_type', 'serie', 'correlative'], 'purchase_unique_company_voucher_serie_corr');
+            $table->unique(['company_id', 'serie', 'correlative'], 'purchase_unique_company_voucher_serie_corr');
         });
     }
 

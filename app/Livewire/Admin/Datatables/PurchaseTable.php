@@ -66,8 +66,6 @@ class PurchaseTable extends DataTableComponent
         return [
             Column::make("Id", "id")
                 ->sortable(),
-            Column::make("Voucher type", "voucher_type")
-                ->sortable(),
             Column::make("Serie", "serie")
                 ->sortable(),
             Column::make("Correlative", "correlative")

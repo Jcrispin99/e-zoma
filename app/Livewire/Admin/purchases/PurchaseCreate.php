@@ -4,17 +4,18 @@ namespace App\Livewire\Admin\purchases;
 
 use App\Facades\Kardex;
 use App\Models\Purchase;
+use App\Models\Journal;
 use App\Models\Variant;
 use App\Models\Warehouse;
 use Livewire\Component;
 use App\Models\PurchaseOrder;
 use Illuminate\Support\Facades\DB;
+use App\Services\SequenceService;
 
 class PurchaseCreate extends Component
 {
-    public $voucher_type = 1;
-    public $serie;
-
+    public $journals = [];
+    public $journal_id;
     public $correlative;
 
     public $date;
@@ -34,6 +35,21 @@ class PurchaseCreate extends Component
     {
         $this->purchase_order_id = $purchase_order_id;
         $this->date = now()->format('Y-m-d');
+
+        // 1. Cargar journals de tipo 'purchase'
+        $this->journals = Journal::where('type', 'purchase')
+            ->with('sequence')
+            ->orderBy('name')
+            ->get();
+
+        // 2. Establecer el primer journal como predeterminado y actualizar la vista previa
+        $journalsCol = collect($this->journals);
+        if ($journalsCol->isNotEmpty()) {
+            $first = $journalsCol->first();
+            $this->journal_id = $first ? $first->id : null;
+            $this->updatePreview();
+        }
+
 
         if ($this->purchase_order_id) {
             $purchaseOrder = PurchaseOrder::find($this->purchase_order_id);
@@ -95,27 +111,9 @@ class PurchaseCreate extends Component
         });
     }
 
-    public function updated($property, $value)
+    public function updatedJournalId()
     {
-        if ($property == 'purchase_order_id') {
-            $purchaseOrder = PurchaseOrder::find($value);
-            if ($purchaseOrder) {
-
-                $this->voucher_type = $purchaseOrder->voucher_type;
-                $this->supplier_id = $purchaseOrder->supplier_id;
-
-                $this->variants = $purchaseOrder->variants->map(function ($variant) {
-                    return [
-                        'id' => $variant->id,
-                        'name' => $variant->fullName,
-                        'quantity' => $variant->pivot->quantity,
-                        'price' => $variant->pivot->price,
-                        'tax_rate' => $variant->pivot->tax_rate,
-                        'subtotal' => $variant->pivot->subtotal,
-                    ];
-                })->toArray();
-            }
-        }
+        $this->updatePreview();
     }
 
     public function addProduct()
@@ -158,9 +156,7 @@ class PurchaseCreate extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
-                'serie' => 'required|string|max:10',
-                'correlative' => 'required|numeric|max:14',
+                'journal_id' => 'required|exists:journals,id',
                 'date' => 'nullable|date',
                 'purchase_order_id' => 'nullable|exists:purchase_orders,id',
                 'supplier_id' => 'required|exists:suppliers,id',
@@ -175,7 +171,7 @@ class PurchaseCreate extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
+                'journal_id' => 'serie',
                 'supplier_id' => 'proveedor',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
@@ -196,10 +192,13 @@ class PurchaseCreate extends Component
             return redirect()->back();
         }
 
+        // 3. Obtener serie y correlativo del servicio
+        $parts = app(SequenceService::class)->getNextParts($this->journal_id);
+
         $purchase = Purchase::create([
-            'voucher_type' => $this->voucher_type,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
+            'journal_id' => $this->journal_id,
+            'serie' => $parts['serie'],
+            'correlative' => $parts['correlative'],
             'date' => $this->date ?? now(),
             'purchase_order_id' => $this->purchase_order_id,
             'supplier_id' => $this->supplier_id,
@@ -247,6 +246,21 @@ class PurchaseCreate extends Component
     public function render()
     {
         return view('livewire.admin.purchases.purchase-create');
+    }
+
+    // 4. Añadir método para previsualizar el correlativo
+    protected function updatePreview()
+    {
+        if (!$this->journal_id) {
+            $this->correlative = '';
+            return;
+        }
+
+        $journal = collect($this->journals)->firstWhere('id', $this->journal_id);
+        $sequence = $journal?->sequence;
+
+        // Previsualizar correlativo sin consumir la secuencia
+        $this->correlative = $sequence ? str_pad($sequence->next_number, $sequence->sequence_size, '0', STR_PAD_LEFT) : '';
     }
 
     /**

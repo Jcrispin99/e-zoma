@@ -27,6 +27,8 @@
                 <option value="cash">Efectivo</option>
                 <option value="bank">Banco</option>
                 <option value="general">General</option>
+                <option value="purchase-order">Orden de Compra</option>
+
             </x-wire-native-select>
 
             <x-wire-native-select label="Compañía" name="company_id">

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\purchases;
 
+use App\Models\Journal;
 use App\Facades\Kardex;
 use App\Models\Purchase;
 use App\Models\PurchaseOrder;
@@ -16,8 +17,8 @@ class PurchaseEdit extends Component
 {
     public Purchase $purchase;
 
-    public $voucher_type = 1;
-    public $serie;
+    public $journals = [];
+    public $journal_id;
     public $correlative;
     public $date;
     public $warehouse_id;
@@ -67,9 +68,12 @@ class PurchaseEdit extends Component
     {
         $this->purchase = $purchase->load('variants.product', 'variants.attributeValues', 'supplier', 'warehouse', 'purchaseOrder');
 
-        $this->voucher_type = $purchase->voucher_type;
-        $this->serie = $purchase->serie;
+        // 1. Cargar journals y asignar el de la compra existente
+        $this->journals = Journal::where('type', 'purchase')->get();
+        $this->journal_id = $purchase->journal_id;
+
         $this->correlative = $purchase->correlative;
+
         $this->date = optional($purchase->date)->format('Y-m-d');
         $this->supplier_id = $purchase->supplier_id;
         $this->warehouse_id = $purchase->warehouse_id;
@@ -131,9 +135,6 @@ class PurchaseEdit extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
-                'serie' => 'required|string|max:10',
-                'correlative' => 'required|numeric|max:14',
                 'date' => 'nullable|date',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'warehouse_id' => 'required|exists:warehouses,id',
@@ -147,7 +148,6 @@ class PurchaseEdit extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
                 'supplier_id' => 'proveedor',
                 'warehouse_id' => 'almacén',
                 'observation' => 'observación',
@@ -167,10 +167,8 @@ class PurchaseEdit extends Component
         }
         $this->total = $computedTotal;
 
+        // 2. Actualizar solo los campos editables. La serie y el correlativo no deben cambiar.
         $this->purchase->update([
-            'voucher_type' => $this->voucher_type,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
             'date' => $this->date ?? now(),
             'supplier_id' => $this->supplier_id,
             'warehouse_id' => $this->warehouse_id,

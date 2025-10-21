@@ -11,9 +11,6 @@ use App\Services\SequenceService;
 
 class PurchaseOrderCreate extends Component
 {
-    public $voucher_type = 1;
-    public $serie = 'A';
-
     public $journals = [];
     public $journal_id;
     public $correlative;
@@ -52,10 +49,10 @@ class PurchaseOrderCreate extends Component
     }
     public function mount()
     {
-        $this->correlative = PurchaseOrder::max('correlative') + 1;
         $this->date = now()->format('Y-m-d');
 
-        $this->journals = Journal::where('type', 'purchase-order')
+        // 1. Cargar journals de tipo 'purchase-order'
+        $this->journals = Journal::where('type', 'purchase-order') // Asegúrate de tener journals de este tipo en tu seeder
             ->with('sequence')
             ->orderBy('name')
             ->get();
@@ -63,6 +60,7 @@ class PurchaseOrderCreate extends Component
         $journalsCol = collect($this->journals);
         if ($journalsCol->isNotEmpty()) {
             $first = $journalsCol->first();
+            // 2. Establecer el primer journal y actualizar la vista previa del correlativo
             $this->journal_id = $first ? $first->id : null;
             $this->updatePreview();
         }
@@ -143,7 +141,7 @@ class PurchaseOrderCreate extends Component
     {
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
+                'journal_id' => 'required|exists:journals,id',
                 'date' => 'nullable|date',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'total' => 'required|numeric|min:0',
@@ -156,7 +154,7 @@ class PurchaseOrderCreate extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
+                'journal_id' => 'serie',
                 'supplier_id' => 'proveedor',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
@@ -188,10 +186,7 @@ class PurchaseOrderCreate extends Component
         $parts = app(SequenceService::class)->getNextParts($this->journal_id);
 
         $purchaseOrder = PurchaseOrder::create([
-            'voucher_type' => $this->voucher_type,
-            'serie' => $this->serie,
-            'correlative' => $this->correlative,
-            'serie' => $parts['serie'],
+            'serie' => $parts['serie'], // 3. Usar la serie del servicio
             'correlative' => $parts['correlative'],
             'date' => $this->date ?? now(),
             'supplier_id' => $this->supplier_id,

@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Datatables;
 use Rappasoft\LaravelLivewireTables\DataTableComponent;
 use Rappasoft\LaravelLivewireTables\Views\Column;
 use App\Models\Journal;
+use Illuminate\Database\Eloquent\Builder;
 
 class JournalTable extends DataTableComponent
 {
@@ -26,14 +27,20 @@ class JournalTable extends DataTableComponent
                 ->sortable(),
             Column::make("Type", "type")
                 ->sortable(),
-            Column::make("Sequence id", "sequence_id")
+            Column::make("Secuencia", "sequence.next_number")
                 ->sortable(),
-            Column::make("Company id", "company_id")
+            Column::make("Compañía", "company.name")
                 ->sortable(),
             Column::make("Acciones")
                 ->label(function ($row, Column $column) {
                     return view('admin.journals.actions', ['journal' => $row]);
                 })
         ];
+    }
+
+    public function builder(): Builder
+    {
+        // Cargar las relaciones 'sequence' y 'company' para evitar N+1
+        return Journal::query()->with(['sequence', 'company']);
     }
 }

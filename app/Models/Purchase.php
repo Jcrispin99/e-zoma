@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Purchase extends Model
 {
     protected $fillable = [
-        'voucher_type',
+        'journal_id',
         'serie',
         'correlative',
         'date',
@@ -27,6 +27,11 @@ class Purchase extends Model
         'date' => 'datetime',
         'vendor_bill_date' => 'date',
     ];
+
+     public function journal()
+    {
+        return $this->belongsTo(Journal::class);
+    }
 
     public function supplier()
     {

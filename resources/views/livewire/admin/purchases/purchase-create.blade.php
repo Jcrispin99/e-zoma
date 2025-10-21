@@ -32,15 +32,17 @@
         <form wire:submit="save" class="space-y-4">
 
             <div class="grid lg:grid-cols-4 gap-4">
-                <x-wire-native-select label="Tipo de Documento" wire:model="voucher_type">
-                    <option value="1">Factura</option>
-                    <option value="2">Boleta</option>
+                <x-wire-native-select label="Serie del Documento" wire:model.live="journal_id">
+                    @if($journals->isEmpty())
+                        <option value="">No hay series para compras</option>
+                    @endif
+                    @foreach ($journals as $journal)
+                        <option value="{{ $journal->id }}">{{ $journal->name }} ({{ $journal->code }})</option>
+                    @endforeach
                 </x-wire-native-select>
 
-                <div class="grid grid-cols-2 gap-2">
-                    <x-wire-input label="Serie" wire:model="serie" placeholder="Serie del comprobante" />
-                    <x-wire-input label="Correlativo" wire:model="correlative" placeholder="Correlativo del comprobante" />
-                </div>
+                <x-wire-input label="Correlativo" wire:model="correlative" readonly disabled />
+
                 <x-wire-input label="Fecha" wire:model="date" type="date" />
 
                 <x-wire-select label="Orden de Compra" wire:model.live="purchase_order_id" placeholder="Seleccione una orden de compra" :async-data="[

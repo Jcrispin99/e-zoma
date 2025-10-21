@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Admin\purchaseOrders;
 
+use App\Models\Journal;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Variant;
@@ -19,8 +20,8 @@ class PurchaseOrderEdit extends Component
     public bool $hasPurchase = false;
     public ?int $purchaseId = null;
 
-    public $voucher_type = 1;
-    public $serie = 'A';
+    public $journals = [];
+    public $journal_id;
     public $correlative;
 
     public $date;
@@ -62,9 +63,11 @@ class PurchaseOrderEdit extends Component
     public function mount(PurchaseOrder $purchaseOrder)
     {
         $this->purchaseOrder = $purchaseOrder->load('variants.product', 'variants.attributeValues', 'purchase');
+        
+        // 1. Cargar journals y asignar el de la orden de compra
+        $this->journals = Journal::where('type', 'purchase-order')->get();
+        $this->journal_id = $purchaseOrder->journal_id;
 
-        $this->voucher_type = $purchaseOrder->voucher_type;
-        $this->serie = $purchaseOrder->serie;
         $this->correlative = $purchaseOrder->correlative;
         $this->date = optional($purchaseOrder->date)->format('Y-m-d');
         $this->supplier_id = $purchaseOrder->supplier_id;
@@ -115,7 +118,7 @@ class PurchaseOrderEdit extends Component
 
         $this->validate(
             [
-                'voucher_type' => 'required|in:1,2',
+                'journal_id' => 'required|exists:journals,id',
                 'date' => 'nullable|date',
                 'supplier_id' => 'required|exists:suppliers,id',
                 'total' => 'required|numeric|min:0',
@@ -127,7 +130,7 @@ class PurchaseOrderEdit extends Component
             ],
             [],
             [
-                'voucher_type' => 'tipo de comprobante',
+                'journal_id' => 'serie',
                 'supplier_id' => 'proveedor',
                 'observation' => 'observación',
                 'variants.*.id' => 'producto',
@@ -137,8 +140,8 @@ class PurchaseOrderEdit extends Component
         );
 
         // Actualizar datos base (serie/correlativo permanecen sin cambios)
+        // 2. Eliminar voucher_type de la actualización
         $this->purchaseOrder->update([
-            'voucher_type' => $this->voucher_type,
             'date' => $this->date ?? now(),
             'supplier_id' => $this->supplier_id,
             'total' => $this->total,

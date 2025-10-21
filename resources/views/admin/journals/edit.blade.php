@@ -28,6 +28,7 @@
                 <option value="cash" @selected($journal->type == 'cash')>Efectivo</option>
                 <option value="bank" @selected($journal->type == 'bank')>Banco</option>
                 <option value="general" @selected($journal->type == 'general')>General</option>
+                <option value="purchase-order" @selected($journal->type == 'purchase_order')>Orden de Compra</option>
             </x-wire-native-select>
 
             <x-wire-native-select label="Compañía" name="company_id">

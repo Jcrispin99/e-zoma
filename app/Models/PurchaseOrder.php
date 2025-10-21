@@ -7,14 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 class PurchaseOrder extends Model
 {
     protected $fillable = [
-        'voucher_type',
+        'journal_id',
         'serie',
         'correlative',
         'supplier_id',
         'total',
         'observation',
         'company_id',
-        // nuevos campos
         'status',
         'receiving_status',
         'billing_status',
@@ -39,6 +38,10 @@ class PurchaseOrder extends Model
         'cancelled_at' => 'datetime',
     ];
 
+    public function journal()
+    {
+        return $this->belongsTo(Journal::class);
+    }
 
     public function supplier()
     {

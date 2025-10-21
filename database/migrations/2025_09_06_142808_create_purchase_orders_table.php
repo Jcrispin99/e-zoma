@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('purchase_orders', function (Blueprint $table) {
             $table->id();
 
-            $table->integer('voucher_type');
-
             $table->string('serie');
             $table->string('correlative');
+
+            $table->foreignId('journal_id')->nullable()->constrained()->onDelete('set null');
 
             $table->timestamp('date')
                 ->useCurrent();
@@ -29,8 +29,6 @@ return new class extends Migration
             $table->string('observation')->nullable();
 
             $table->foreignId('company_id')->constrained('companies')->onDelete('cascade');
-
-            $table->foreignId('journal_id')->nullable()->constrained()->onDelete('set null');
 
             // Ciclo global del PO
             $table->enum('status', ['draft', 'confirmed', 'done', 'cancelled'])->default('draft');
@@ -52,13 +50,11 @@ return new class extends Migration
             $table->timestamps();
 
             // Índices para búsqueda y unicidad
-            $table->index(['supplier_id']);
-            $table->index(['company_id']);
             $table->index(['status']);
             $table->index(['receiving_status']);
             $table->index(['billing_status']);
             $table->index(['payment_status']);
-            $table->unique(['company_id', 'voucher_type', 'serie', 'correlative'], 'po_unique_company_voucher_serie_corr');
+            $table->unique(['company_id', 'journal_id', 'serie', 'correlative'], 'po_unique_company_journal_serie_corr');
         });
     }
 

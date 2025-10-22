@@ -46,7 +46,21 @@ class PosConfigController extends Controller
             'invoice_journal_id' => 'required|exists:journals,id',
             'default_customer_id' => 'required|exists:customers,id',
             'is_active' => 'boolean',
+            // IGV
+            'apply_tax' => 'boolean',
+            'tax_rate' => 'numeric|min:0|max:1',
+            'tax_rate_preset' => 'nullable|in:0,0.18',
+            'prices_include_tax' => 'boolean',
         ]);
+
+        $data['apply_tax'] = $request->boolean('apply_tax');
+        $data['prices_include_tax'] = $request->boolean('prices_include_tax');
+
+        if ($request->filled('tax_rate_preset')) {
+            $preset = $request->input('tax_rate_preset');
+            $data['tax_rate'] = $preset === '0.18' ? 0.18 : 0.0;
+            $data['apply_tax'] = $preset !== '0';
+        }
 
         $posConfig = PosConfig::create($data);
 
@@ -85,7 +99,21 @@ class PosConfigController extends Controller
             'invoice_journal_id' => 'required|exists:journals,id',
             'default_customer_id' => 'required|exists:customers,id',
             'is_active' => 'boolean',
+            // IGV
+            'apply_tax' => 'boolean',
+            'tax_rate' => 'numeric|min:0|max:1',
+            'tax_rate_preset' => 'nullable|in:0,0.18',
+            'prices_include_tax' => 'boolean',
         ]);
+
+        $data['apply_tax'] = $request->boolean('apply_tax');
+        $data['prices_include_tax'] = $request->boolean('prices_include_tax');
+
+        if ($request->filled('tax_rate_preset')) {
+            $preset = $request->input('tax_rate_preset');
+            $data['tax_rate'] = $preset === '0.18' ? 0.18 : 0.0;
+            $data['apply_tax'] = $preset !== '0';
+        }
 
         $posConfig->update($data);
 

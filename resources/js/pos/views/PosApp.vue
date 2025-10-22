@@ -7,6 +7,7 @@ import OpeningModal from '../components/modals/OpeningModal.vue';
 import ClosingModal from '../components/modals/ClosingModal.vue';
 import { useCart } from '../composables/useCart.js';
 import { useSessionStore } from '../stores/useSessionStore.js';
+import { setCache } from '../composables/useCache.js';
 
 // Usar el composable del carrito
 const {
@@ -18,15 +19,22 @@ const {
   updateQuantity,
   removeItem,
   clearError,
+  clearCart,
 } = useCart();
 
 // Store de sesión
 const sessionStore = useSessionStore();
+// Util para origen backend (Blade inyecta meta)
+const backendOrigin =
+  document.querySelector('meta[name="backend-origin"]')?.content ||
+  window.location.origin;
 onMounted(async () => {
   sessionStore.initFromUrl();
   // Prefetch de cookie CSRF para asegurar estado stateful
   try {
-    await fetch(`/sanctum/csrf-cookie`, { credentials: 'include' });
+    await fetch(new URL('/sanctum/csrf-cookie', backendOrigin), {
+      credentials: 'include',
+    });
   } catch (e) {
     // No bloquear el flujo si falla; el bootstrap manejará el estado
     console.warn('No se pudo obtener CSRF cookie al inicio:', e);
@@ -56,6 +64,12 @@ const isReceipt = computed(() => route.name === 'pos-receipt');
 onUnmounted(() => {
   clearError();
 });
+
+// Limpieza de carrito al completar venta
+function handleClearCart() {
+  clearCart();
+  setCache('pos:checkout', { items: [], subtotal: 0, tax: 0, total: 0 });
+}
 
 // Modal de apertura
 const showOpeningModal = ref(false);
@@ -225,7 +239,7 @@ async function confirmClosingBalance() {
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1 1 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
                 />
                 <path
                   stroke-linecap="round"
@@ -263,7 +277,7 @@ async function confirmClosingBalance() {
 
       <!-- Products Section - Izquierda -->
       <div class="flex-1 overflow-hidden">
-        <router-view @add-to-cart="addToCart" />
+        <router-view @add-to-cart="addToCart" @clear-cart="handleClearCart" />
       </div>
     </div>
   </div>

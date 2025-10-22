@@ -243,10 +243,8 @@ class SaleCreate extends Component
             return redirect()->back();
         }
 
-        // Obtener serie y correlativo con consumo de secuencia
         $parts = app(SequenceService::class)->getNextParts($this->journal_id);
 
-        // Derivar voucher_type según el journal seleccionado (01 factura, 03 boleta)
         $sale = Sale::create([
             'serie' => $parts['serie'],
             'correlative' => $parts['correlative'],

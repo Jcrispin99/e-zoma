@@ -122,9 +122,6 @@ class PosSessionController extends Controller
 
         $categories = Category::query()->select(['id', 'name'])->orderBy('name')->get();
 
-        // Cargar variantes iniciales para el POS (primeras 24)
-        // Ajuste: usar relación morfológica de imágenes y el accessor de imagen
-        // para evitar columnas inexistentes como variant_id/url en la tabla images.
         $variants = Variant::query()
             ->with(['product:id,name', 'images'])
             ->select(['id', 'sku', 'product_id', 'price'])
@@ -136,7 +133,7 @@ class PosSessionController extends Controller
                     'sku' => $v->sku,
                     'name' => $v->product->name ?? null,
                     'price' => $v->price,
-                    'image' => $v->image, // accessor en Variant
+                    'image' => $v->image,
                 ];
             });
 
@@ -153,6 +150,10 @@ class PosSessionController extends Controller
                 'company_id' => $posConfig->company_id,
                 'warehouse_id' => $posConfig->warehouse_id,
                 'default_customer_id' => $posConfig->default_customer_id,
+                // IGV
+                'apply_tax' => (bool) ($posConfig->apply_tax ?? true),
+                'tax_rate' => (float) ($posConfig->tax_rate ?? 0.18),
+                'prices_include_tax' => (bool) ($posConfig->prices_include_tax ?? false),
             ],
             'sequences' => [
                 'receipt' => $receiptJournal ? [

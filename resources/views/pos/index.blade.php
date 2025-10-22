@@ -6,6 +6,8 @@
 
     <title>POS</title>
 
+    <meta name="backend-origin" content="{{ url('/') }}">
+
     @vite(['resources/css/app.css', 'resources/js/pos/main.js'])
 </head>
 <body>

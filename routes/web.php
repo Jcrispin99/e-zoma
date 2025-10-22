@@ -4,9 +4,15 @@ use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\PosController;
 
+// SPA POS: ruta base y comodín para deep links
 Route::get('/pos/{posSession}', [PosController::class, '__invoke'])
     ->middleware(['auth'])
     ->name('pos.show');
+
+Route::get('/pos/{posSession}/{any?}', [PosController::class, '__invoke'])
+    ->where('any', '.*')
+    ->middleware(['auth'])
+    ->name('pos.any');
 
 Route::redirect('/', '/admin');
 

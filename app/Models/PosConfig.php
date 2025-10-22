@@ -19,6 +19,16 @@ class PosConfig extends Model
         'invoice_journal_id',
         'default_customer_id',
         'is_active',
+        // impuestos IGV
+        'apply_tax',
+        'tax_rate',
+        'prices_include_tax',
+    ];
+
+    protected $casts = [
+        'apply_tax' => 'bool',
+        'tax_rate' => 'float',
+        'prices_include_tax' => 'bool',
     ];
 
     public function company(): BelongsTo

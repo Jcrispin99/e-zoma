@@ -5,6 +5,7 @@ import { setCache } from "../composables/useCache.js";
 import { useKeypad } from "../composables/useKeypad.js";
 import { formatCurrency } from "../utils/currency.js";
 import { POS_CONFIG } from "../constants/index.js";
+import { useSessionStore } from "../stores/useSessionStore.js";
 
 // Props del carrito
 const props = defineProps({
@@ -55,19 +56,53 @@ const selectedProduct = computed(() => {
     return props.cartItems[selectedProductIndex.value];
 });
 
-// Cálculos optimizados con dependencias específicas
-const subtotal = computed(() => {
+// Configuración de IGV desde sesión
+const sessionStore = useSessionStore();
+const taxRate = computed(() => {
+    const apply = !!sessionStore.config?.apply_tax;
+    const rate = Number(sessionStore.config?.tax_rate ?? 0);
+    return apply ? rate : 0;
+});
+const pricesIncludeTax = computed(() => !!sessionStore.config?.prices_include_tax);
+
+// Suma de ítems (bruto si precios incluyen IGV)
+const itemsSum = computed(() => {
     return props.cartItems.reduce(
         (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
         0
     );
 });
 
-const tax = computed(() => {
-    return subtotal.value * POS_CONFIG.TAX_RATE;
+// Subtotal base imponible
+const subtotal = computed(() => {
+    const rate = taxRate.value;
+    if (rate <= 0) return itemsSum.value;
+    if (pricesIncludeTax.value) {
+        const gross = itemsSum.value;
+        const igv = gross * (rate / (1 + rate));
+        return gross - igv;
+    }
+    return itemsSum.value;
 });
 
+// IGV
+const tax = computed(() => {
+    const rate = taxRate.value;
+    if (rate <= 0) return 0;
+    if (pricesIncludeTax.value) {
+        const gross = itemsSum.value;
+        return gross * (rate / (1 + rate));
+    }
+    return subtotal.value * rate;
+});
+
+// Total
 const total = computed(() => {
+    const rate = taxRate.value;
+    if (rate <= 0) return itemsSum.value;
+    if (pricesIncludeTax.value) {
+        return itemsSum.value;
+    }
     return subtotal.value + tax.value;
 });
 
@@ -267,7 +302,15 @@ function goToCheckout() {
         <!-- Total Section -->
         <div class="bg-white p-4 border-t border-gray-300">
             <div class="flex justify-end">
-                <div class="text-right">
+                <div class="text-right text-sm text-gray-700 space-y-1">
+                    <div class="flex justify-between">
+                        <span>Subtotal</span>
+                        <span>{{ formatCurrency(subtotal) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>IGV</span>
+                        <span>{{ formatCurrency(tax) }}</span>
+                    </div>
                     <p class="text-lg font-bold text-gray-900">
                         Total: {{ formatCurrency(total) }}
                     </p>

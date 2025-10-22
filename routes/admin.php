@@ -70,6 +70,10 @@ Route::resource('posconfig', PosConfigController::class)->except(['show'])->para
     'posconfig' => 'posConfig'
 ]);
 
+Route::get('posconfig/{posConfig}/sessions', function (\App\Models\PosConfig $posConfig) {
+    return view('admin.posconfig.sessions', compact('posConfig'));
+})->name('posconfig.sessions');
+
 // Diarios
 Route::resource('journals', JournalController::class)->except(['show']);
 Route::resource('sequences', SequenceController::class)->except(['show']);

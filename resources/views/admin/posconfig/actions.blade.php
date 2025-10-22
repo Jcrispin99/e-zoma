@@ -14,6 +14,10 @@
         Editar
     </x-wire-button>
 
+    <x-wire-button href="{{ route('admin.posconfig.sessions', $posconfig->id) }}" gray xs>
+        Sesiones
+    </x-wire-button>
+
     <form action="{{ route('admin.posconfig.destroy', $posconfig->id) }}" method="post" class="delete-form">
         @csrf
         @method('delete')

@@ -151,6 +151,21 @@ $links = [
         ],
     ],
     [
+        'type' => 'group',
+        'title' => 'Lealtad',
+        'icon' => 'fa-solid fa-gift',
+        'route' => '#',
+        'active' => ['admin.loyalty-programs.*'],
+        'items' => [
+            [
+                'type' => 'link',
+                'title' => 'Programas',
+                'route' => 'admin.loyalty-programs.index',
+                'active' => 'admin.loyalty-programs.*',
+            ],
+        ],
+    ],
+    [
         'type' => 'header',
         'title' => 'Configuración',
     ],

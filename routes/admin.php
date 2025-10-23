@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\PosConfigController;
 use App\Http\Controllers\Admin\SequenceController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\SunatConnectionController;
+use App\Http\Controllers\Admin\LoyaltyProgramController;
 
 // Dashboard
 
@@ -82,6 +83,11 @@ Route::get('possessions/{posSession}', function (\App\Models\PosSession $posSess
 // Diarios
 Route::resource('journals', JournalController::class)->except(['show']);
 Route::resource('sequences', SequenceController::class)->except(['show']);
+
+// Lealtad: Programas
+Route::resource('loyalty-programs', LoyaltyProgramController::class)->only(['index', 'create', 'edit'])->parameters([
+    'loyalty-programs' => 'loyaltyProgram'
+]);
 
 // Imagenes
 route::post('variants/{variant}/dropzone', [VariantController::class, 'dropzone'])->name('variants.dropzone');

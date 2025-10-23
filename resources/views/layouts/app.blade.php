@@ -16,7 +16,7 @@
 
     <!-- Styles -->
     @livewireStyles
-    @wireUiStyles
+    @wireUiStyles(false)
 </head>
 <body class="font-sans antialiased">
     <x-banner />
@@ -42,6 +42,6 @@
     @stack('modals')
 
     @livewireScripts
-    @wireUiScripts
+    @wireUiScripts(false)
 </body>
 </html>

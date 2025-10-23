@@ -33,6 +33,7 @@
                 <div>
                     <x-wire-input label="Número de documento" name="document_number" placeholder="Ej: 12345678"
                         value="{{ old('document_number') }}" autocomplete="off" required />
+                    <div id="customer-lookup-status" class="text-xs text-slate-500 mt-1"></div>
                 </div>
                 <div class="md:col-span-2">
                     <x-wire-input label="Nombre" name="name" placeholder="Nombre completo"
@@ -58,5 +59,57 @@
         </form>
 
     </x-wire-card>
+
+    <script>
+        (function () {
+            const docInput = document.querySelector('input[name="document_number"]');
+            if (!docInput) return;
+            const statusEl = document.getElementById('customer-lookup-status');
+            const nameInput = document.querySelector('input[name="name"]');
+            const addressInput = document.querySelector('input[name="address"]');
+            const identitySelect = document.querySelector('select[name="identity_id"]');
+
+            const getCookie = (name) => {
+                const match = document.cookie.split('; ').find((row) => row.startsWith(name + '='));
+                return match ? decodeURIComponent(match.split('=')[1]) : null;
+            };
+
+            async function consult() {
+                const doc = docInput.value.trim();
+                if (!doc) return;
+                if (![8, 11].includes(doc.length)) {
+                    if (statusEl) statusEl.textContent = 'Documento debe ser DNI (8) o RUC (11).';
+                    return;
+                }
+                try {
+                    if (statusEl) statusEl.textContent = 'Consultando APIS Perú...';
+                    await fetch('/sanctum/csrf-cookie', { credentials: 'same-origin' });
+                    const xsrf = getCookie('XSRF-TOKEN');
+                    const resp = await fetch('/api/customers/lookup', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-XSRF-TOKEN': xsrf ?? ''
+                        },
+                        body: JSON.stringify({ document_number: doc })
+                    });
+                    const data = await resp.json();
+                    if (!resp.ok) {
+                        throw new Error(data?.message || 'No se pudo consultar APIS Perú');
+                    }
+                    if (identitySelect && data.identity_id) identitySelect.value = data.identity_id;
+                    if (nameInput && data.name) nameInput.value = data.name;
+                    if (addressInput && data.address) addressInput.value = data.address;
+                    if (statusEl) statusEl.textContent = 'Autocompletado desde APIS Perú';
+                } catch (e) {
+                    if (statusEl) statusEl.textContent = e.message || 'Error consultando APIS Perú';
+                }
+            }
+
+            docInput.addEventListener('blur', consult);
+        })();
+    </script>
 
 </x-admin-layout>

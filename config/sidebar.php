@@ -179,6 +179,12 @@ $links = [
                 'route' => 'admin.sequences.index',
                 'active' => 'admin.sequences.*',
             ],
+            [
+                'type' => 'link',
+                'title' => 'Sunat',
+                'route' => 'admin.sunat-connections.index',
+                'active' => 'admin.sunat-connections.*',
+            ],
         ],
     ],
     [

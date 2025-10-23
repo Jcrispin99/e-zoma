@@ -90,6 +90,69 @@ async function fetchIdentities() {
   }
 }
 
+// Estado de autocompletado
+const lookupLoading = ref(false);
+const lookupError = ref(null);
+
+// Lookup por DNI/RUC para autocompletar
+async function lookupByDocument() {
+  lookupError.value = null;
+  const doc = (form.document_number || '').trim();
+  if (!doc) return;
+
+  // Preseleccionar identidad por longitud
+  if (doc.length === 8) {
+    const dniId = identities.value.find(
+      (i) => i.name?.toLowerCase() === 'dni'
+    )?.id;
+    if (dniId) form.identity_id = dniId;
+  } else if (doc.length === 11) {
+    const rucId = identities.value.find(
+      (i) => i.name?.toLowerCase() === 'ruc'
+    )?.id;
+    if (rucId) form.identity_id = rucId;
+  } else {
+    lookupError.value = 'Documento inválido. Use DNI (8) o RUC (11).';
+    return;
+  }
+
+  lookupLoading.value = true;
+  try {
+    let token = getXsrfToken();
+    if (!token) {
+      await fetch(`/sanctum/csrf-cookie`, { credentials: 'include' });
+      token = getXsrfToken();
+    }
+
+    const res = await fetch('/api/customers/lookup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        ...(token ? { 'X-XSRF-TOKEN': token } : {}),
+      },
+      credentials: 'include',
+      body: JSON.stringify({ document_number: doc }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      lookupError.value = data?.message || `HTTP ${res.status}`;
+      return;
+    }
+
+    form.identity_id = data.identity_id ?? form.identity_id;
+    form.document_number = data.document_number ?? form.document_number;
+    form.name = data.name ?? form.name;
+    if (data.address) form.address = data.address;
+  } catch (e) {
+    console.error(e);
+    lookupError.value = 'Error consultando ApiPeru';
+  } finally {
+    lookupLoading.value = false;
+  }
+}
+
 async function createCustomer() {
   formErrors.value = {};
   saving.value = true;
@@ -280,6 +343,7 @@ watch(
             >
             <input
               v-model="form.document_number"
+              @blur="lookupByDocument"
               type="text"
               class="w-full border rounded px-3 py-2"
             />
@@ -288,6 +352,13 @@ watch(
               class="text-red-600 text-xs mt-1"
             >
               {{ formErrors.document_number[0] }}
+            </div>
+            <div v-if="lookupLoading" class="text-xs text-gray-500 mt-1">
+              <i class="fa-solid fa-spinner animate-spin mr-1"></i> Consultando
+              ApiPeru...
+            </div>
+            <div v-if="lookupError" class="text-red-600 text-xs mt-1">
+              {{ lookupError }}
             </div>
           </div>
           <div class="md:col-span-2">

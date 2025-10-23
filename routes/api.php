@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PosSessionController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\IdentityController;
+use App\Http\Controllers\Api\CustomerLookupController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -23,6 +24,8 @@ Route::post('/suppliers', [SupplierController::class, 'index'])->name('api.suppl
 Route::post('/customers', [CustomerController::class, 'index'])->name('api.customers.index');
 
 Route::post('/customers/store', [CustomerController::class, 'store'])->name('api.customers.store');
+
+Route::post('/customers/lookup', [CustomerLookupController::class, 'lookup'])->name('api.customers.lookup');
 
 Route::post('/warehouses', [WarehouseController::class, 'index'])->name('api.warehouse.index');
 

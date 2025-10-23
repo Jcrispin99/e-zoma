@@ -28,7 +28,7 @@ class SessionsList extends Component
             ->orderByDesc('opened_at')
             ->paginate(15);
 
-        return view('admin.posconfig.sessions-list', [
+        return view('admin.possessions.sessions-list', [
             'sessions' => $sessions,
         ]);
     }

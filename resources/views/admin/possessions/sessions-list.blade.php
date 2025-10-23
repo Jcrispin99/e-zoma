@@ -37,12 +37,11 @@
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700">Cerrada</span>
                         @endif
                     </td>
-                    <td class="px-4 py-2 text-sm">
+                    <td class="px-4 py-2 text-sm space-x-2">
                         @if($s->status === 'open' && !$s->closed_at)
                         <a href="/pos/{{ $s->id }}" class="text-blue-600 hover:underline">Ir a POS</a>
-                        @else
-                        <span class="text-gray-400">—</span>
                         @endif
+                        <a href="{{ route('admin.possessions.show', ['posSession' => $s->id]) }}" class="text-indigo-600 hover:underline">Ver órdenes</a>
                     </td>
                 </tr>
                 @endforeach

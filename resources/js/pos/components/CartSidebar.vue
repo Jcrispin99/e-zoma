@@ -6,6 +6,7 @@ import { useKeypad } from '../composables/useKeypad.js';
 import { formatCurrency } from '../utils/currency.js';
 import { POS_CONFIG } from '../constants/index.js';
 import { useSessionStore } from '../stores/useSessionStore.js';
+import CustomerSelectModal from './modals/CustomerSelectModal.vue';
 
 // Props del carrito
 const props = defineProps({
@@ -205,6 +206,21 @@ function goToCheckout() {
     console.error('Error navegando a checkout:', e);
   }
 }
+
+const showCustomerModal = ref(false);
+const currentCustomerName = computed(
+  () =>
+    sessionStore.selectedCustomer?.name ||
+    sessionStore.defaultCustomer?.name ||
+    'VARIOS'
+);
+function openCustomerModal() {
+  showCustomerModal.value = true;
+}
+function handleCustomerSelected(c) {
+  sessionStore.setSelectedCustomer(c);
+  showCustomerModal.value = false;
+}
 </script>
 
 <template>
@@ -334,6 +350,8 @@ function goToCheckout() {
           <!-- Selecionar cliente -->
           <button
             class="h-16 w-full flex items-center justify-center text-white bg-gray-800 border-b border-gray-600"
+            @click="openCustomerModal"
+            aria-label="Seleccionar cliente"
           >
             <div class="flex items-center space-x-2">
               <div
@@ -352,7 +370,7 @@ function goToCheckout() {
                   />
                 </svg>
               </div>
-              <span class="text-sm font-medium">VARIOS</span>
+              <span class="text-sm font-medium">{{ currentCustomerName }}</span>
             </div>
           </button>
 
@@ -381,6 +399,12 @@ function goToCheckout() {
             </div>
           </button>
         </div>
+
+        <CustomerSelectModal
+          :show="showCustomerModal"
+          @close="showCustomerModal = false"
+          @select="handleCustomerSelected"
+        />
 
         <!-- Numeric Keypad -->
         <div class="flex-1">

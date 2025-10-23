@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AttributeValueController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\PosSessionController;
 use App\Http\Controllers\Api\PaymentMethodController;
+use App\Http\Controllers\Api\IdentityController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -20,6 +21,8 @@ Route::apiResource('categories', CategoryController::class);
 Route::post('/suppliers', [SupplierController::class, 'index'])->name('api.suppliers.index');
 
 Route::post('/customers', [CustomerController::class, 'index'])->name('api.customers.index');
+
+Route::post('/customers/store', [CustomerController::class, 'store'])->name('api.customers.store');
 
 Route::post('/warehouses', [WarehouseController::class, 'index'])->name('api.warehouse.index');
 
@@ -36,6 +39,8 @@ Route::post('/reasons', [ReasonController::class, 'index'])->name('api.reasons.i
 Route::post('/attributes', [AttributeController::class, 'index'])->name('api.attributes.index');
 
 Route::post('/attribute-values/{attributeId}', [AttributeValueController::class, 'index'])->name('api.attribute-values.show');
+
+Route::get('/identities', [IdentityController::class, 'index'])->name('api.identities.index');
 
 // Rutas de sesiones POS (protegidas por token si está disponible)
 Route::middleware(['auth:sanctum'])->group(function () {

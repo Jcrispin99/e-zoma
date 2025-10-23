@@ -41,8 +41,10 @@ const currentJournalCode = computed(() => {
   return sessionStore.sequences?.[key]?.serie_code || null;
 });
 
-// Cliente seleccionado (por ahora usamos el default del bootstrap)
-const customer = ref(sessionStore.defaultCustomer || null);
+// Cliente seleccionado (usar el seleccionado del store o el default)
+const customer = computed(
+  () => sessionStore.selectedCustomer || sessionStore.defaultCustomer || null
+);
 
 // Métodos de pago y montos
 const paidTotal = computed(() => {

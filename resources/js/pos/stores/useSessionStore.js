@@ -15,6 +15,7 @@ export const useSessionStore = defineStore('pos-session', {
     config: null,
     sequences: null,
     defaultCustomer: null,
+    selectedCustomer: null,
     categories: [],
     variants: [],
     online: true,
@@ -56,6 +57,7 @@ export const useSessionStore = defineStore('pos-session', {
         this.config = data.config;
         this.sequences = data.sequences;
         this.defaultCustomer = data.default_customer;
+        this.selectedCustomer = data.default_customer;
         this.categories = data.categories || [];
         this.variants = data.variants || [];
         this.online = true;
@@ -157,6 +159,9 @@ export const useSessionStore = defineStore('pos-session', {
     },
     setOnline(status) {
       this.online = !!status;
+    },
+    setSelectedCustomer(customer) {
+      this.selectedCustomer = customer || null;
     },
   },
 });

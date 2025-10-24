@@ -130,6 +130,7 @@ $links = [
             ],
         ],
     ],
+
     [
         'type' => 'group',
         'title' => 'Reportes',
@@ -147,6 +148,21 @@ $links = [
                 'title' => 'Punto de venta',
                 'route' => 'admin.posconfig.index',
                 'active' => 'admin.posconfig.*',
+            ],
+        ],
+    ],
+    [
+        'type' => 'group',
+        'title' => 'Promociones',
+        'icon' => 'fa-regular fa-gift',
+        'route' => '#',
+        'active' => ['admin.loyalty-programs.*'],
+        'items' => [
+            [
+                'type' => 'link',
+                'title' => 'Promociones',
+                'route' => 'admin.loyalty-programs.index',
+                'active' => 'admin.loyalty-programs.*',
             ],
         ],
     ],

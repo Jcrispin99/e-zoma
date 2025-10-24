@@ -1,7 +1,7 @@
-import "./bootstrap";
+import './bootstrap';
 
-import "flowbite";
+import 'flowbite';
 
-document.addEventListener("livewire:navigated", () => {
-    initFlowbite();
+document.addEventListener('livewire:navigated', () => {
+  initFlowbite();
 });

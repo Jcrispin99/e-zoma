@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\PosConfigController;
 use App\Http\Controllers\Admin\SequenceController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\SunatConnectionController;
+use App\Http\Controllers\Admin\LoyaltyProgramController;
 
 // Dashboard
 
@@ -94,3 +95,8 @@ Route::resource('companies', CompanyController::class)->except(['show']);
 Route::get('sunat-connections', [SunatConnectionController::class, 'index'])->name('sunat-connections.index');
 Route::post('sunat-connections', [SunatConnectionController::class, 'store'])->name('sunat-connections.store');
 Route::put('sunat-connections', [SunatConnectionController::class, 'update'])->name('sunat-connections.update');
+
+// Loyalty
+Route::resource('loyalty-programs', LoyaltyProgramController::class)
+    ->except(['show'])
+    ->parameters(['loyalty-programs' => 'program']);

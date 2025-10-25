@@ -16,6 +16,7 @@ class ProductCreate extends Component
     public $price = '';
     public $category_id = '';
 
+    public $generalSku = '';
     public $selectedAttributes = [];
     public $variantsData = [];
 
@@ -24,17 +25,13 @@ class ProductCreate extends Component
         'description' => 'nullable|string',
         'price' => 'required|numeric|min:0',
         'category_id' => 'required|exists:categories,id',
+        'generalSku' => 'nullable|string',
         'variantsData' => 'array',
         'variantsData.*.sku' => 'nullable|string',
-        'variantsData.*.price' => 'required|numeric|min:0',
+        // Relax required for variant price; fallback to base price when null
+        'variantsData.*.price' => 'nullable|numeric|min:0',
         'variantsData.*.barcode' => 'nullable|string',
     ];
-
-    public function mount()
-    {
-        // Inicializamos con una variante por defecto
-        $this->generateVariantsPreview();
-    }
 
     public function addAttribute()
     {
@@ -56,11 +53,39 @@ class ProductCreate extends Component
         $this->generateVariantsPreview();
     }
 
+    public function updated($name, $value)
+    {
+        if (strpos($name, 'variantsData.') === 0) {
+            $parts = explode('.', $name);
+            if (count($parts) === 3) {
+                $index = (int) $parts[1];
+                $field = $parts[2];
+                if ($field === 'price') {
+                    $this->variantsData[$index]['price_manually_changed'] = true;
+                } elseif ($field === 'sku') {
+                    $this->variantsData[$index]['sku_manually_changed'] = true;
+                } elseif ($field === 'barcode') {
+                    $this->variantsData[$index]['barcode_manually_changed'] = true;
+                }
+            }
+        }
+    }
+
+    public function updatedGeneralSku()
+    {
+        // Propagar el SKU general a variantes que no tengan SKU definido
+        foreach ($this->variantsData as $index => $variant) {
+            if (empty($variant['sku'])) {
+                $this->variantsData[$index]['sku'] = $this->generalSku;
+            }
+        }
+    }
+
     public function updatedPrice()
     {
-        // Si el precio base cambia, actualizamos las variantes que no han sido modificadas
+        // Cuando cambie el precio base, actualizar el precio de variantes no modificadas manualmente
         foreach ($this->variantsData as $index => $variant) {
-            if ($variant['price'] == $this->price) {
+            if (!isset($variant['price_manually_changed']) || !$variant['price_manually_changed']) {
                 $this->variantsData[$index]['price'] = $this->price;
             }
         }
@@ -69,30 +94,34 @@ class ProductCreate extends Component
     private function generateVariantsPreview()
     {
         $combinations = $this->calculateCombinations();
-        $this->variantsData = []; // Reiniciamos el array
+        $newVariantsData = [];
 
         if (empty($combinations)) {
-            $this->variantsData[] = [
-                'sku' => '',
+            $newVariantsData[] = [
+                'sku' => $this->generalSku, // default desde Información General
                 'price' => $this->price,
                 'barcode' => '',
+                'stock' => 0,
                 'attribute_values' => [],
-                'description' => 'Default'
+                'description' => 'Default',
             ];
-            return;
+        } else {
+            foreach ($combinations as $combination) {
+                $attributeValues = AttributeValue::whereIn('id', $combination)->get();
+                $description = $attributeValues->pluck('value')->implode(' / ');
+
+                $newVariantsData[] = [
+                    'sku' => $this->generalSku, // default desde Información General
+                    'price' => $this->price,
+                    'barcode' => '',
+                    'stock' => 0,
+                    'attribute_values' => $combination,
+                    'description' => $description,
+                ];
+            }
         }
 
-        foreach ($combinations as $combination) {
-            $attributeValues = AttributeValue::whereIn('id', $combination)->get();
-
-            $this->variantsData[] = [
-                'sku' => $this->generateVariantSku(null, $attributeValues),
-                'price' => $this->price,
-                'barcode' => '',
-                'attribute_values' => $attributeValues->pluck('id')->toArray(),
-                'description' => $attributeValues->pluck('value')->implode(' / ')
-            ];
-        }
+        $this->variantsData = $newVariantsData;
     }
 
     private function calculateCombinations()
@@ -123,6 +152,19 @@ class ProductCreate extends Component
     {
         $this->validate();
 
+        // Si no hay variantes generadas, crear una por defecto
+        if (empty($this->variantsData)) {
+            $this->variantsData = [[
+                'sku' => $this->generalSku,
+                'price' => $this->price,
+                'barcode' => '',
+                'stock' => 0,
+                'attribute_values' => [],
+                'description' => 'Default',
+            ]];
+        }
+
+        // Crear producto
         $product = Product::create([
             'name' => $this->name,
             'description' => $this->description,
@@ -130,27 +172,31 @@ class ProductCreate extends Component
             'category_id' => $this->category_id,
         ]);
 
+        // Crear variantes
         foreach ($this->variantsData as $variantData) {
+            $combinationIds = $variantData['attribute_values'] ?? [];
+            $sku = ($variantData['sku'] ?? '') !== '' ? $variantData['sku'] : ($this->generalSku !== '' ? $this->generalSku : null);
+
             $variant = $product->variants()->create([
-                'sku' => $variantData['sku'] ?: $this->generateVariantSku($product, AttributeValue::whereIn('id', $variantData['attribute_values'])->get()),
-                'price' => $variantData['price'],
-                'barcode' => $variantData['barcode'] ?: Variant::generateUniqueBarcode(),
+                'sku' => $sku,
+                'price' => (isset($variantData['price']) && $variantData['price'] !== '') ? $variantData['price'] : $this->price,
+                'barcode' => ($variantData['barcode'] ?? '') !== '' ? $variantData['barcode'] : Variant::generateUniqueBarcode(),
                 'stock' => 0,
             ]);
 
-            if (!empty($variantData['attribute_values'])) {
-                $variant->attributeValues()->attach($variantData['attribute_values']);
+            if (!empty($combinationIds)) {
+                $variant->attributeValues()->attach($combinationIds);
             }
         }
 
         session()->flash('message', 'Producto creado exitosamente con ' . count($this->variantsData) . ' variante(s)');
-
         return redirect()->route('admin.products.index');
     }
 
+    // Mantener método por compatibilidad, aunque no se usa para generación automática
     private function generateVariantSku($product, $attributeValues)
     {
-        $productId = $product ? str_pad($product->id, 3, '0', STR_PAD_LEFT) : 'XXX';
+        $productId = $product ? str_pad($product->id, 3, '0', STR_PAD_LEFT) : '000';
         $baseSku = 'PROD-' . $productId;
 
         if ($attributeValues->isEmpty()) {

@@ -13,15 +13,22 @@ class AttributeSeeder extends Seeder
      */
     public function run(): void
     {
-        $attributes = [
-            ['name' => 'Color'],
-            ['name' => 'Talla'],
-            ['name' => 'Material'],
-            ['name' => 'Estilo'],
+        $attributesWithValues = [
+            'Color' => ['Rojo', 'Verde', 'Azul', 'Negro', 'Blanco', 'Amarillo', 'Gris', 'Naranja', 'Morado'],
+            'Talla' => ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+            'Material' => ['Algodón', 'Poliéster', 'Seda', 'Lana', 'Cuero', 'Lino', 'Denim'],
+            'Estilo' => ['Casual', 'Formal', 'Deportivo', 'Vintage', 'Bohemio', 'Urbano'],
+            'Capacidad' => ['16 GB', '32 GB', '64 GB', '128 GB', '256 GB', '512 GB', '1 TB'],
+            'Voltaje' => ['110V', '220V'],
+            'Acabado' => ['Mate', 'Brillante', 'Satinado', 'Metálico'],
         ];
 
-        foreach ($attributes as $attr) {
-            Attribute::create($attr);
+        foreach ($attributesWithValues as $attributeName => $values) {
+            $attribute = Attribute::create(['name' => $attributeName]);
+
+            foreach ($values as $value) {
+                $attribute->attributeValues()->create(['value' => $value]);
+            }
         }
     }
 }

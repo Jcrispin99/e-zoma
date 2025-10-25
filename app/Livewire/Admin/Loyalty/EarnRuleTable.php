@@ -21,7 +21,7 @@ class EarnRuleTable extends Component
     // Form fields
     public string $name = '';
     public ?string $basis = null; // 'per_amount' | 'per_unit' | 'per_order'
-    public ?int $points_value = null; // unified points input (entero positivo)
+    public ?float $points_value = null; // unified points input (puede ser decimal)
     public ?float $points_per_sol = null; // mapped on save
     public ?float $points_per_unit = null; // mapped on save
     public ?int $points_per_order = null; // mapped on save
@@ -44,7 +44,7 @@ class EarnRuleTable extends Component
         return [
             'name' => ['required', 'string', 'max:255'],
             'basis' => ['required', Rule::in(['per_amount', 'per_unit', 'per_order'])],
-            'points_value' => ['required', 'integer', 'min:1'],
+            'points_value' => ['required', 'numeric', 'min:0'],
             'min_qty' => ['nullable', 'integer', 'min:0'],
             'min_amount' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['boolean'],
@@ -123,9 +123,9 @@ class EarnRuleTable extends Component
         $this->basis = $rule->basis;
         // map points
         $this->points_value = match ($rule->basis) {
-            'per_amount' => (int) ($rule->points_per_sol ?? 0),
-            'per_unit' => (int) ($rule->points_per_unit ?? 0),
-            'per_order' => (int) ($rule->points_per_order ?? 0),
+            'per_amount' => (float) ($rule->points_per_sol ?? 0),
+            'per_unit' => (float) ($rule->points_per_unit ?? 0),
+            'per_order' => (float) ($rule->points_per_order ?? 0),
             default => null,
         };
         $this->min_qty = $rule->min_qty;

@@ -31,6 +31,9 @@ class DatabaseSeeder extends Seeder
             RolesSeeder::class,
             SequenceSeeder::class,
             PaymentMethodSeeder::class,
+            LoyaltyProgramSeeder::class,
+            LoyaltyEarnRulesSeeder::class,
+            LoyaltyRewardsSeeder::class,
         ]);
 
         Customer::factory(50)->create();

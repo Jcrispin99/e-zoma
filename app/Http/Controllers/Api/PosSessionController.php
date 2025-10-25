@@ -14,6 +14,11 @@ use App\Models\PosSession;
 use App\Models\Sale;
 use App\Models\Variant;
 use App\Models\PosConfig;
+use App\Models\LoyaltyAccount;
+use App\Models\LoyaltyTransaction;
+use App\Models\LoyaltyProgram;
+use App\Models\LoyaltyEarnRule;
+use App\Models\LoyaltyReward;
 use App\Services\SequenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -196,6 +201,10 @@ class PosSessionController extends Controller
             'orders.*.payments' => 'array',
             'orders.*.payments.*.payment_method_id' => 'required|exists:payment_methods,id',
             'orders.*.payments.*.amount' => 'required|numeric|min:0',
+            // Lealtad opcional
+            'orders.*.loyalty.points_spent' => 'nullable|integer|min:0',
+            'orders.*.loyalty.discount_amount' => 'nullable|numeric|min:0',
+            'orders.*.loyalty.points_earned' => 'nullable|integer|min:0',
         ]);
 
         $created = [];
@@ -296,6 +305,117 @@ class PosSessionController extends Controller
                         'inventoryable_id' => $sale->id,
                         'inventoryable_type' => Sale::class,
                     ]);
+                }
+
+
+                $loyalty = $order['loyalty'] ?? null;
+                // Calcular puntos ganados y redención con validación de programa
+                $pointsSpent = (int) ($loyalty['points_spent'] ?? 0);
+                $pointsEarned = (int) ($loyalty['points_earned'] ?? 0);
+
+                // Validar programa de lealtad para POS (Opción A)
+                $program = LoyaltyProgram::query()
+                    ->where('is_active', true)
+                    ->where('type', 'points')
+                    ->whereIn('scope', ['pos', 'both'])
+                    ->where(function ($q) {
+                        $q->whereNull('valid_from')->orWhere('valid_from', '<=', now());
+                    })
+                    ->where(function ($q) {
+                        $q->whereNull('valid_to')->orWhere('valid_to', '>=', now());
+                    })
+                    ->orderBy('id')
+                    ->first();
+
+                $canAccumulate = false;
+                $canRedeem = false;
+                $earnRate = 0.0;
+                $redeemRate = 0.0;
+
+                if ($program) {
+                    $earnRule = LoyaltyEarnRule::query()
+                        ->where('program_id', $program->id)
+                        ->where('is_active', true)
+                        ->where('basis', 'per_amount')
+                        ->where(function ($q) {
+                            $q->whereNull('scope_type')->orWhere('scope_type', 'all');
+                        })
+                        ->orderByDesc('priority')
+                        ->first();
+                    if ($earnRule && (float) ($earnRule->points_per_sol ?? 0) > 0) {
+                        $earnRate = (float) ($earnRule->points_per_sol ?? 0);
+                        $canAccumulate = true;
+                    }
+
+                    $reward = LoyaltyReward::query()
+                        ->where('program_id', $program->id)
+                        ->where('is_active', true)
+                        ->where('reward_type', 'discount')
+                        ->where('discount_method', 'soles_per_point')
+                        ->where(function ($q) {
+                            $q->whereNull('discount_scope')->orWhere('discount_scope', 'order');
+                        })
+                        ->orderByDesc('priority')
+                        ->first();
+                    if ($reward && (float) ($reward->soles_per_point ?? 0) > 0) {
+                        $redeemRate = (float) ($reward->soles_per_point ?? 0);
+                        $canRedeem = true;
+                    }
+                }
+
+                // Si no se permite redimir, ignorar cualquier gasto de puntos del payload
+                if (!$canRedeem) {
+                    $pointsSpent = 0;
+                }
+
+                // Fallback para acumulación sólo si el programa permite acumular
+                if ($pointsEarned <= 0) {
+                    if ($canAccumulate && $earnRate > 0) {
+                        $pointsEarned = (int) floor(($sale->total ?? 0) * $earnRate);
+                    } else {
+                        $pointsEarned = 0;
+                    }
+                }
+
+                // Solo crear cuenta y transacciones si hay redención o acumulación
+                if ($pointsSpent > 0 || $pointsEarned > 0) {
+                    $account = LoyaltyAccount::firstOrCreate(
+                        ['customer_id' => $order['customer_id']],
+                        ['points_balance' => 0, 'points_lifetime' => 0, 'status' => 'active']
+                    );
+
+                    if ($pointsSpent > 0) {
+                        $account->points_balance = max(0, ($account->points_balance ?? 0) - $pointsSpent);
+                        $account->save();
+
+                        LoyaltyTransaction::create([
+                            'account_id' => $account->id,
+                            'type' => 'redeem',
+                            'points' => $pointsSpent,
+                            'available_points' => $account->points_balance,
+                            'reference_type' => Sale::class,
+                            'reference_id' => $sale->id,
+                            'occurred_at' => now(),
+                            'notes' => 'Redención puntos en POS',
+                        ]);
+                    }
+
+                    if ($pointsEarned > 0) {
+                        $account->points_balance = ($account->points_balance ?? 0) + $pointsEarned;
+                        $account->points_lifetime = ($account->points_lifetime ?? 0) + $pointsEarned;
+                        $account->save();
+
+                        LoyaltyTransaction::create([
+                            'account_id' => $account->id,
+                            'type' => 'earn',
+                            'points' => $pointsEarned,
+                            'available_points' => $account->points_balance,
+                            'reference_type' => Sale::class,
+                            'reference_id' => $sale->id,
+                            'occurred_at' => now(),
+                            'notes' => 'Acumulación puntos en POS',
+                        ]);
+                    }
                 }
 
                 $created[] = [

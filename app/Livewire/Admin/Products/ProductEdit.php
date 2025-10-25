@@ -16,6 +16,7 @@ class ProductEdit extends Component
     public $description = '';
     public $price = '';
     public $category_id = '';
+    public $generalSku = '';
 
     public $selectedAttributes = [];
     public $variantsData = [];
@@ -26,9 +27,11 @@ class ProductEdit extends Component
         'description' => 'nullable|string',
         'price' => 'required|numeric|min:0',
         'category_id' => 'required|exists:categories,id',
+        'generalSku' => 'nullable|string',
         'variantsData' => 'array',
         'variantsData.*.sku' => 'nullable|string',
-        'variantsData.*.price' => 'required|numeric|min:0',
+        // Relax required for variant price; fallback to base price when null
+        'variantsData.*.price' => 'nullable|numeric|min:0',
         'variantsData.*.barcode' => 'nullable|string',
     ];
 
@@ -36,24 +39,40 @@ class ProductEdit extends Component
     {
         $this->productId = $productId;
         $product = Product::with(['variants.attributeValues', 'category'])->findOrFail($productId);
-        
+
         // Cargar datos básicos
         $this->name = $product->name;
         $this->description = $product->description;
         $this->price = $product->price;
         $this->category_id = $product->category_id;
-        
+        $this->generalSku = optional($product->variants->first())->sku ?? '';
+
         // Reconstruir selectedAttributes desde las variantes existentes
         $this->loadExistingAttributes($product->variants);
-        
+
         // Cargar variantes existentes
         $this->loadExistingVariants($product->variants);
+
+        // Si no existen variantes, preparar una variante por defecto
+        if ($product->variants->isEmpty()) {
+            $this->generateVariantsPreview();
+        }
+    }
+
+    public function updatedGeneralSku()
+    {
+        // Propagar el SKU general a variantes que no tengan SKU definido
+        foreach ($this->variantsData as $index => $variant) {
+            if (empty($variant['sku'])) {
+                $this->variantsData[$index]['sku'] = $this->generalSku;
+            }
+        }
     }
 
     private function loadExistingAttributes($variants)
     {
         $attributeGroups = [];
-        
+
         foreach ($variants as $variant) {
             foreach ($variant->attributeValues as $attributeValue) {
                 $attributeId = $attributeValue->attribute_id;
@@ -68,18 +87,18 @@ class ProductEdit extends Component
                 }
             }
         }
-        
+
         $this->selectedAttributes = array_values($attributeGroups);
     }
 
     private function loadExistingVariants($variants)
     {
         $this->existingVariants = $variants->pluck('id')->toArray();
-        
+
         foreach ($variants as $variant) {
             $attributeValueIds = $variant->attributeValues->pluck('id')->toArray();
             $description = $variant->attributeValues->pluck('value')->implode(' / ') ?: 'Default';
-            
+
             $this->variantsData[] = [
                 'id' => $variant->id, // Importante: mantener ID para updates
                 'sku' => $variant->sku,
@@ -113,6 +132,24 @@ class ProductEdit extends Component
         $this->generateVariantsPreview();
     }
 
+    public function updated($name, $value)
+    {
+        if (strpos($name, 'variantsData.') === 0) {
+            $parts = explode('.', $name);
+            if (count($parts) === 3) {
+                $index = (int) $parts[1];
+                $field = $parts[2];
+                if ($field === 'price') {
+                    $this->variantsData[$index]['price_manually_changed'] = true;
+                } elseif ($field === 'sku') {
+                    $this->variantsData[$index]['sku_manually_changed'] = true;
+                } elseif ($field === 'barcode') {
+                    $this->variantsData[$index]['barcode_manually_changed'] = true;
+                }
+            }
+        }
+    }
+
     public function updatedPrice()
     {
         // Si el precio base cambia, actualizamos las variantes que no han sido modificadas manualmente
@@ -128,14 +165,14 @@ class ProductEdit extends Component
     {
         $combinations = $this->calculateCombinations();
         $newVariantsData = [];
-        
+
         if (empty($combinations)) {
             // Buscar si existe variante default
             $defaultVariant = collect($this->variantsData)->firstWhere('description', 'Default');
-            
+
             $newVariantsData[] = [
                 'id' => $defaultVariant['id'] ?? null,
-                'sku' => $defaultVariant['sku'] ?? '',
+                'sku' => $defaultVariant['sku'] ?? $this->generalSku,
                 'price' => $defaultVariant['price'] ?? $this->price,
                 'barcode' => $defaultVariant['barcode'] ?? '',
                 'stock' => $defaultVariant['stock'] ?? 0,
@@ -147,15 +184,16 @@ class ProductEdit extends Component
             foreach ($combinations as $combination) {
                 $attributeValues = AttributeValue::whereIn('id', $combination)->get();
                 $description = $attributeValues->pluck('value')->implode(' / ');
-                
+
                 // Buscar si esta combinación ya existe
                 $existingVariant = collect($this->variantsData)->first(function ($variant) use ($combination) {
                     return $variant['attribute_values'] == $combination;
                 });
-                
+
                 $newVariantsData[] = [
                     'id' => $existingVariant['id'] ?? null,
-                    'sku' => $existingVariant['sku'] ?? $this->generateVariantSku(null, $attributeValues),
+                    // SKU editable; usar general por defecto si está vacío
+                    'sku' => $existingVariant['sku'] ?? $this->generalSku,
                     'price' => $existingVariant['price'] ?? $this->price,
                     'barcode' => $existingVariant['barcode'] ?? '',
                     'stock' => $existingVariant['stock'] ?? 0,
@@ -165,7 +203,7 @@ class ProductEdit extends Component
                 ];
             }
         }
-        
+
         $this->variantsData = $newVariantsData;
     }
 
@@ -196,9 +234,23 @@ class ProductEdit extends Component
     public function update()
     {
         $this->validate();
-        
+
         $product = Product::findOrFail($this->productId);
-        
+
+        // Si no hay variantes en memoria, crear una por defecto
+        if (empty($this->variantsData)) {
+            $this->variantsData = [[
+                'id' => null,
+                'sku' => $this->generalSku,
+                'price' => $this->price,
+                'barcode' => '',
+                'stock' => 0,
+                'attribute_values' => [],
+                'description' => 'Default',
+                'is_existing' => false,
+            ]];
+        }
+
         // Actualizar datos básicos del producto
         $product->update([
             'name' => $this->name,
@@ -206,50 +258,54 @@ class ProductEdit extends Component
             'price' => $this->price,
             'category_id' => $this->category_id,
         ]);
-        
+
         // Obtener IDs de variantes actuales
         $currentVariantIds = collect($this->variantsData)
             ->whereNotNull('id')
             ->pluck('id')
             ->toArray();
-        
+
         // Eliminar variantes que ya no están en la lista
         $variantsToDelete = array_diff($this->existingVariants, $currentVariantIds);
         if (!empty($variantsToDelete)) {
             Variant::whereIn('id', $variantsToDelete)->delete();
         }
-        
+
         // Procesar cada variante
         foreach ($this->variantsData as $variantData) {
-            if ($variantData['is_existing'] && $variantData['id']) {
+            $combinationIds = $variantData['attribute_values'] ?? [];
+            // Usar SKU de la variante o propagar el general si está vacío
+            $sku = ($variantData['sku'] ?? '') !== '' ? $variantData['sku'] : ($this->generalSku !== '' ? $this->generalSku : null);
+
+            if (!empty($variantData['is_existing']) && !empty($variantData['id'])) {
                 // Actualizar variante existente
                 $variant = Variant::find($variantData['id']);
                 $variant->update([
-                    'sku' => $variantData['sku'],
-                    'price' => $variantData['price'],
-                    'barcode' => $variantData['barcode'] ?: Variant::generateUniqueBarcode(),
+                    'sku' => $sku,
+                    'price' => (isset($variantData['price']) && $variantData['price'] !== '') ? $variantData['price'] : $this->price,
+                    'barcode' => ($variantData['barcode'] ?? '') !== '' ? $variantData['barcode'] : Variant::generateUniqueBarcode(),
                     // No actualizar stock aquí, se maneja por separado
                 ]);
-                
-                // Actualizar relaciones de atributos
-                $variant->attributeValues()->sync($variantData['attribute_values']);
+
+                // Actualizar relaciones de atributos con seguridad
+                $variant->attributeValues()->sync($combinationIds);
             } else {
                 // Crear nueva variante
                 $variant = $product->variants()->create([
-                    'sku' => $variantData['sku'] ?: $this->generateVariantSku($product, AttributeValue::whereIn('id', $variantData['attribute_values'])->get()),
-                    'price' => $variantData['price'],
-                    'barcode' => $variantData['barcode'] ?: Variant::generateUniqueBarcode(),
+                    'sku' => $sku,
+                    'price' => (isset($variantData['price']) && $variantData['price'] !== '') ? $variantData['price'] : $this->price,
+                    'barcode' => ($variantData['barcode'] ?? '') !== '' ? $variantData['barcode'] : Variant::generateUniqueBarcode(),
                     'stock' => 0,
                 ]);
-                
-                if (!empty($variantData['attribute_values'])) {
-                    $variant->attributeValues()->attach($variantData['attribute_values']);
+
+                // Adjuntar relaciones de atributos si corresponde
+                if (!empty($combinationIds)) {
+                    $variant->attributeValues()->attach($combinationIds);
                 }
             }
         }
-        
+
         session()->flash('message', 'Producto actualizado exitosamente con ' . count($this->variantsData) . ' variante(s)');
-        
         return redirect()->route('admin.products.index');
     }
 

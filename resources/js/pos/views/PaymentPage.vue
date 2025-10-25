@@ -24,6 +24,7 @@ const orderLines = ref(cached.items || []);
 const orderSubtotal = ref(Number(cached.subtotal || 0));
 const orderTax = ref(Number(cached.tax || 0));
 const orderTotal = ref(Number(cached.total || 0));
+const loyaltyMeta = ref(cached.loyalty || null);
 
 // Selección de tipo de documento
 const docType = ref('boleta'); // "boleta" | "factura"
@@ -185,6 +186,15 @@ async function pay() {
     total_amount: orderTotal.value,
   };
 
+  // Incluir datos de lealtad si están en cache
+  if (loyaltyMeta.value) {
+    payload.loyalty = {
+      points_spent: Number(loyaltyMeta.value.points_spent || 0),
+      discount_amount: Number(loyaltyMeta.value.discount_amount || 0),
+      points_earned: Number(loyaltyMeta.value.points_earned || 0),
+    };
+  }
+
   try {
     const result = await sessionStore.sync([payload]);
     console.log('Sync OK', result);
@@ -218,6 +228,13 @@ async function pay() {
       tax: orderTax.value,
       total: orderTotal.value,
       isOffline: false,
+      loyalty: loyaltyMeta.value
+        ? {
+            points_spent: Number(loyaltyMeta.value.points_spent || 0),
+            discount_amount: Number(loyaltyMeta.value.discount_amount || 0),
+            points_earned: Number(loyaltyMeta.value.points_earned || 0),
+          }
+        : null,
     };
     setCache(`pos:receipt:${receiptRef}`, receiptData);
     setCache('pos:receipt:last', receiptData);
@@ -260,6 +277,13 @@ async function pay() {
         tax: orderTax.value,
         total: orderTotal.value,
         isOffline: true,
+        loyalty: loyaltyMeta.value
+          ? {
+              points_spent: Number(loyaltyMeta.value.points_spent || 0),
+              discount_amount: Number(loyaltyMeta.value.discount_amount || 0),
+              points_earned: Number(loyaltyMeta.value.points_earned || 0),
+            }
+          : null,
       };
       setCache('pos:offlineReceiptCounter', {
         next: Number(counter.next || 1) + 1,

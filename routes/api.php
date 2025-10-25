@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\PosSessionController;
 use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\IdentityController;
 use App\Http\Controllers\Api\CustomerLookupController;
+use App\Http\Controllers\Api\LoyaltyPosController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -47,6 +48,11 @@ Route::get('/identities', [IdentityController::class, 'index'])->name('api.ident
 
 // Rutas de sesiones POS (protegidas por token si está disponible)
 Route::middleware(['auth:sanctum'])->group(function () {
+    // Lealtad (config y cuenta)
+    Route::get('/loyalty/config', [LoyaltyPosController::class, 'config'])->name('api.loyalty.config');
+    Route::get('/loyalty/account/{customer}', [LoyaltyPosController::class, 'account'])->name('api.loyalty.account');
+
+    // POS
     Route::post('/pos-sessions/open', [PosSessionController::class, 'open'])->name('api.pos-sessions.open');
     Route::get('/pos-sessions/{id}/bootstrap', [PosSessionController::class, 'bootstrap'])->name('api.pos-sessions.bootstrap');
     Route::post('/pos-sessions/{id}/opening-balance', [PosSessionController::class, 'setOpeningBalance'])->name('api.pos-sessions.opening-balance');

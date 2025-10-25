@@ -70,7 +70,7 @@
                     <div class="space-y-4">
                         <div class="text-sm font-semibold text-gray-700">PUNTO(S)</div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                            <x-wire-input wire:model.lazy="points_value" type="number" min="1" step="1" label="Otorgar" placeholder="Cantidad de puntos" />
+                            <x-wire-input wire:model.lazy="points_value" type="number" min="0" step="0.01" label="Otorgar" placeholder="Cantidad de puntos" />
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Base</label>
                                 <div class="space-y-2">
@@ -100,24 +100,9 @@
                             </div>
                             <!-- DOMINIO: solo categorías y variantes (sin checkboxes) -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <x-wire-select
-                                    label="Categoría"
-                                    wire:model="category_id"
-                                    placeholder="Seleccione categoría"
-                                    :async-data="['api' => route('categories.index'), 'method' => 'GET']"
-                                    option-label="name"
-                                    option-value="id"
-                                />
+                                <x-wire-select label="Categoría" wire:model="category_id" placeholder="Seleccione categoría" :async-data="['api' => route('categories.index'), 'method' => 'GET']" option-label="name" option-value="id" />
 
-                                <x-wire-select
-                                    label="Producto"
-                                    wire:model="variant_ids"
-                                    placeholder="Seleccione variantes"
-                                    :async-data="['api' => route('api.product.index'), 'method' => 'POST']"
-                                    option-label="name"
-                                    option-value="id"
-                                    multiselect
-                                />
+                                <x-wire-select label="Producto" wire:model="variant_ids" placeholder="Seleccione variantes" :async-data="['api' => route('api.product.index'), 'method' => 'POST']" option-label="name" option-value="id" multiselect />
                             </div>
                         </div>
                     </div>

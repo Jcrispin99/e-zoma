@@ -1,11 +1,12 @@
 <script setup>
-import { computed, ref, shallowRef, onUnmounted, watch } from 'vue';
+import { computed, ref, shallowRef, onUnmounted, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { setCache } from '../composables/useCache.js';
 import { useKeypad } from '../composables/useKeypad.js';
 import { formatCurrency } from '../utils/currency.js';
 import { POS_CONFIG } from '../constants/index.js';
 import { useSessionStore } from '../stores/useSessionStore.js';
+import { useLoyaltyStore } from '../stores/useLoyaltyStore.js';
 import CustomerSelectModal from './modals/CustomerSelectModal.vue';
 
 // Props del carrito
@@ -59,6 +60,7 @@ const selectedProduct = computed(() => {
 
 // Configuración de IGV desde sesión
 const sessionStore = useSessionStore();
+const loyaltyStore = useLoyaltyStore();
 const taxRate = computed(() => {
   const apply = !!sessionStore.config?.apply_tax;
   const rate = Number(sessionStore.config?.tax_rate ?? 0);
@@ -108,6 +110,33 @@ const total = computed(() => {
   }
   return subtotal.value + tax.value;
 });
+
+// Lógica de lealtad: descuento y puntos
+const pointsToSpend = ref(0);
+const loyaltyDiscount = computed(() =>
+  loyaltyStore.calculateDiscount(pointsToSpend.value, total.value)
+);
+const totalAfterDiscount = computed(() =>
+  Math.max(0, Math.round((total.value - loyaltyDiscount.value) * 100) / 100)
+);
+const pointsEarned = computed(() =>
+  loyaltyStore.calculateEarnedPoints(totalAfterDiscount.value)
+);
+const loyaltyEnabled = computed(() => !!loyaltyStore.config?.active_for_pos);
+
+onMounted(() => {
+  loyaltyStore.fetchConfig();
+});
+
+// Al seleccionar cliente, cargar cuenta de puntos y resetear gasto
+watch(
+  () => sessionStore.selectedCustomer?.id,
+  (id) => {
+    pointsToSpend.value = 0;
+    if (id) loyaltyStore.fetchAccount(id);
+  },
+  { immediate: true }
+);
 
 // Función para seleccionar un producto
 const selectProduct = (index) => {
@@ -199,7 +228,18 @@ function goToCheckout() {
       items: props.cartItems,
       subtotal: subtotal.value,
       tax: tax.value,
-      total: total.value,
+      total: totalAfterDiscount.value,
+      // Metadatos de lealtad para el backend y recibo
+      loyalty: loyaltyEnabled.value
+        ? {
+            points_spent: Math.min(
+              Math.floor(pointsToSpend.value || 0),
+              Math.floor(loyaltyStore.account.points_balance || 0)
+            ),
+            discount_amount: loyaltyDiscount.value,
+            points_earned: pointsEarned.value,
+          }
+        : null,
     });
     router.push({ name: 'pos-checkout', params: { id: route.params.id } });
   } catch (e) {
@@ -324,6 +364,54 @@ function handleCustomerSelected(c) {
           <p class="text-lg font-bold text-gray-900">
             Total: {{ formatCurrency(total) }}
           </p>
+          <!-- Sección de puntos debajo del total -->
+          <div
+            v-if="loyaltyEnabled && loyaltyStore.account.customer_id"
+            class="mt-3 p-3 border rounded bg-purple-50"
+          >
+            <h4 class="text-sm font-semibold text-gray-700 mb-2">
+              Punto(s) de lealtad
+            </h4>
+            <div class="grid grid-cols-3 gap-2">
+              <div class="bg-white border rounded p-2 text-center">
+                <div class="text-xs text-gray-500">Saldo en puntos</div>
+                <div class="text-sm font-semibold">
+                  {{ loyaltyStore.account.points_balance }}
+                </div>
+              </div>
+              <div class="bg-white border rounded p-2 text-center">
+                <div class="text-xs text-gray-500">Puntos ganados</div>
+                <div class="text-sm font-semibold text-green-600">+{{ pointsEarned }}</div>
+              </div>
+              <div class="bg-white border rounded p-2 text-center">
+                <div class="text-xs text-gray-500">Nuevo total</div>
+                <div class="text-sm font-semibold">{{ formatCurrency(totalAfterDiscount) }}</div>
+              </div>
+            </div>
+            <div
+              v-if="loyaltyStore.canRedeem"
+              class="mt-2 flex items-center justify-between gap-2"
+            >
+              <label class="text-sm text-gray-700">Usar puntos</label>
+              <input
+                type="number"
+                min="0"
+                :max="loyaltyStore.account.points_balance"
+                step="1"
+                class="w-28 border rounded px-2 py-1 text-right"
+                v-model.number="pointsToSpend"
+              />
+            </div>
+            <div v-if="loyaltyStore.canRedeem" class="mt-2 flex justify-between text-sm">
+              <span class="text-gray-700">Descuento por puntos</span>
+              <span class="font-semibold">{{ formatCurrency(loyaltyDiscount) }}</span>
+            </div>
+            <div class="mt-2 text-xs text-gray-500">
+              Acumularás {{ pointsEarned }} puntos en esta compra.
+            </div>
+          </div
+          >
+
         </div>
       </div>
     </div>

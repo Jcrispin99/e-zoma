@@ -71,6 +71,29 @@ class LoyaltyProgramCreate extends Component
         return redirect()->route('admin.loyalty-programs.index');
     }
 
+    public function toggleScope(string $target): void
+    {
+        $pos = in_array($this->scope, ['pos', 'both']);
+        $sales = in_array($this->scope, ['sales', 'both']);
+
+        if ($target === 'pos') {
+            $pos = !$pos;
+        } elseif ($target === 'sales') {
+            $sales = !$sales;
+        }
+
+        if ($pos && $sales) {
+            $this->scope = 'both';
+        } elseif ($pos) {
+            $this->scope = 'pos';
+        } elseif ($sales) {
+            $this->scope = 'sales';
+        } else {
+            // Mantener al menos una selección por usabilidad: si ambas quedan falsas, default a 'pos'
+            $this->scope = 'pos';
+        }
+    }
+
     public function render()
     {
         return view('livewire.admin.loyalty.program-create');

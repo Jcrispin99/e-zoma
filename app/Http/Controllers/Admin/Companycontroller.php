@@ -7,6 +7,7 @@ use App\Models\Company;
 use Illuminate\Http\Request;
 use App\Models\Identity;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Storage;
 
 class Companycontroller extends Controller
 {
@@ -51,11 +52,20 @@ class Companycontroller extends Controller
             'legal_representative' => 'nullable|string|max:255',
             'parent_id' => 'nullable|exists:companies,id',
             'is_active' => 'boolean',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $data['is_active'] = $request->has('is_active') ? true : false;
 
         $company = Company::create($data);
+
+        if ($request->hasFile('logo')) {
+            $path = $request->file('logo')->store('logos', 'public');
+            $company->images()->create([
+                'path' => $path,
+                'size' => $request->file('logo')->getSize(),
+            ]);
+        }
 
         session()->flash('swalt', [
             'icon' => 'success',
@@ -113,11 +123,26 @@ class Companycontroller extends Controller
             'legal_representative' => 'nullable|string|max:255',
             'parent_id' => 'nullable|exists:companies,id',
             'is_active' => 'boolean',
+            'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ]);
 
         $data['is_active'] = $request->has('is_active') ? true : false;
 
         $company->update($data);
+
+        if ($request->hasFile('logo')) {
+            $existing = $company->images()->first();
+            if ($existing) {
+                Storage::disk('public')->delete($existing->path);
+                $existing->delete();
+            }
+
+            $path = $request->file('logo')->store('logos', 'public');
+            $company->images()->create([
+                'path' => $path,
+                'size' => $request->file('logo')->getSize(),
+            ]);
+        }
 
         session()->flash('swalt', [
             'icon' => 'success',

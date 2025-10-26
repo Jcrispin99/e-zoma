@@ -14,6 +14,6 @@
     ],
 ]">
 
-    @livewire('admin.purchases.purchase-create')
+    @livewire('admin.purchases.purchase-create', ['purchase_order_id' => request()->get('purchase_order_id')])
 
 </x-admin-layout>

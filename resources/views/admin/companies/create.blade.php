@@ -15,7 +15,7 @@
 ]">
 
     <x-wire-card>
-        <form action="{{ route('admin.companies.store') }}" method="POST" class="space-y-8">
+        <form action="{{ route('admin.companies.store') }}" method="POST" class="space-y-8" enctype="multipart/form-data">
             @csrf
 
             {{-- Sección de Información General --}}
@@ -77,6 +77,20 @@
                 </div>
                 <div class="mt-6">
                     <x-wire-checkbox id="is_active" name="is_active" label="Compañía Activa" value="1" :checked="old('is_active', true)" />
+                </div>
+            </div>
+
+            <hr class="border-gray-200 dark:border-gray-700" />
+
+            {{-- Sección de Logo --}}
+            <div>
+                <h2 class="text-lg font-semibold text-gray-700 dark:text-gray-200">Logo de la Compañía</h2>
+                <div class="mt-4">
+                    <label for="logo" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Imagen de logo (PNG, JPG, WEBP) máx. 2MB</label>
+                    <input id="logo" name="logo" type="file" accept="image/*" class="mt-2 block w-full text-sm text-gray-700 dark:text-gray-200 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100" />
+                    @error('logo')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
                 </div>
             </div>
 

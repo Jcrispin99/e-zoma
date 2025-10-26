@@ -41,6 +41,11 @@ onMounted(() => {
         :date="receipt.date"
         :customer="receipt.customer"
         :is-offline="receipt.isOffline"
+        :journal-name="sessionStore.sequences?.[receipt.type === 'invoice' ? 'invoice' : 'receipt']?.journal_name || null"
+        :serie-code="sessionStore.sequences?.[receipt.type === 'invoice' ? 'invoice' : 'receipt']?.serie_code || receipt.serie || ''"
+        :pos-name="sessionStore.pos?.name || ''"
+        :seller-name="sessionStore.seller?.name || ''"
+        condition="Contado"
       />
 
       <ReceiptItems :items="receipt.items || []" />
@@ -51,7 +56,10 @@ onMounted(() => {
         :total="Number(receipt.total || 0)"
         :loyalty="receipt.loyalty || null"
       />
-      <ReceiptPayments :payments="receipt.payments || []" />
+      <ReceiptPayments 
+        :payments="receipt.payments || []" 
+        :policies="sessionStore.company?.policies || ''" 
+      />
 
       <!-- Acciones -->
       <div class="px-6 py-4 border-t flex gap-2 print:hidden">

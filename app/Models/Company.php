@@ -24,11 +24,16 @@ class Company extends Model
         'identity_id',
         'document_number',
         'address',
+        'city',
+        'department',
+        'district',
         'email',
         'phone',
         'tax_address',
         'legal_representative',
         'is_active',
+        'policies',
+        'slogan',
     ];
 
     /**

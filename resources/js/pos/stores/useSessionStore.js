@@ -14,6 +14,9 @@ export const useSessionStore = defineStore('pos-session', {
     session: null,
     config: null,
     sequences: null,
+    company: null,
+    pos: null,
+    seller: null,
     defaultCustomer: null,
     selectedCustomer: null,
     categories: [],
@@ -56,6 +59,9 @@ export const useSessionStore = defineStore('pos-session', {
         this.session = data.session;
         this.config = data.config;
         this.sequences = data.sequences;
+        this.company = data.company || null;
+        this.pos = data.pos || null;
+        this.seller = data.seller || null;
         this.defaultCustomer = data.default_customer;
         this.selectedCustomer = data.default_customer;
         this.categories = data.categories || [];
@@ -63,6 +69,9 @@ export const useSessionStore = defineStore('pos-session', {
         this.online = true;
         setCache('pos:categories', this.categories);
         setCache('pos:variants', this.variants);
+        setCache('pos:company', this.company);
+        setCache('pos:pos', this.pos);
+        setCache('pos:seller', this.seller);
       } catch (e) {
         this.error = e.message || 'Bootstrap failed';
         // 401 no es "offline"; mantener online hasta tener indicador de red real
@@ -71,6 +80,9 @@ export const useSessionStore = defineStore('pos-session', {
         }
         this.categories = getCache('pos:categories', []);
         this.variants = getCache('pos:variants', []);
+        this.company = getCache('pos:company', null);
+        this.pos = getCache('pos:pos', null);
+        this.seller = getCache('pos:seller', null);
       } finally {
         this.loading = false;
       }

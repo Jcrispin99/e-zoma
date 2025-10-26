@@ -16,6 +16,11 @@ class Journal extends Model
         'document_type_code',
         'sequence_id',
         'company_id',
+        'is_fiscal',
+    ];
+
+    protected $casts = [
+        'is_fiscal' => 'boolean',
     ];
 
     public function company()

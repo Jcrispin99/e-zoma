@@ -46,6 +46,9 @@ class Companycontroller extends Controller
             'identity_id' => 'required|exists:identities,id',
             'document_number' => 'required|string|max:255|unique:companies,document_number',
             'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'department' => 'nullable|string|max:255',
+            'district' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:255',
             'tax_address' => 'nullable|string|max:255',
@@ -53,6 +56,8 @@ class Companycontroller extends Controller
             'parent_id' => 'nullable|exists:companies,id',
             'is_active' => 'boolean',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'policies' => 'nullable|string',
+            'slogan' => 'nullable|string|max:255',
         ]);
 
         $data['is_active'] = $request->has('is_active') ? true : false;
@@ -117,6 +122,9 @@ class Companycontroller extends Controller
                 Rule::unique('companies')->ignore($company->id),
             ],
             'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:255',
+            'department' => 'nullable|string|max:255',
+            'district' => 'nullable|string|max:255',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:255',
             'tax_address' => 'nullable|string|max:255',
@@ -124,6 +132,8 @@ class Companycontroller extends Controller
             'parent_id' => 'nullable|exists:companies,id',
             'is_active' => 'boolean',
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'policies' => 'nullable|string',
+            'slogan' => 'nullable|string|max:255',
         ]);
 
         $data['is_active'] = $request->has('is_active') ? true : false;

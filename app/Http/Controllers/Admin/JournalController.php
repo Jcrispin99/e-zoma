@@ -38,7 +38,15 @@ class JournalController extends Controller
             'code' => 'required|string|max:255',
             'type' => 'required|string|max:255',
             'company_id' => 'required|exists:companies,id',
+            'is_fiscal' => 'nullable|boolean',
+            'document_type_code' => 'nullable|string|in:01,03,07,08|required_if:is_fiscal,1',
         ]);
+
+        // Normalizar booleano y coherencia del tipo de documento
+        $data['is_fiscal'] = $request->boolean('is_fiscal');
+        if (! $data['is_fiscal']) {
+            $data['document_type_code'] = null;
+        }
 
         $sequence = Sequence::create([
             'sequence_size' => 9,
@@ -88,15 +96,41 @@ class JournalController extends Controller
             'type' => 'required|string|max:255',
             'sequence_id' => 'required|exists:sequences,id',
             'company_id' => 'required|exists:companies,id',
+            'is_fiscal' => 'nullable|boolean',
+            'document_type_code' => 'nullable|string|in:01,03,07,08',
         ]);
+
+        // Bloqueo: si la secuencia ya avanzó (>= 2), no permitir cambiar is_fiscal
+        $lockedFiscal = optional($journal->sequence)->next_number >= 2;
+        $requestedFiscal = $request->boolean('is_fiscal');
+        $effectiveFiscal = $lockedFiscal ? $journal->is_fiscal : $requestedFiscal;
+
+        // Validar coherencia del tipo de documento respecto al estado fiscal efectivo
+        if ($effectiveFiscal && empty($data['document_type_code'])) {
+            return back()->withErrors(['document_type_code' => 'Seleccione el tipo de documento SUNAT para diarios fiscales.'])->withInput();
+        }
+
+        // Normalizar y coherencia del tipo de documento
+        $data['is_fiscal'] = $effectiveFiscal;
+        if (! $effectiveFiscal) {
+            $data['document_type_code'] = null;
+        }
 
         $journal->update($data);
 
-        session()->flash('swalt', [
-            'icon' => 'success',
-            'title' => '¡Bien hecho!',
-            'text' => 'Diario ha sido actualizado',
-        ]);
+        if ($lockedFiscal && $requestedFiscal !== $journal->is_fiscal) {
+            session()->flash('swalt', [
+                'icon' => 'warning',
+                'title' => 'Configuración fiscal bloqueada',
+                'text' => 'No se puede modificar "Documento fiscal" porque la secuencia ya tiene movimientos.',
+            ]);
+        } else {
+            session()->flash('swalt', [
+                'icon' => 'success',
+                'title' => '¡Bien hecho!',
+                'text' => 'Diario ha sido actualizado',
+            ]);
+        }
 
         return redirect()->route('admin.journals.edit', $journal);
     }

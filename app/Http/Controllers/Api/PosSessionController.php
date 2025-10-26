@@ -23,6 +23,7 @@ use App\Services\SequenceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use App\Facades\Kardex;
 
 class PosSessionController extends Controller
 {
@@ -50,45 +51,21 @@ class PosSessionController extends Controller
         ]);
     }
 
+    /**
+     * Open a POS session.
+     */
     public function open(Request $request)
     {
         $validated = $request->validate([
             'pos_config_id' => 'required|exists:pos_configs,id',
-            'opening_balance' => 'nullable|numeric',
+            'opening_balance' => 'nullable|numeric|min:0',
         ]);
 
-        $userId = optional($request->user())->id ?? $request->integer('user_id');
-        if (!$userId) {
-            return response()->json(['message' => 'Usuario no autenticado o no provisto'], 401);
-        }
-
-        /** @var PosConfig $posConfig */
         $posConfig = PosConfig::query()->findOrFail($validated['pos_config_id']);
+        $userId = $request->user()->id;
 
-        // Si ya existe una sesión abierta para esta caja, continuar en esa
-        $existing = PosSession::query()
-            ->where('pos_config_id', $posConfig->id)
-            ->where('status', 'open')
-            ->whereNull('closed_at')
-            ->orderByDesc('opened_at')
-            ->first();
-
-        if ($existing) {
-            return response()->json([
-                'message' => 'Ya existe una sesión abierta para esta caja',
-                'id' => $existing->id,
-                'status' => $existing->status,
-                'opened_at' => $existing->opened_at,
-                'opening_balance' => $existing->opening_balance,
-                'pos_config' => [
-                    'id' => $posConfig->id,
-                    'name' => $posConfig->name,
-                ],
-                'redirect_url' => url('/pos/' . $existing->id),
-            ], 409);
-        }
-
-        $session = PosSession::create([
+        /** @var PosSession $session */
+        $session = PosSession::query()->create([
             'pos_config_id' => $posConfig->id,
             'user_id' => $userId,
             'status' => 'open',
@@ -112,7 +89,7 @@ class PosSessionController extends Controller
     public function bootstrap(Request $request, int $id)
     {
         /** @var PosSession $session */
-        $session = PosSession::query()->with(['posConfig'])->findOrFail($id);
+        $session = PosSession::query()->with(['posConfig.company.identity'])->findOrFail($id);
 
         $posConfig = $session->posConfig;
 
@@ -120,8 +97,8 @@ class PosSessionController extends Controller
         $receiptJournalId = $posConfig->receipt_journal_id;
         $invoiceJournalId = $posConfig->invoice_journal_id;
 
-        $receiptJournal = $receiptJournalId ? Journal::query()->find($receiptJournalId) : null;
-        $invoiceJournal = $invoiceJournalId ? Journal::query()->find($invoiceJournalId) : null;
+        $receiptJournal = $receiptJournalId ? Journal::query()->with('sequence')->find($receiptJournalId) : null;
+        $invoiceJournal = $invoiceJournalId ? Journal::query()->with('sequence')->find($invoiceJournalId) : null;
 
         $defaultCustomer = $posConfig->defaultCustomer ?? ($posConfig->default_customer_id ? Customer::query()->find($posConfig->default_customer_id) : null);
 
@@ -142,6 +119,9 @@ class PosSessionController extends Controller
                 ];
             });
 
+        $company = $posConfig->company; // incluye identity si está cargado en with
+        $seller = $session->user; // vendedor actual
+
         return response()->json([
             'session' => [
                 'id' => $session->id,
@@ -149,6 +129,33 @@ class PosSessionController extends Controller
                 'opened_at' => $session->opened_at,
                 'opening_balance' => $session->opening_balance,
             ],
+            'pos' => [
+                'id' => $posConfig->id,
+                'name' => $posConfig->name,
+            ],
+            'seller' => $seller ? [
+                'id' => $seller->id,
+                'name' => $seller->name,
+                'email' => $seller->email,
+            ] : null,
+            'company' => $company ? [
+                'id' => $company->id,
+                'name' => $company->name,
+                'trade_name' => $company->trade_name,
+                'document_number' => $company->document_number,
+                'address' => $company->address,
+                'city' => $company->city,
+                'department' => $company->department,
+                'district' => $company->district,
+                'email' => $company->email,
+                'phone' => $company->phone,
+                'logo' => $company->logo ?? null,
+                'slogan' => $company->slogan,
+                'policies' => $company->policies,
+                'identity' => [
+                    'name' => optional($company->identity)->name,
+                ],
+            ] : null,
             'config' => [
                 'id' => $posConfig->id,
                 'name' => $posConfig->name,
@@ -165,11 +172,15 @@ class PosSessionController extends Controller
                     'sequence_id' => $receiptJournal->sequence_id,
                     'journal_id' => $receiptJournal->id,
                     'serie_code' => $receiptJournal->code,
+                    'journal_name' => $receiptJournal->name,
+                    'preview_correlative' => $receiptJournal->sequence ? str_pad($receiptJournal->sequence->next_number, $receiptJournal->sequence->sequence_size, '0', STR_PAD_LEFT) : null,
                 ] : null,
                 'invoice' => $invoiceJournal ? [
                     'sequence_id' => $invoiceJournal->sequence_id,
                     'journal_id' => $invoiceJournal->id,
                     'serie_code' => $invoiceJournal->code,
+                    'journal_name' => $invoiceJournal->name,
+                    'preview_correlative' => $invoiceJournal->sequence ? str_pad($invoiceJournal->sequence->next_number, $invoiceJournal->sequence->sequence_size, '0', STR_PAD_LEFT) : null,
                 ] : null,
             ],
             'default_customer' => $defaultCustomer ? [
@@ -207,239 +218,191 @@ class PosSessionController extends Controller
             'orders.*.loyalty.points_earned' => 'nullable|integer|min:0',
         ]);
 
-        $created = [];
+        $synced = [];
 
         DB::beginTransaction();
         try {
             foreach ($validated['orders'] as $order) {
-                $posOrder = PosOrder::create([
+                $customerId = $order['customer_id'];
+                $customer = Customer::query()->findOrFail($customerId);
+
+                // Determinar journal según tipo de voucher
+                $journalId = $order['voucher_type'] === 'invoice'
+                    ? $posConfig->invoice_journal_id
+                    : $posConfig->receipt_journal_id;
+
+                // Numeración: serie y correlativo
+                $parts = SequenceService::getNextParts((int) $journalId);
+                $serie = $parts['serie'];
+                $correlative = $parts['correlative'];
+
+                // Crear orden POS primero
+                $paidSum = 0;
+                if (!empty($order['payments'])) {
+                    foreach ($order['payments'] as $p) {
+                        $paidSum += (float) $p['amount'];
+                    }
+                }
+                $paymentStatus = $paidSum <= 0 ? 'unpaid' : ($paidSum + 0.00001 >= (float) $order['total_amount'] ? 'paid' : 'partial');
+
+                /** @var PosOrder $posOrder */
+                $posOrder = PosOrder::query()->create([
                     'pos_session_id' => $session->id,
-                    'customer_id' => $order['customer_id'],
+                    'customer_id' => $customerId,
                     'total_amount' => $order['total_amount'],
-                    'status' => 'synced',
+                    'status' => $paymentStatus === 'paid' ? 'paid' : 'open',
                 ]);
 
-                // Guardar líneas del pedido POS
+                // Crear líneas de la orden POS
                 foreach ($order['lines'] as $line) {
-                    PosOrderLine::create([
+                    PosOrderLine::query()->create([
                         'pos_order_id' => $posOrder->id,
                         'variant_id' => $line['variant_id'],
-                        'quantity' => $line['quantity'],
                         'price' => $line['price'],
+                        'quantity' => $line['quantity'],
                         'subtotal' => $line['subtotal'],
                     ]);
                 }
 
-                // Guardar pagos del pedido POS
-                foreach (($order['payments'] ?? []) as $payment) {
-                    PosPayment::create([
-                        'pos_order_id' => $posOrder->id,
-                        'payment_method_id' => $payment['payment_method_id'],
-                        'amount' => $payment['amount'],
-                    ]);
+                // Registrar pagos
+                if (!empty($order['payments'])) {
+                    foreach ($order['payments'] as $p) {
+                        PosPayment::query()->create([
+                            'pos_order_id' => $posOrder->id,
+                            'payment_method_id' => $p['payment_method_id'],
+                            'amount' => $p['amount'],
+                        ]);
+                    }
                 }
 
-                // Generar Venta con correlativo según voucher_type
-                $journal = null;
-                if ($order['voucher_type'] === 'receipt' && $posConfig->receipt_journal_id) {
-                    $journal = Journal::query()->find($posConfig->receipt_journal_id);
-                } elseif ($order['voucher_type'] === 'invoice' && $posConfig->invoice_journal_id) {
-                    $journal = Journal::query()->find($posConfig->invoice_journal_id);
-                }
+                // Crear Sale con numeración y vínculos requeridos
+                $sale = Sale::query()->create([
+                    'serie' => $serie,
+                    'correlative' => $correlative,
+                    'journal_id' => (int) $journalId,
+                    'customer_id' => $customerId,
+                    'warehouse_id' => (int) $posConfig->warehouse_id,
+                    'total' => (float) $order['total_amount'],
+                    'company_id' => (int) $posConfig->company_id,
+                    'pos_order_id' => $posOrder->id,
+                    'status' => 'posted',
+                    'payment_status' => $paymentStatus,
+                ]);
 
-                if (!$journal) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Diario no configurado para el tipo de documento (receipt/invoice).',
-                    ], 422);
-                }
-
-                $serie = null;
-                $correlative = null;
-                if ($journal) {
-                    $parts = $sequenceService->getNextParts($journal->id);
-                    $serie = $parts['serie'] ?? null;
-                    $correlative = $parts['correlative'] ?? null;
-                }
-
-                // Crear Sale
-                /** @var Sale $sale */
-                $sale = new Sale();
-                $sale->serie = $serie;
-                $sale->correlative = $correlative;
-                $sale->date = now();
-                $sale->customer_id = $order['customer_id'];
-                $sale->warehouse_id = $posConfig->warehouse_id;
-                $sale->company_id = $posConfig->company_id;
-                $sale->total = $order['total_amount'];
-                $sale->pos_order_id = $posOrder->id;
-                $sale->journal_id = $journal->id; // Asegurar FK al diario
-                $sale->save();
-
-                // Asociar variantes a la venta (pivot con quantity y price)
+                // Adjuntar variantes a la venta para edición en Admin
+                $syncData = [];
                 foreach ($order['lines'] as $line) {
-                    $sale->variants()->attach($line['variant_id'], [
+                    $syncData[$line['variant_id']] = [
                         'quantity' => $line['quantity'],
                         'price' => $line['price'],
                         'subtotal' => $line['subtotal'],
-                    ]);
+                    ];
                 }
+                $sale->variants()->sync($syncData);
 
-                // Registrar movimiento de inventario (salida) por venta en el almacén de la config POS
+                // Registrar movimientos de inventario (Kardex) por salida de venta
                 foreach ($order['lines'] as $line) {
-                    $prev = Inventory::query()
-                        ->where('variant_id', $line['variant_id'])
-                        ->where('warehouse_id', $posConfig->warehouse_id)
-                        ->orderByDesc('id')
-                        ->first();
-
-                    $prevQty = $prev?->quantity_balance ?? 0;
-                    $newBalance = $prevQty - abs($line['quantity']);
-
-                    Inventory::query()->create([
-                        'variant_id' => $line['variant_id'],
-                        'warehouse_id' => $posConfig->warehouse_id,
-                        'quantity_in' => 0,
-                        'quantity_out' => abs($line['quantity']),
-                        'quantity_balance' => $newBalance,
-                        'inventoryable_id' => $sale->id,
-                        'inventoryable_type' => Sale::class,
-                    ]);
+                    Kardex::registerExit(
+                        $sale,
+                        [
+                            'id' => $line['variant_id'],
+                            'quantity' => $line['quantity'],
+                            'price' => $line['price'],
+                        ],
+                        (int) $posConfig->warehouse_id,
+                        'Venta'
+                    );
                 }
 
-
-                $loyalty = $order['loyalty'] ?? null;
-                // Calcular puntos ganados y redención con validación de programa
-                $pointsSpent = (int) ($loyalty['points_spent'] ?? 0);
-                $pointsEarned = (int) ($loyalty['points_earned'] ?? 0);
-
-                // Validar programa de lealtad para POS (Opción A)
-                $program = LoyaltyProgram::query()
-                    ->where('is_active', true)
-                    ->where('type', 'points')
-                    ->whereIn('scope', ['pos', 'both'])
-                    ->where(function ($q) {
-                        $q->whereNull('valid_from')->orWhere('valid_from', '<=', now());
-                    })
-                    ->where(function ($q) {
-                        $q->whereNull('valid_to')->orWhere('valid_to', '>=', now());
-                    })
-                    ->orderBy('id')
-                    ->first();
-
-                $canAccumulate = false;
-                $canRedeem = false;
-                $earnRate = 0.0;
-                $redeemRate = 0.0;
-
-                if ($program) {
-                    $earnRule = LoyaltyEarnRule::query()
-                        ->where('program_id', $program->id)
-                        ->where('is_active', true)
-                        ->where('basis', 'per_amount')
-                        ->where(function ($q) {
-                            $q->whereNull('scope_type')->orWhere('scope_type', 'all');
-                        })
-                        ->orderByDesc('priority')
-                        ->first();
-                    if ($earnRule && (float) ($earnRule->points_per_sol ?? 0) > 0) {
-                        $earnRate = (float) ($earnRule->points_per_sol ?? 0);
-                        $canAccumulate = true;
-                    }
-
-                    $reward = LoyaltyReward::query()
-                        ->where('program_id', $program->id)
-                        ->where('is_active', true)
-                        ->where('reward_type', 'discount')
-                        ->where('discount_method', 'soles_per_point')
-                        ->where(function ($q) {
-                            $q->whereNull('discount_scope')->orWhere('discount_scope', 'order');
-                        })
-                        ->orderByDesc('priority')
-                        ->first();
-                    if ($reward && (float) ($reward->soles_per_point ?? 0) > 0) {
-                        $redeemRate = (float) ($reward->soles_per_point ?? 0);
-                        $canRedeem = true;
-                    }
-                }
-
-                // Si no se permite redimir, ignorar cualquier gasto de puntos del payload
-                if (!$canRedeem) {
-                    $pointsSpent = 0;
-                }
-
-                // Fallback para acumulación sólo si el programa permite acumular
-                if ($pointsEarned <= 0) {
-                    if ($canAccumulate && $earnRate > 0) {
-                        $pointsEarned = (int) floor(($sale->total ?? 0) * $earnRate);
-                    } else {
-                        $pointsEarned = 0;
-                    }
-                }
-
-                // Solo crear cuenta y transacciones si hay redención o acumulación
-                if ($pointsSpent > 0 || $pointsEarned > 0) {
-                    $account = LoyaltyAccount::firstOrCreate(
-                        ['customer_id' => $order['customer_id']],
+                // Ajustar puntos de lealtad si aplica (crear cuenta si no existe)
+                if (!empty($order['loyalty'])) {
+                    $loy = $order['loyalty'];
+                    $account = LoyaltyAccount::query()->firstOrCreate(
+                        ['customer_id' => $customerId],
                         ['points_balance' => 0, 'points_lifetime' => 0, 'status' => 'active']
                     );
 
-                    if ($pointsSpent > 0) {
-                        $account->points_balance = max(0, ($account->points_balance ?? 0) - $pointsSpent);
+                    // Redeem
+                    $pointsSpent = (int) ($loy['points_spent'] ?? 0);
+                    if ($pointsSpent > 0 && $account->points_balance >= $pointsSpent) {
+                        $account->points_balance -= $pointsSpent;
                         $account->save();
-
-                        LoyaltyTransaction::create([
+                        LoyaltyTransaction::query()->create([
                             'account_id' => $account->id,
                             'type' => 'redeem',
                             'points' => $pointsSpent,
-                            'available_points' => $account->points_balance,
-                            'reference_type' => Sale::class,
-                            'reference_id' => $sale->id,
-                            'occurred_at' => now(),
-                            'notes' => 'Redención puntos en POS',
+                            'available_points' => null,
+                            'reference_type' => 'pos_order',
+                            'reference_id' => $posOrder->id,
+                            'idempotency_key' => null,
+                            'occurred_at' => Carbon::now(),
+                            'expires_at' => null,
+                            'notes' => 'POS redeem',
                         ]);
                     }
 
+                    // Earn
+                    $pointsEarned = (int) ($loy['points_earned'] ?? 0);
                     if ($pointsEarned > 0) {
-                        $account->points_balance = ($account->points_balance ?? 0) + $pointsEarned;
-                        $account->points_lifetime = ($account->points_lifetime ?? 0) + $pointsEarned;
+                        $account->points_balance += $pointsEarned;
+                        $account->points_lifetime += $pointsEarned;
                         $account->save();
-
-                        LoyaltyTransaction::create([
+                        LoyaltyTransaction::query()->create([
                             'account_id' => $account->id,
                             'type' => 'earn',
                             'points' => $pointsEarned,
-                            'available_points' => $account->points_balance,
-                            'reference_type' => Sale::class,
-                            'reference_id' => $sale->id,
-                            'occurred_at' => now(),
-                            'notes' => 'Acumulación puntos en POS',
+                            'available_points' => $pointsEarned,
+                            'reference_type' => 'pos_order',
+                            'reference_id' => $posOrder->id,
+                            'idempotency_key' => null,
+                            'occurred_at' => Carbon::now(),
+                            'expires_at' => null,
+                            'notes' => 'POS earn',
                         ]);
                     }
                 }
 
-                $created[] = [
-                    'pos_order_id' => $posOrder->id,
+                $synced[] = [
                     'sale_id' => $sale->id,
-                    'serie' => $sale->serie,
-                    'correlative' => $sale->correlative,
+                    'pos_order_id' => $posOrder->id,
+                    'voucher_type' => $order['voucher_type'],
+                    'customer_id' => $customerId,
+                    'total_amount' => (float) $order['total_amount'],
+                    'payment_status' => $paymentStatus,
+                    'serie' => $serie,
+                    'correlative' => $correlative,
                 ];
             }
 
             DB::commit();
-
-            return response()->json([
-                'status' => 'ok',
-                'synced' => $created,
-            ]);
-        } catch (\Throwable $e) {
+        } catch (\Exception $e) {
             DB::rollBack();
-
-            return response()->json([
-                'status' => 'error',
-                'message' => $e->getMessage(),
-            ], 500);
+            throw $e;
         }
+
+        return response()->json(['synced' => $synced]);
+    }
+
+    public function summary(Request $request, int $id)
+    {
+        /** @var PosSession $session */
+        $session = PosSession::query()->with(['orders.payments'])->findOrFail($id);
+
+        $ordersCount = $session->orders()->count();
+        $totalAmount = $session->orders()->sum('total_amount');
+        $paymentsTotal = $session->orders->flatMap->payments->sum('amount');
+
+        return response()->json([
+            'id' => $session->id,
+            'status' => $session->status,
+            'opened_at' => $session->opened_at,
+            'closed_at' => $session->closed_at,
+            'opening_balance' => $session->opening_balance,
+            'closing_balance' => $session->closing_balance,
+            'orders_count' => $ordersCount,
+            'orders_total_amount' => $totalAmount,
+            'payments_total_amount' => $paymentsTotal,
+        ]);
     }
 
     public function close(Request $request, int $id)
@@ -447,32 +410,18 @@ class PosSessionController extends Controller
         /** @var PosSession $session */
         $session = PosSession::query()->with(['orders.payments'])->findOrFail($id);
 
-        $validated = $request->validate([
-            'closing_balance' => 'required|numeric',
-        ]);
+        if ($session->status !== 'open') {
+            return response()->json(['message' => 'La sesión no está abierta'], 422);
+        }
 
-        $theoretical = $session->orders->flatMap->payments->sum('amount');
-        $difference = ($validated['closing_balance'] ?? 0) - $theoretical;
+        $validated = $request->validate([
+            'closing_balance' => 'required|numeric|min:0',
+        ]);
 
         $session->closing_balance = $validated['closing_balance'];
         $session->closed_at = Carbon::now();
         $session->status = 'closed';
         $session->save();
-
-        return response()->json([
-            'id' => $session->id,
-            'status' => $session->status,
-            'closed_at' => $session->closed_at,
-            'closing_balance' => $session->closing_balance,
-            'theoretical_cash' => $theoretical,
-            'difference' => $difference,
-        ]);
-    }
-
-    public function summary(Request $request, int $id)
-    {
-        /** @var PosSession $session */
-        $session = PosSession::query()->with(['orders.payments'])->findOrFail($id);
 
         $ordersCount = $session->orders()->count();
         $totalAmount = $session->orders()->sum('total_amount');

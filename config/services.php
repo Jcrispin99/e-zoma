@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // Configuración del servicio Greenter
+    'greenter' => [
+        'base_url' => env('GREENTER_BASE_URL', 'http://greenter.test'),
+    ],
+
 ];

@@ -31,19 +31,37 @@
                 <option value="purchase-order" @selected($journal->type == 'purchase_order')>Orden de Compra</option>
             </x-wire-native-select>
 
+            @php($lockedFiscal = optional($journal->sequence)->next_number >= 2)
+            <label class="inline-flex items-center space-x-2">
+                <input type="checkbox" id="is_fiscal" name="is_fiscal" value="1" class="rounded border-gray-300" @checked(old('is_fiscal', $journal->is_fiscal)) @disabled($lockedFiscal)>
+                <span>Documento fiscal</span>
+            </label>
+            @if($lockedFiscal)
+            <p class="text-xs text-gray-500">No editable: la secuencia ya avanzó y existen documentos.</p>
+            @endif
+
+            <x-wire-native-select label="Tipo de documento SUNAT" name="document_type_code">
+                @php($docType = old('document_type_code', $journal->document_type_code))
+                <option value="" @selected($docType==null)>-- Selecciona --</option>
+                <option value="01" @selected($docType=='01' )>Factura (01)</option>
+                <option value="03" @selected($docType=='03' )>Boleta (03)</option>
+                <option value="07" @selected($docType=='07' )>Nota de Crédito (07)</option>
+                <option value="08" @selected($docType=='08' )>Nota de Débito (08)</option>
+            </x-wire-native-select>
+
             <x-wire-native-select label="Compañía" name="company_id">
                 @foreach ($companies as $company)
-                    <option value="{{ $company->id }}" @selected($journal->company_id == $company->id)>
-                        {{ $company->name }}
-                    </option>
+                <option value="{{ $company->id }}" @selected($journal->company_id == $company->id)>
+                    {{ $company->name }}
+                </option>
                 @endforeach
             </x-wire-native-select>
 
             <x-wire-native-select label="Secuencia" name="sequence_id">
                 @foreach ($sequences as $sequence)
-                    <option value="{{ $sequence->id }}" @selected($journal->sequence_id == $sequence->id)>
-                        {{ $sequence->id }}
-                    </option>
+                <option value="{{ $sequence->id }}" @selected($journal->sequence_id == $sequence->id)>
+                    {{ $sequence->id }}
+                </option>
                 @endforeach
             </x-wire-native-select>
 

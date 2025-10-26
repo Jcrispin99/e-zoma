@@ -27,6 +27,18 @@ class JournalTable extends DataTableComponent
                 ->sortable(),
             Column::make("Type", "type")
                 ->sortable(),
+            Column::make("Fiscal", "is_fiscal")
+                ->format(fn($value) => $value ? 'Sí' : 'No')
+                ->sortable(),
+            Column::make("Doc SUNAT", "document_type_code")
+                ->format(function ($value) {
+                    if ($value === '01') return 'Factura (01)';
+                    if ($value === '03') return 'Boleta (03)';
+                    if ($value === '07') return 'Nota de Crédito (07)';
+                    if ($value === '08') return 'Nota de Débito (08)';
+                    return '-';
+                })
+                ->sortable(),
             Column::make("Secuencia", "sequence.next_number")
                 ->sortable(),
             Column::make("Compañía", "company.name")

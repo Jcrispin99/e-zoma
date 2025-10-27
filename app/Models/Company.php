@@ -24,10 +24,7 @@ class Company extends Model
         'identity_id',
         'document_number',
         'address',
-        'ubigeo',
-        'city',
-        'department',
-        'district',
+        'district_id',
         'email',
         'phone',
         'tax_address',
@@ -64,6 +61,11 @@ class Company extends Model
     public function identity(): BelongsTo
     {
         return $this->belongsTo(Identity::class);
+    }
+
+    public function district(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\UbigeoDistrict::class, 'district_id', 'id');
     }
 
     public function users()

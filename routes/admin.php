@@ -22,6 +22,7 @@ use App\Http\Controllers\Admin\SequenceController;
 use App\Http\Controllers\Admin\JournalController;
 use App\Http\Controllers\Admin\SunatConnectionController;
 use App\Http\Controllers\Admin\LoyaltyProgramController;
+use App\Http\Controllers\Admin\Companycontroller as CompanycontrollerLower;
 
 // Dashboard
 
@@ -92,6 +93,9 @@ Route::delete('images/{image}', [ImageController::class, 'destroy'])->name('imag
 
 // Company
 Route::resource('companies', CompanyController::class)->except(['show']);
+// Ubigeo endpoints para selects dependientes
+Route::get('ubigeo/provinces', [CompanycontrollerLower::class, 'ubigeoProvinces'])->name('ubigeo.provinces');
+Route::get('ubigeo/districts', [CompanycontrollerLower::class, 'ubigeoDistricts'])->name('ubigeo.districts');
 Route::get('sunat-connections', [SunatConnectionController::class, 'index'])->name('sunat-connections.index');
 Route::post('sunat-connections', [SunatConnectionController::class, 'store'])->name('sunat-connections.store');
 Route::put('sunat-connections', [SunatConnectionController::class, 'update'])->name('sunat-connections.update');

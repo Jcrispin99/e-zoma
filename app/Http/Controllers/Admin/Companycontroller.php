@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Company;
 use Illuminate\Http\Request;
 use App\Models\Identity;
+use App\Models\UbigeoDepartment;
+use App\Models\UbigeoProvince;
+use App\Models\UbigeoDistrict;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 
@@ -32,7 +35,10 @@ class Companycontroller extends Controller
             ->select('id', 'name')
             ->get();
 
-        return view('admin.companies.create', compact('identities', 'parentCompanies'));
+        // Ubigeo: Departamentos para selects dependientes
+        $departments = UbigeoDepartment::select('id', 'name')->orderBy('name')->get();
+
+        return view('admin.companies.create', compact('identities', 'parentCompanies', 'departments'));
     }
 
     /**
@@ -46,9 +52,8 @@ class Companycontroller extends Controller
             'identity_id' => 'required|exists:identities,id',
             'document_number' => 'required|string|max:255|unique:companies,document_number',
             'address' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:255',
-            'department' => 'nullable|string|max:255',
-            'district' => 'nullable|string|max:255',
+            // Ubigeo: solo persistimos district_id
+            'district_id' => 'nullable|string|size:6|exists:ubigeo_districts,id',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:255',
             'tax_address' => 'nullable|string|max:255',
@@ -102,7 +107,37 @@ class Companycontroller extends Controller
             ->select('id', 'name')
             ->get();
 
-        return view('admin.companies.edit', compact('company', 'identities', 'parentCompanies'));
+        // Ubigeo inicial para edición
+        $departments = UbigeoDepartment::select('id', 'name')->orderBy('name')->get();
+        $district = $company->district_id ? UbigeoDistrict::find($company->district_id) : null;
+        $selectedDepartmentId = $district ? $district->department_id : null;
+        $selectedProvinceId = $district ? $district->province_id : null;
+        $provinces = $selectedDepartmentId
+            ? UbigeoProvince::where('department_id', $selectedDepartmentId)->select('id', 'name')->orderBy('name')->get()
+            : collect();
+        $districts = $selectedProvinceId
+            ? UbigeoDistrict::where('province_id', $selectedProvinceId)->select('id', 'name')->orderBy('name')->get()
+            : collect();
+
+        // Enfoque alternativo: cargar todo y filtrar en el cliente (sin llamadas API)
+        $allProvinces = UbigeoProvince::select('id', 'name', 'department_id')->orderBy('name')->get();
+        $allDistricts = UbigeoDistrict::select('id', 'name', 'province_id')->orderBy('name')->get();
+
+        return view(
+            'admin.companies.edit',
+            compact(
+                'company',
+                'identities',
+                'parentCompanies',
+                'departments',
+                'provinces',
+                'districts',
+                'selectedDepartmentId',
+                'selectedProvinceId',
+                'allProvinces',
+                'allDistricts'
+            )
+        );
     }
 
     /**
@@ -122,9 +157,8 @@ class Companycontroller extends Controller
                 Rule::unique('companies')->ignore($company->id),
             ],
             'address' => 'nullable|string|max:255',
-            'city' => 'nullable|string|max:255',
-            'department' => 'nullable|string|max:255',
-            'district' => 'nullable|string|max:255',
+            // Ubigeo: solo persistimos district_id
+            'district_id' => 'nullable|string|size:6|exists:ubigeo_districts,id',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:255',
             'tax_address' => 'nullable|string|max:255',
@@ -189,5 +223,32 @@ class Companycontroller extends Controller
         ]);
 
         return redirect()->route('admin.companies.index');
+    }
+
+    /**
+     * Endpoints Ubigeo para selects dependientes
+     */
+    public function ubigeoProvinces(Request $request)
+    {
+        $departmentId = $request->query('department_id');
+        if (!$departmentId) {
+            return response()->json([]);
+        }
+        $provinces = UbigeoProvince::where('department_id', $departmentId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        return response()->json($provinces);
+    }
+
+    public function ubigeoDistricts(Request $request)
+    {
+        $provinceId = $request->query('province_id');
+        if (!$provinceId) {
+            return response()->json([]);
+        }
+        $districts = UbigeoDistrict::where('province_id', $provinceId)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+        return response()->json($districts);
     }
 }

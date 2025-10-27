@@ -22,10 +22,11 @@ return new class extends Migration
             $table->string('document_number')->nullable()->unique();
 
             $table->string('address')->nullable();
-            $table->string('ubigeo')->nullable();
-            $table->string('city')->nullable();
-            $table->string('department')->nullable();
-            $table->string('district')->nullable();
+            // Ubigeo: solo almacenamos el id de distrito
+            $table->string('district_id', 6)->nullable();
+            $table->foreign('district_id')
+                ->references('id')
+                ->on('ubigeo_districts');
             $table->text('policies')->nullable();
             $table->string('slogan')->nullable();
 

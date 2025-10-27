@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\PaymentMethodController;
 use App\Http\Controllers\Api\IdentityController;
 use App\Http\Controllers\Api\CustomerLookupController;
 use App\Http\Controllers\Api\LoyaltyPosController;
+use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -45,6 +46,11 @@ Route::post('/attributes', [AttributeController::class, 'index'])->name('api.att
 Route::post('/attribute-values/{attributeId}', [AttributeValueController::class, 'index'])->name('api.attribute-values.show');
 
 Route::get('/identities', [IdentityController::class, 'index'])->name('api.identities.index');
+
+// Ubigeo API
+Route::get('/ubigeo/departments', [UbigeoController::class, 'departments'])->name('api.ubigeo.departments');
+Route::get('/ubigeo/provinces', [UbigeoController::class, 'provinces'])->name('api.ubigeo.provinces');
+Route::get('/ubigeo/districts', [UbigeoController::class, 'districts'])->name('api.ubigeo.districts');
 
 // Rutas de sesiones POS (protegidas por token si está disponible)
 Route::middleware(['auth:sanctum'])->group(function () {

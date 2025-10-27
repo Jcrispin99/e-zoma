@@ -104,11 +104,7 @@
                     <x-wire-input label="Teléfono" name="phone" placeholder="987654321" value="{{ old('phone', $company->phone) }}" />
                     <x-wire-input label="Dirección Comercial" name="address" placeholder="Dirección de la oficina o tienda" value="{{ old('address', $company->address) }}" />
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                    <x-wire-input label="Ciudad" name="city" placeholder="Ej: Lima" value="{{ old('city', $company->city) }}" />
-                    <x-wire-input label="Departamento" name="department" placeholder="Ej: Lima" value="{{ old('department', $company->department) }}" />
-                    <x-wire-input label="Distrito" name="district" placeholder="Ej: Miraflores" value="{{ old('district', $company->district) }}" />
-                </div>
+                <livewire:admin.company.company-edit :company="$company" />
                 <div class="mt-6">
                     <x-wire-checkbox id="is_active" name="is_active" label="Compañía Activa" value="1" :checked="old('is_active', $company->is_active)" />
                 </div>
@@ -121,5 +117,7 @@
             </div>
         </form>
     </x-wire-card>
+
+    
 
 </x-admin-layout>

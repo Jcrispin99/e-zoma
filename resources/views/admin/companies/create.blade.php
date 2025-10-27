@@ -88,11 +88,7 @@
                     <x-wire-input label="Teléfono" name="phone" placeholder="987654321" value="{{ old('phone') }}" />
                     <x-wire-input label="Dirección Comercial" name="address" placeholder="Dirección de la oficina o tienda" value="{{ old('address') }}" />
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-                    <x-wire-input label="Ciudad" name="city" placeholder="Ej: Lima" value="{{ old('city') }}" />
-                    <x-wire-input label="Departamento" name="department" placeholder="Ej: Lima" value="{{ old('department') }}" />
-                    <x-wire-input label="Distrito" name="district" placeholder="Ej: Miraflores" value="{{ old('district') }}" />
-                </div>
+                <livewire:admin.company.company-create />
                 <div class="mt-6">
                     <x-wire-checkbox id="is_active" name="is_active" label="Compañía Activa" value="1" :checked="old('is_active', true)" />
                 </div>
@@ -105,5 +101,7 @@
             </div>
         </form>
     </x-wire-card>
+
+    
 
 </x-admin-layout>

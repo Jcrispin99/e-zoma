@@ -22,6 +22,9 @@ class DatabaseSeeder extends Seeder
 
 
         $this->call([
+            UbigeoDepartmentSeeder::class,
+            UbigeoProvinceSeeder::class,
+            UbigeoDistrictSeeder::class,
             IdentitySeeder::class,
             CompanySeeder::class,
             CategorySeder::class,

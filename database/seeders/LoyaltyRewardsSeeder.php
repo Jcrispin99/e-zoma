@@ -32,7 +32,7 @@ class LoyaltyRewardsSeeder extends Seeder
                 'consume_all_points' => true,
                 'reward_product_id' => null,
                 'discount_percent' => null,
-                'soles_per_point' => 0.10, // cada punto equivale a S/ 0.10
+                'soles_per_point' => 1,
                 'fixed_amount' => null,
                 'max_discount_amount' => 50.00,
                 'description' => 'Convierte puntos en descuento sobre el total de la orden.',

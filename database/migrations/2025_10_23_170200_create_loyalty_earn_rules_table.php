@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('basis'); // 'per_amount' | 'per_unit'
             $table->decimal('points_per_sol', 12, 4)->nullable();
             $table->integer('points_per_unit')->nullable();
+            $table->unsignedInteger('points_per_order')->nullable();
             $table->unsignedInteger('min_qty')->nullable();
             $table->decimal('min_amount', 12, 2)->nullable();
             $table->string('scope_type'); // 'all' | 'products' | 'category' | 'variant'

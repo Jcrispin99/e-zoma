@@ -24,6 +24,7 @@ class Company extends Model
         'identity_id',
         'document_number',
         'address',
+        'ubigeo',
         'city',
         'department',
         'district',

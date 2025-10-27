@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('code');
             $table->string('type');
+            $table->boolean('is_fiscal')->default(false);
 
             $table->string('document_type_code', 2)->nullable();
 

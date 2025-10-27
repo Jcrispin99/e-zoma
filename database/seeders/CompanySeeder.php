@@ -14,23 +14,25 @@ class CompanySeeder extends Seeder
     public function run(): void
     {
         $parent = Company::create([
-            'name' => 'Empresa Principal SAC',
-            'trade_name' => 'Empresa Principal',
-            'identity_id' => 3, // RUC
-            'document_number' => '20000000001',
-            'address' => 'Av. Principal 123, Lima',
-            'email' => 'contacto@principal.com',
+            'name' => 'KOODI SOLUTIONS S.A.C.',
+            'trade_name' => 'IKOO DEV',
+            'identity_id' => 3,
+            'document_number' => '20614550440',
+            'address' => 'Jr. Callao Nro. 545 Tingo Maria',
+            'email' => 'contacto@koodi.com',
             'phone' => '987654321',
-            'tax_address' => 'Av. Principal 123, Lima',
-            'legal_representative' => 'Juan Perez',
+            'tax_address' => 'Jr. Callao Nro. 545 Tingo Maria',
+            'legal_representative' => 'Jhamil Crispin',
+            'ubigeo' => '150101',
+            'city' => 'Huanuco',
+            'department' => 'Huanuco',
+            'district' => 'Huanuco',
         ]);
 
         Company::create([
             'parent_id' => $parent->id,
-            'name' => 'Sucursal Arequipa SAC',
-            'trade_name' => 'Sucursal Arequipa',
-            'identity_id' => 3, // RUC
-            'document_number' => '20000000002',
+            'name' => 'Sucursal Arequipa',
+            'trade_name' => '',
             'address' => 'Av. Arequipa 456, Arequipa',
             'email' => 'contacto@sucursal-aqp.com',
             'phone' => '987654322',

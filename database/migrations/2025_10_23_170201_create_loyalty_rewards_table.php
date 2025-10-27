@@ -17,8 +17,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('reward_type'); // 'free_product' | 'free_shipping' | 'discount'
             $table->unsignedInteger('points_cost')->default(0);
+            $table->boolean('consume_all_points')->default(false);
             $table->string('discount_method')->nullable(); // 'percent' | 'soles_per_point' | 'soles_fixed'
             $table->string('discount_scope')->nullable(); // 'order' | 'cheapest_product' | 'specific_product'
+            $table->foreignId('discount_category_id')->nullable()->constrained('categories')->onDelete('cascade');
             $table->foreignId('reward_product_id')->nullable()->constrained('products')->onDelete('cascade');
             $table->decimal('discount_percent', 5, 2)->nullable();
             $table->decimal('soles_per_point', 12, 4)->nullable();

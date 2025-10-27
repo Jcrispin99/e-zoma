@@ -18,10 +18,17 @@ return new class extends Migration
             $table->string('name');
             $table->string('trade_name')->nullable();
 
-            $table->foreignId('identity_id')->constrained('identities')->onDelete('cascade');
-            $table->string('document_number')->unique();
+            $table->foreignId('identity_id')->nullable()->constrained('identities')->onDelete('cascade');
+            $table->string('document_number')->nullable()->unique();
 
             $table->string('address')->nullable();
+            $table->string('ubigeo')->nullable();
+            $table->string('city')->nullable();
+            $table->string('department')->nullable();
+            $table->string('district')->nullable();
+            $table->text('policies')->nullable();
+            $table->string('slogan')->nullable();
+
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
 

@@ -137,6 +137,7 @@
 
         <!-- Botones de acción -->
         <div class="flex justify-end space-x-3">
+            <x-wire-button light gray label="Generar QR" href="{{ route('admin.qr.labels', ['type' => 'product', 'id' => $productId]) }}" />
             <x-button type="button" outline href="{{ route('admin.products.index') }}">
                 Cancelar
             </x-button>

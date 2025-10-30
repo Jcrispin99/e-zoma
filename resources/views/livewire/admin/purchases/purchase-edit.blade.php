@@ -61,6 +61,8 @@
                     descargar
                 </x-wire-button>
 
+                <x-wire-button light gray href="{{ route('admin.qr.labels', ['type' => 'purchase', 'id' => $purchase->id]) }}" label="Generar QR" />
+
                 <x-wire-button light gray :href="route('admin.purchases.index')" label="Volver" />
             </div>
         </div>

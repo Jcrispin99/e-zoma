@@ -68,6 +68,9 @@ Route::get('movements/{movement}/pdf', [MovementController::class, 'pdf'])->name
 Route::resource('transfers', TransferController::class)->only(['index', 'create']);
 Route::get('transfers/{transfer}/pdf', [TransferController::class, 'pdf'])->name('transfers.pdf');
 
+// QR Labels
+Route::get('qr/labels/{type}/{id}', \App\Livewire\Admin\Qr\QrGenerator::class)->name('qr.labels');
+
 // POS
 Route::resource('posconfig', PosConfigController::class)->except(['show'])->parameters([
     'posconfig' => 'posConfig'

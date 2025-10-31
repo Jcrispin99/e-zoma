@@ -1,0 +1,41 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Customer extends Model
+{
+    use HasFactory;
+    protected $fillable = [
+        'identity_id',
+        'document_number',
+        'name',
+        'address',
+        'email',
+        'phone',
+    ];
+
+    //Relaciones
+    public function identity()
+    {
+        return $this->belongsTo(Identity::class);
+    }
+
+    public function quotes()
+    {
+        return $this->hasMany(Quote::class);
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
+    }
+
+    public function posOrders(): HasMany
+    {
+        return $this->hasMany(PosOrder::class);
+    }
+}

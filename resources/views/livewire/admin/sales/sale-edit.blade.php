@@ -1,0 +1,154 @@
+<div x-data="{
+    variants: @entangle('variants'),
+    total: @entangle('total'),
+    scanBuffer: '',
+    lastKeyTime: 0,
+    removeVariant(index) { this.variants.splice(index, 1); },
+    init() { this.$watch('variants', (vs) => { let t = 0; vs.forEach(v => t += (v.quantity||0)*(v.price||0)); this.total = t; }); },
+    handleScanner(e) {
+        const key = e.key;
+        const now = Date.now();
+        if (key === 'Enter') {
+            if (this.scanBuffer.length > 0) {
+                this.$wire.scanBarcode(this.scanBuffer);
+                this.scanBuffer = '';
+                e.preventDefault();
+            }
+            return;
+        }
+        if (key === 'Backspace') { this.scanBuffer = this.scanBuffer.slice(0, -1); return; }
+        if (/^[A-Za-z0-9\-_.]$/.test(key)) {
+            if (this.lastKeyTime && now - this.lastKeyTime > 300) { this.scanBuffer = ''; }
+            this.scanBuffer += key; this.lastKeyTime = now;
+        }
+    }
+}"
+x-on:keydown.window="handleScanner($event)">
+    <x-wire-card class="mb-3">
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <x-wire-badge :label="str($sale->status)->upper()" :color="$sale->status === 'draft' ? 'slate' : ($sale->status === 'posted' ? 'emerald' : 'rose')" />
+                @if($sale->payment_status)
+                <x-wire-badge :label="str($sale->payment_status)->upper()" :color="$sale->payment_status === 'paid' ? 'emerald' : ($sale->payment_status === 'partial' ? 'amber' : 'slate')" />
+                @endif
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                @if($sale->status === 'draft')
+                <x-wire-button light emerald label="Contabilizar" wire:click="post" wire:loading.attr="disabled" />
+                <x-wire-button light red label="Cancelar" wire:click="cancel" wire:loading.attr="disabled" />
+                @elseif($sale->status === 'posted')
+                @if($sale->payment_status !== 'paid')
+                <x-wire-button light emerald label="Registrar pago" wire:click="markPaid" wire:loading.attr="disabled" />
+                @endif
+                <x-wire-button light red label="Anular" wire:click="cancel" wire:loading.attr="disabled" />
+                @elseif($sale->status === 'cancelled')
+                <x-wire-button light gray label="Reabrir" wire:click="reopen" wire:loading.attr="disabled" />
+                @endif
+
+                @if($sale->quote_id)
+                <x-wire-button light gray label="Ver cotización" :href="route('admin.quotes.edit', $sale->quote_id)" />
+                @endif
+
+                <x-wire-button light gray label="Enviar factura por correo" wire:click="openModal({{ $sale }})">
+                    <i class="fa-solid fa-envelope"></i>
+                </x-wire-button>
+
+                <x-wire-button light gray href="{{ route('admin.sales.pdf', $sale) }}">
+                    descargar
+                </x-wire-button>
+
+                <x-wire-button light gray :href="route('admin.sales.index')" label="Volver" />
+            </div>
+        </div>
+    </x-wire-card>
+
+
+
+    <x-wire-card>
+        <form wire:submit="save" class="space-y-4" x-on:keydown.enter.prevent>
+            <div class="grid lg:grid-cols-4 gap-4">
+                <x-wire-input label="Serie" wire:model="serie" disabled />
+                <x-wire-input label="Correlativo" wire:model="correlative" disabled />
+                <x-wire-input label="Fecha" wire:model.live="date" type="date" />
+
+                <div class="col-span-2">
+                    <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente" :async-data="['api' => route('api.customers.index'), 'method' => 'POST']" option-label="name" option-value="id" class="flex-1" option-description="description" />
+                </div>
+                <div class="col-span-2">
+                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén" :async-data="['api' => route('api.warehouse.index'), 'method' => 'POST', 'params' => ['company_ids' => session()->get('selected_company_ids', [])]]" option-label="name" option-value="id" class="flex-1" option-description="description" />
+                </div>
+            </div>
+
+            <div class="lg:flex lg:space-x-4">
+                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto" :async-data="['api' => route('api.product.index'), 'method' => 'POST']" option-label="name" option-value="id" class="flex-1" />
+                <div class="flex-shrink-0">
+                    <x-wire-button wire:click="addProduct" class="mt-4 w-full lg:mt-6.5" spinner>Agregar producto</x-wire-button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto w-full">
+                <table class="w-full text-sm text-left">
+                    <thead>
+                        <tr class="text-gray-700 border-y bg-blue-50">
+                            <th class="px-6 py-2">Producto</th>
+                            <th class="px-6 py-2">Cantidad</th>
+                            <th class="px-6 py-2">Precio</th>
+                            <th class="px-6 py-2">Subtotal</th>
+                            <th class="px-6 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(variant, index) in variants" :key="variant.id">
+                            <tr class="border-b">
+                                <td class="px-4 py-1" x-text="variant.name" />
+                                <td class="px-4 py-1">
+                                    <x-wire-input type="number" x-model="variant.quantity" />
+                                </td>
+                                <td class="px-4 py-1">
+                                    <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20" />
+                                </td>
+                                <td class="px-4 py-1" x-text="(variant.quantity * variant.price).toFixed(2)"></td>
+                                <td class="px-4 py-1">
+                                    <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
+                                </td>
+                            </tr>
+                        </template>
+                        <template x-if="variants.length === 0">
+                            <tr>
+                                <td colspan="5" class="text-center text-gray-500 py-4">No hay productos agregados</td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="fex items-center space-x-4">
+                <x-label>Observaciones</x-label>
+                <x-wire-input wire:model="observation" placeholder="Ingrese observaciones" class="flex-1" />
+            </div>
+            <div>
+                Total: $<span x-text="Number(total ?? 0).toFixed(2)"></span>
+            </div>
+
+            <div>
+                <x-wire-button type="submit" icon="check" spinner>Guardar</x-wire-button>
+            </div>
+        </form>
+    </x-wire-card>
+
+    <x-wire-modal-card wire:model="form.open" width="lg">
+        <x-slot name="title">
+            <p class="text-xl text-center mb-2">Enviar email</p>
+            <p class="text-lg text-center uppercase font-bold mb-2">{{ $form['document'] }}</p>
+            <p class="text-lg text-center mb-2">{{ $form['client'] }}</p>
+        </x-slot>
+
+        <form wire:submit="sendEmail">
+            <x-wire-input label="Correo" wire:model="form.email" class="mb-4" value="{{ $form['email'] }}" />
+            <x-wire-button type="submit" class="w-full">
+                Enviar
+            </x-wire-button>
+        </form>
+    </x-wire-modal-card>
+</div>

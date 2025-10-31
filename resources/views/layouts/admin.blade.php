@@ -1,7 +1,6 @@
 @props([
-  'title' => config('app.name', 'Laravel'),
-  'breadcrumbs' => [] ,
-    
+'title' => config('app.name', 'Laravel'),
+'breadcrumbs' => [],
 ])
 
 <!DOCTYPE html>
@@ -18,41 +17,46 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-   
-    
-  {{-- fontawesome --}}
+    {{-- switalert --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    {{-- fontawesome --}}
     <script src="https://kit.fontawesome.com/da8c4aaac7.js" crossorigin="anonymous"></script>
 
     <!-- Styles -->
     @livewireStyles
-    
+
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
+
     {{-- wireui --}}
     <wireui:scripts />
-    <script src="//unpkg.com/alpinejs" defer></script>
+
+    @stack('css')
 </head>
 
 <body class="font-sans antialiased">
     @include('layouts.includes.admin.navigation')
     @include('layouts.includes.admin.sidebar')
 
-   <div class="p-4 sm:ml-64">
-      <div class="mt-14">
+    <div class="p-4 sm:ml-64">
+        <div class="mt-14">
 
-        <div class="mt-14 flex items-center">
-          @include('layouts.includes.admin.breadcrumb')
+            <div class="mt-14 flex items-center">
+                @include('layouts.includes.admin.breadcrumb')
 
-          @isset($action)
-            <div class="ml-auto">
-              {{ $action }}
+                @isset($action)
+                <div class="ml-auto">
+                    {{ $action }}
+                </div>
+                @endisset
+
             </div>
-          @endisset
-
         </div>
-      </div>
-         {{ $slot }}
+
+        <p>
+
+            {{ $slot }}
     </div>
 
     @stack('modals')
@@ -60,9 +64,56 @@
     @livewireScripts
 
 
-    <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script>
- 
-    
+
+    <script>
+        Livewire.on('swal', (data) => {
+            Swal.fire(data[0]);
+        });
+
+    </script>
+
+
+    @if (session()->has('swalt'))
+    <script>
+        Swal.fire(@json(session('swalt')));
+
+    </script>
+    @endif
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const forms = document.querySelectorAll('.delete-form');
+            forms.forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const currentForm = this;
+
+                    Swal.fire({
+                        title: '¿Estás seguro?'
+                        , text: 'No podrás revertir esto'
+                        , icon: 'warning'
+                        , showCancelButton: true
+                        , confirmButtonColor: '#3085d6'
+                        , cancelButtonColor: '#d33'
+                        , confirmButtonText: 'Sí, eliminar'
+                        , cancelButtonText: 'Cancelar'
+                    , }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Enviar el formulario
+                            currentForm.submit();
+
+                            // No mostramos el mensaje de éxito aquí para evitar confusiones
+                            // ya que el formulario se enviará y la página se recargará
+                        }
+                    });
+                });
+            });
+        });
+
+    </script>
+
+    @stack('js')
+
 </body>
 
 </html>

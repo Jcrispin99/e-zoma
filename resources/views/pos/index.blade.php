@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>POS</title>
+
+    <meta name="backend-origin" content="{{ url('/') }}">
+
+    @vite(['resources/css/app.css', 'resources/js/pos/main.js'])
+</head>
+<body>
+    <div id="pos"></div>
+</body>
+</html>

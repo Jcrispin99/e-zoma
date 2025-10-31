@@ -1,13 +1,12 @@
 @import '../../vendor/wireui/wireui/ts/global.css';
 @import 'flowbite/src/themes/default';
 
+@source "../../node_modules/flowbite";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @plugin "flowbite/plugin";
-@source "../../node_modules/flowbite";
-
 @source '../../vendor/wireui/wireui';
 
 [x-cloak] {

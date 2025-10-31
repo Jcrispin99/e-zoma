@@ -251,7 +251,6 @@ class ProductEdit extends Component
             ]];
         }
 
-        // Actualizar datos básicos del producto
         $product->update([
             'name' => $this->name,
             'description' => $this->description,
@@ -259,7 +258,6 @@ class ProductEdit extends Component
             'category_id' => $this->category_id,
         ]);
 
-        // Obtener IDs de variantes actuales
         $currentVariantIds = collect($this->variantsData)
             ->whereNotNull('id')
             ->pluck('id')

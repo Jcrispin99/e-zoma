@@ -14,28 +14,28 @@ class CategorySeder extends Seeder
      */
     public function run(): void
     {
-        $categories = [
-            'Electrónica' => ['Teléfonos', 'Laptops', 'Televisores'],
-            'Ropa' => ['Hombres', 'Mujeres', 'Niños'],
-            'Hogar y Jardín' => ['Muebles', 'Decoración', 'Jardinería'],
+        $mainCategories = [
+            'Electrónica',
+            'Moda y Accesorios',
+            'Hogar y Jardín',
+            'Salud y Belleza',
+            'Deportes y Aire Libre',
+            'Juguetes y Bebés',
+            'Libros y Papelería',
+            'Alimentos y Bebidas',
+            'Automotriz',
+            'Mascotas',
+            'Herramientas',
+            'Oficina y Papelería',
         ];
 
-        foreach ($categories as $parentName => $children) {
-            $parent = Category::create([
-                'name' => $parentName,
-                'slug' => Str::slug($parentName),
-                'description' => 'Descripción de la categoría ' . $parentName,
+        foreach ($mainCategories as $categoryName) {
+            Category::create([
+                'name' => $categoryName,
+                'slug' => Str::slug($categoryName),
+                'full_name' => $categoryName,
+                'description' => 'Descripción de la categoría ' . $categoryName,
             ]);
-
-            foreach ($children as $childName) {
-                Category::create([
-                    'name' => $childName,
-                    'slug' => Str::slug($childName),
-                    'parent_id' => $parent->id,
-                    'full_name' => $parent->name . ' > ' . $childName,
-                    'description' => 'Descripción de la subcategoría ' . $childName,
-                ]);
-            }
         }
     }
 }

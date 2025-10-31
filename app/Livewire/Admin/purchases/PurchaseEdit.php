@@ -131,6 +131,46 @@ class PurchaseEdit extends Component
         $this->reset('variant_id');
     }
 
+    public function scanBarcode($code = null)
+    {
+        $code = trim($code ?? '');
+        if ($code === '') {
+            return;
+        }
+
+        $variant = Variant::where('barcode', $code)
+            ->orWhere('sku', $code)
+            ->first();
+
+        if (! $variant) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Código no encontrado',
+                'text' => 'No se encontró ningún producto para ese código o SKU.',
+            ]);
+            return;
+        }
+
+        // Si ya existe en la tabla, incrementar cantidad
+        foreach ($this->variants as $index => $row) {
+            if (($row['id'] ?? null) === $variant->id) {
+                $current = (int) ($this->variants[$index]['quantity'] ?? 0);
+                $this->variants[$index]['quantity'] = $current + 1;
+                if (array_key_exists('subtotal', $this->variants[$index])) {
+                    $price = (float) ($this->variants[$index]['price'] ?? 0);
+                    $qty = (int) ($this->variants[$index]['quantity'] ?? 0);
+                    $this->variants[$index]['subtotal'] = $price * $qty;
+                }
+                return;
+            }
+        }
+
+        // Caso contrario, usar la lógica existente de addProduct
+        $this->variant_id = $variant->id;
+        $this->addProduct();
+        $this->reset('variant_id');
+    }
+
     public function save()
     {
         $this->validate(

@@ -3,6 +3,8 @@
     total: @entangle('total'),
     subtotal: 0,
     taxTotal: 0,
+    scanBuffer: '',
+    lastKeyTime: 0,
 
     removeVariant(index) { this.variants.splice(index, 1); },
 
@@ -24,12 +26,40 @@
     init() {
         this.calculateTotals();
         this.$watch('variants', () => this.calculateTotals(), { deep: true });
+    },
+
+    handleScanner(e) {
+        const key = e.key;
+        const now = Date.now();
+
+        if (key === 'Enter') {
+            if (this.scanBuffer.length > 0) {
+                this.$wire.scanBarcode(this.scanBuffer);
+                this.scanBuffer = '';
+                e.preventDefault();
+            }
+            return;
+        }
+
+        if (key === 'Backspace') {
+            this.scanBuffer = this.scanBuffer.slice(0, -1);
+            return;
+        }
+
+        if (/^[A-Za-z0-9\-_.]$/.test(key)) {
+            if (this.lastKeyTime && now - this.lastKeyTime > 300) {
+                this.scanBuffer = '';
+            }
+            this.scanBuffer += key;
+            this.lastKeyTime = now;
+        }
     }
-}">
+}"
+x-on:keydown.window="handleScanner($event)">
 
     <x-wire-card>
 
-        <form wire:submit="save" class="space-y-4">
+        <form wire:submit="save" class="space-y-4" x-on:keydown.enter.prevent>
 
             <div class="grid lg:grid-cols-4 gap-4">
                 <x-wire-native-select label="Serie del Documento" wire:model.live="journal_id">

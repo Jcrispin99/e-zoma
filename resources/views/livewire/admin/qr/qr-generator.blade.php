@@ -1,12 +1,28 @@
 <div>
     <style>
         @media print {
-            .print-hidden {
-                display: none !important;
+
+            /* Oculta todo el cuerpo por defecto */
+            body * {
+                visibility: hidden;
             }
 
+            /* Muestra solo el contenedor de impresión y su contenido */
+            .print-only,
+            .print-only * {
+                visibility: visible;
+            }
+
+            /* Asegura que el contenedor de impresión ocupe toda la página */
             .print-only {
-                display: block !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+
+            .print-hidden {
+                display: none !important;
             }
         }
 
@@ -24,25 +40,14 @@
                 <p class="text-sm text-gray-600">Fuente: {{ strtoupper($type) }} #{{ $id }}</p>
             </div>
             <div class="flex flex-wrap items-end gap-3">
-                <x-wire-native-select label="Columnas" wire:model="columns" class="w-28">
-                    @for($i = 1; $i <= 6; $i++) <option value="{{ $i }}">{{ $i }}</option>
-                        @endfor
+                <x-wire-native-select label="Estilo de Etiqueta" wire:model.live="selectedStyleId">
+                    @foreach($styles as $style)
+                    <option value="{{ $style->id }}">{{ $style->name }}</option>
+                    @endforeach
                 </x-wire-native-select>
 
-                <x-wire-input type="number" min="100" max="600" step="10" label="Tamaño QR (px)" wire:model.live="qrSize" class="w-36" />
-
-                <div class="flex items-center gap-2">
-                    <x-wire-checkbox id="showSku" wire:model="showSku" />
-                    <x-label for="showSku">Mostrar SKU</x-label>
-                </div>
-                <div class="flex items-center gap-2">
-                    <x-wire-checkbox id="showBarcodeText" wire:model="showBarcodeText" />
-                    <x-label for="showBarcodeText">Mostrar Código de Barras</x-label>
-                </div>
-                <div class="flex items-center gap-2">
-                    <x-wire-checkbox id="showPrice" wire:model="showPrice" />
-                    <x-label for="showPrice">Mostrar Precio</x-label>
-                </div>
+                {{-- Aquí podrías agregar un botón para administrar los estilos --}}
+                {{-- <x-wire-button light gray :href="route('admin.qr-styles.index')">Administrar Estilos</x-wire-button> --}}
 
                 <x-wire-button light gray onclick="window.print()">
                     Imprimir etiquetas
@@ -54,23 +59,32 @@
         </div>
     </x-wire-card>
 
-    <div class="grid gap-4 print-hidden" style="grid-template-columns: repeat({{ $columns }}, minmax(0, 1fr));">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 print-hidden">
         @foreach($labels as $index => $label)
         @php($qty = (int) ($label['qty'] ?? 1))
-        @for($i = 0; $i < max(0, $qty); $i++) <div class="p-3 border rounded bg-white print:shadow-none print:border-0">
-            <div class="flex items-start justify-between mb-2">
-                <div>
-                    <div class="text-sm font-semibold">{{ $label['product_name'] }}</div>
-                    <div class="text-xs text-gray-600">{{ $label['description'] }}</div>
-                </div>
-                @if($showPrice)
-                <div class="text-sm font-bold">S/ {{ number_format($label['price'] ?? 0, 2) }}</div>
-                @endif
-            </div>
+        @for($i = 0; $i < max(0, $qty); $i++) {{-- Contenedor de la etiqueta con dimensiones y estilos base --}} <div class="p-3 border rounded bg-white print:shadow-none print:border-0" style="width: {{ $label_width }}mm; height: {{ $label_height }}mm; display: flex; flex-direction: column; justify-content: space-between;">
 
-            <div class="flex items-center justify-center">
-                @php($size = $qrSize . 'x' . $qrSize)
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size={{ $size }}&data={{ rawurlencode($label['payload']) }}" alt="QR" style="width: {{ $qrSize }}px; height: {{ $qrSize }}px;" />
+            {{-- LAYOUT POR DEFECTO (CUADRADO) --}}
+            @if ($layout_type === 'default')
+            <div>
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        @if($show_product_name)
+                        <div class="text-sm font-semibold">{{ $label['product_name'] }}</div>
+                        @endif
+                        @if($show_description)
+                        <div class="text-xs text-gray-600">{{ $label['description'] }}</div>
+                        @endif
+                    </div>
+                    @if($showPrice)
+                    <div class="text-sm font-bold">S/ {{ number_format($label['price'] ?? 0, 2) }}</div>
+                    @endif
+                </div>
+
+                <div class="flex items-center justify-center">
+                    @php($size = $qrSize . 'x' . $qrSize)
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size={{ $size }}&data={{ rawurlencode($label['payload']) }}" alt="QR" style="width: {{ $qrSize }}px; height: {{ $qrSize }}px;" />
+                </div>
             </div>
 
             @if($showSku || $showBarcodeText)
@@ -83,6 +97,41 @@
                 @endif
             </div>
             @endif
+            @endif
+
+            {{-- LAYOUT QR A LA IZQUIERDA (RECTANGULAR) --}}
+            @if ($layout_type === 'qr_left')
+            <div class="flex items-center gap-4 h-full">
+                {{-- Columna QR --}}
+                <div class="flex-shrink-0">
+                    @php($size = $qrSize . 'x' . $qrSize)
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size={{ $size }}&data={{ rawurlencode($label['payload']) }}" alt="QR" style="width: {{ $qrSize }}px; height: {{ $qrSize }}px;" />
+                </div>
+                {{-- Columna de texto --}}
+                <div class="flex flex-col justify-between h-full flex-grow">
+                    <div>
+                        @if($show_product_name)
+                        <div class="text-sm font-semibold">{{ $label['product_name'] }}</div>
+                        @endif
+                        @if($show_description)
+                        <div class="text-xs text-gray-600">{{ $label['description'] }}</div>
+                        @endif
+                    </div>
+                    <div class="text-right">
+                        @if($showPrice)
+                        <div class="text-sm font-bold">S/ {{ number_format($label['price'] ?? 0, 2) }}</div>
+                        @endif
+                        @if($showSku)
+                        <div class="text-xs text-gray-700">SKU: {{ $label['sku'] }}</div>
+                        @endif
+                        @if($showBarcodeText)
+                        <div class="text-xs text-gray-700">BC: {{ $label['barcode'] }}</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endif
+
     </div>
     @endfor
     @endforeach
@@ -90,23 +139,32 @@
 
 <!-- Contenedor exclusivo de impresión -->
 <div class="print-only">
-    <div class="grid gap-4" style="grid-template-columns: repeat({{ $columns }}, minmax(0, 1fr));">
+    <div>
         @foreach($labels as $label)
         @php($qty = (int) ($label['qty'] ?? 1))
-        @for($i = 0; $i < max(0, $qty); $i++) <div class="p-3 border rounded bg-white print:shadow-none print:border-0">
-            <div class="flex items-start justify-between mb-2">
-                <div>
-                    <div class="text-sm font-semibold">{{ $label['product_name'] }}</div>
-                    <div class="text-xs text-gray-600">{{ $label['description'] }}</div>
-                </div>
-                @if($showPrice)
-                <div class="text-sm font-bold">S/ {{ number_format($label['price'] ?? 0, 2) }}</div>
-                @endif
-            </div>
+        @for($i = 0; $i < max(0, $qty); $i++) <div class="p-3 bg-white print:shadow-none print:border-0 print:break-after-page" style="width: {{ $label_width }}mm; height: {{ $label_height }}mm; display: flex; flex-direction: column; justify-content: space-between;">
 
-            <div class="flex items-center justify-center">
-                @php($size = $qrSize . 'x' . $qrSize)
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size={{ $size }}&data={{ rawurlencode($label['payload']) }}" alt="QR" style="width: {{ $qrSize }}px; height: {{ $qrSize }}px;" />
+            {{-- LAYOUT POR DEFECTO (CUADRADO) --}}
+            @if ($layout_type === 'default')
+            <div>
+                <div class="flex items-start justify-between mb-2">
+                    <div>
+                        @if($show_product_name)
+                        <div class="text-sm font-semibold">{{ $label['product_name'] }}</div>
+                        @endif
+                        @if($show_description)
+                        <div class="text-xs text-gray-600">{{ $label['description'] }}</div>
+                        @endif
+                    </div>
+                    @if($showPrice)
+                    <div class="text-sm font-bold">S/ {{ number_format($label['price'] ?? 0, 2) }}</div>
+                    @endif
+                </div>
+
+                <div class="flex items-center justify-center">
+                    @php($size = $qrSize . 'x' . $qrSize)
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size={{ $size }}&data={{ rawurlencode($label['payload']) }}" alt="QR" style="width: {{ $qrSize }}px; height: {{ $qrSize }}px;" />
+                </div>
             </div>
 
             @if($showSku || $showBarcodeText)
@@ -119,6 +177,41 @@
                 @endif
             </div>
             @endif
+            @endif
+
+            {{-- LAYOUT QR A LA IZQUIERDA (RECTANGULAR) --}}
+            @if ($layout_type === 'qr_left')
+            <div class="flex items-center gap-4 h-full">
+                {{-- Columna QR --}}
+                <div class="flex-shrink-0">
+                    @php($size = $qrSize . 'x' . $qrSize)
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size={{ $size }}&data={{ rawurlencode($label['payload']) }}" alt="QR" style="width: {{ $qrSize }}px; height: {{ $qrSize }}px;" />
+                </div>
+                {{-- Columna de texto --}}
+                <div class="flex flex-col justify-between h-full flex-grow">
+                    <div>
+                        @if($show_product_name)
+                        <div class="text-sm font-semibold">{{ $label['product_name'] }}</div>
+                        @endif
+                        @if($show_description)
+                        <div class="text-xs text-gray-600">{{ $label['description'] }}</div>
+                        @endif
+                    </div>
+                    <div class="text-right">
+                        @if($showPrice)
+                        <div class="text-sm font-bold">S/ {{ number_format($label['price'] ?? 0, 2) }}</div>
+                        @endif
+                        @if($showSku)
+                        <div class="text-xs text-gray-700">SKU: {{ $label['sku'] }}</div>
+                        @endif
+                        @if($showBarcodeText)
+                        <div class="text-xs text-gray-700">BC: {{ $label['barcode'] }}</div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endif
+
     </div>
     @endfor
     @endforeach

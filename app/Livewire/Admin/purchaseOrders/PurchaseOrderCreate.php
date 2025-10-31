@@ -98,6 +98,48 @@ class PurchaseOrderCreate extends Component
         $this->reset('variant_id');
     }
 
+    /**
+     * Escanea un código (barcode o SKU) y agrega/incrementa en la tabla.
+     */
+    public function scanBarcode($code = null)
+    {
+        $code = trim((string) ($code ?? ''));
+        if ($code === '') {
+            return;
+        }
+
+        $variant = Variant::with('product')
+            ->where('barcode', $code)
+            ->orWhere('sku', $code)
+            ->first();
+
+        if (!$variant) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Producto no encontrado',
+                'text' => 'No se encontró un producto con ese código.',
+            ]);
+            return;
+        }
+
+        $existingIndex = collect($this->variants)->search(function ($v) use ($variant) {
+            return ($v['id'] ?? null) === $variant->id;
+        });
+
+        if ($existingIndex !== false) {
+            $this->variants[$existingIndex]['quantity'] = (int) ($this->variants[$existingIndex]['quantity'] ?? 0) + 1;
+        } else {
+            $this->variants[] = [
+                'id' => $variant->id,
+                'name' => $variant->fullName,
+                'quantity' => 1,
+                'price' => 0,
+                'tax_rate' => 0,
+                'subtotal' => 0,
+            ];
+        }
+    }
+
     public function updatedJournalId()
     {
         $this->updatePreview();

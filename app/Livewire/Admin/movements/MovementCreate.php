@@ -98,6 +98,49 @@ class MovementCreate extends Component
         $this->reset('variant_id');
     }
 
+    public function scanBarcode($code = null)
+    {
+        $code = trim((string) ($code ?? ''));
+        if ($code === '') {
+            return;
+        }
+
+        $variant = Variant::where('barcode', $code)
+            ->orWhere('sku', $code)
+            ->first();
+
+        if (!$variant) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Producto no encontrado',
+                'text' => "No se encontró un producto con el código escaneado: {$code}",
+            ]);
+            return;
+        }
+
+        $existingIndex = collect($this->variants)->search(function ($item) use ($variant) {
+            if (is_array($item)) {
+                return ($item['id'] ?? null) === $variant->id || ($item['variant_id'] ?? null) === $variant->id;
+            }
+            return ($item->id ?? null) === $variant->id || ($item->variant_id ?? null) === $variant->id;
+        });
+
+        if ($existingIndex !== false) {
+            // Incrementar cantidad si el producto ya existe
+            if (is_array($this->variants[$existingIndex])) {
+                $this->variants[$existingIndex]['quantity'] = ($this->variants[$existingIndex]['quantity'] ?? 0) + 1;
+            } else {
+                $this->variants[$existingIndex]->quantity = ($this->variants[$existingIndex]->quantity ?? 0) + 1;
+            }
+
+            return;
+        }
+
+        // Agregar nuevo producto a través del flujo existente
+        $this->variant_id = $variant->id;
+        $this->addProduct();
+    }
+
     public function save()
     {
         $this->validate(

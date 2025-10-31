@@ -33,8 +33,10 @@ class QuoteCreate extends Component
             ->get();
 
         // 2. Establecer el primer journal como predeterminado y actualizar la vista previa
-        if ($this->journals->isNotEmpty()) {
-            $this->journal_id = $this->journals->first()->id;
+        $journalsCol = collect($this->journals);
+        if ($journalsCol->isNotEmpty()) {
+            $first = $journalsCol->first();
+            $this->journal_id = is_array($first) ? ($first['id'] ?? null) : ($first->id ?? null);
             $this->updatePreview();
         }
     }
@@ -47,9 +49,26 @@ class QuoteCreate extends Component
     // 3. Renombrado a updatePreview y optimizado para no hacer más queries a la BD
     public function updatePreview()
     {
-        $journal = $this->journals->firstWhere('id', $this->journal_id);
-        $sequence = $journal?->sequence;
-        $this->correlative = $sequence ? str_pad($sequence->next_number, $sequence->sequence_size, '0', STR_PAD_LEFT) : '';
+        $journal = collect($this->journals)->first(function ($j) {
+            if (is_array($j)) {
+                return ($j['id'] ?? null) == $this->journal_id;
+            }
+            return ($j->id ?? null) == $this->journal_id;
+        });
+
+        if (is_array($journal)) {
+            $sequence = $journal['sequence'] ?? null;
+            $next = $sequence['next_number'] ?? null;
+            $size = $sequence['sequence_size'] ?? null;
+        } else {
+            $sequence = $journal ? $journal->sequence : null;
+            $next = $sequence ? $sequence->next_number : null;
+            $size = $sequence ? $sequence->sequence_size : null;
+        }
+
+        $this->correlative = ($next && $size)
+            ? str_pad((string)$next, (int)$size, '0', STR_PAD_LEFT)
+            : '';
     }
 
     public function boot()
@@ -105,6 +124,40 @@ class QuoteCreate extends Component
             'price' => $variant->price,
             'subtotal' => $variant->price,
         ];
+        $this->reset('variant_id');
+    }
+
+    public function scanBarcode($code = null)
+    {
+        $code = trim((string)($code ?? ''));
+        if ($code === '') {
+            return;
+        }
+
+        $variant = Variant::where('barcode', $code)
+            ->orWhere('sku', $code)
+            ->first();
+
+        if (!$variant) {
+            $this->dispatch('swal', [
+                'icon' => 'warning',
+                'title' => 'Producto no encontrado',
+                'text' => 'No existe un producto con ese código o SKU.',
+            ]);
+            return;
+        }
+
+        $index = collect($this->variants)->search(fn($v) => ($v['id'] ?? null) === $variant->id);
+        if ($index !== false) {
+            $current = $this->variants[$index];
+            $current['quantity'] = (int)($current['quantity'] ?? 0) + 1;
+            $current['subtotal'] = (float)($current['quantity'] ?? 0) * (float)($current['price'] ?? 0);
+            $this->variants[$index] = $current;
+            return;
+        }
+
+        $this->variant_id = $variant->id;
+        $this->addProduct();
         $this->reset('variant_id');
     }
 

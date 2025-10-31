@@ -1,9 +1,29 @@
 <div x-data="{
     variants: @entangle('variants'),
     total: @entangle('total'),
+    scanBuffer: '',
+    lastKeyTime: 0,
     removeVariant(index) { this.variants.splice(index, 1); },
-    init() { this.$watch('variants', (vs) => { let t = 0; vs.forEach(v => t += (v.quantity||0)*(v.price||0)); this.total = t; }); }
-}">
+    init() { this.$watch('variants', (vs) => { let t = 0; vs.forEach(v => t += (v.quantity||0)*(v.price||0)); this.total = t; }); },
+    handleScanner(e) {
+        const key = e.key;
+        const now = Date.now();
+        if (key === 'Enter') {
+            if (this.scanBuffer.length > 0) {
+                this.$wire.scanBarcode(this.scanBuffer);
+                this.scanBuffer = '';
+                e.preventDefault();
+            }
+            return;
+        }
+        if (key === 'Backspace') { this.scanBuffer = this.scanBuffer.slice(0, -1); return; }
+        if (/^[A-Za-z0-9\-_.]$/.test(key)) {
+            if (this.lastKeyTime && now - this.lastKeyTime > 300) { this.scanBuffer = ''; }
+            this.scanBuffer += key; this.lastKeyTime = now;
+        }
+    }
+}"
+x-on:keydown.window="handleScanner($event)">
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
@@ -46,7 +66,7 @@
 
 
     <x-wire-card>
-        <form wire:submit="save" class="space-y-4">
+        <form wire:submit="save" class="space-y-4" x-on:keydown.enter.prevent>
             <div class="grid lg:grid-cols-4 gap-4">
                 <x-wire-input label="Serie" wire:model="serie" disabled />
                 <x-wire-input label="Correlativo" wire:model="correlative" disabled />

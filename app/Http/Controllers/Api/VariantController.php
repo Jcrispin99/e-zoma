@@ -16,7 +16,7 @@ class VariantController extends Controller
         $variants = Variant::query()
             ->with(['product', 'attributeValues'])
             ->when($request->search, function ($query, $search) {
-                $query->where('sku', 'like', "%{$search}%")
+                $query->where('barcode', 'like', "%{$search}%")
                     ->orWhereHas('product', function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%");
                     })

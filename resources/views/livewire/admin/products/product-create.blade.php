@@ -101,7 +101,7 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Detalles de las Variantes Generadas</h3>
                 <div class="space-y-4">
                     @foreach($variantsData as $index => $variant)
-                    <div class="border rounded-lg p-4 bg-gray-50" wire:key="variant-create-{{ $index }}-{{ isset($variant['attribute_values']) ? implode('-', $variant['attribute_values']) : 'default' }}">
+                    <div class="border rounded-lg p-4 bg-gray-50" wire:key="variant-create-{{ $index }}-{{ isset($variant['attribute_values']) ? implode('-', $variant['attribute_values']) : '' }}">
                         <p class="font-medium text-gray-800 mb-3">
                             Variante: {{ $variant['description'] }}
                         </p>

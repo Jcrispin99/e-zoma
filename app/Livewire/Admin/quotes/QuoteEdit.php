@@ -91,6 +91,40 @@ class QuoteEdit extends Component
         $this->reset('variant_id');
     }
 
+    public function scanBarcode($code = null)
+    {
+        $code = trim((string)($code ?? ''));
+        if ($code === '') {
+            return;
+        }
+
+        $variant = Variant::where('barcode', $code)
+            ->orWhere('sku', $code)
+            ->first();
+
+        if (!$variant) {
+            $this->dispatch('swal', [
+                'icon' => 'warning',
+                'title' => 'Producto no encontrado',
+                'text' => 'No existe un producto con ese código o SKU.',
+            ]);
+            return;
+        }
+
+        $index = collect($this->variants)->search(fn ($v) => ($v['id'] ?? null) === $variant->id);
+        if ($index !== false) {
+            $current = $this->variants[$index];
+            $current['quantity'] = (int)($current['quantity'] ?? 0) + 1;
+            $current['subtotal'] = (float)($current['quantity'] ?? 0) * (float)($current['price'] ?? 0);
+            $this->variants[$index] = $current;
+            return;
+        }
+
+        $this->variant_id = $variant->id;
+        $this->addProduct();
+        $this->reset('variant_id');
+    }
+
     public function save()
     {
         $this->validate(

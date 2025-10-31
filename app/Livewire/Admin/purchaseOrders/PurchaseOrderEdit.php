@@ -63,7 +63,7 @@ class PurchaseOrderEdit extends Component
     public function mount(PurchaseOrder $purchaseOrder)
     {
         $this->purchaseOrder = $purchaseOrder->load('variants.product', 'variants.attributeValues', 'purchase');
-        
+
         // 1. Cargar journals y asignar el de la orden de compra
         $this->journals = Journal::where('type', 'purchase-order')->get();
         $this->journal_id = $purchaseOrder->journal_id;
@@ -103,6 +103,41 @@ class PurchaseOrderEdit extends Component
             'tax_rate' => 18, // IGV por defecto
             'subtotal' => $variant->purchase_price ?? 0,
         ];
+    }
+
+    public function scanBarcode($code = null)
+    {
+        $code = trim($code ?? '');
+        if ($code === '') {
+            return;
+        }
+
+        $variant = Variant::where('barcode', $code)
+            ->orWhere('sku', $code)
+            ->first();
+
+        if (! $variant) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Código no encontrado',
+                'text' => 'No se encontró ningún producto para ese código o SKU.',
+            ]);
+            return;
+        }
+
+        // Si ya existe en la tabla, incrementar cantidad
+        foreach ($this->variants as $index => $row) {
+            if (($row['id'] ?? null) === $variant->id) {
+                $current = (int) ($this->variants[$index]['quantity'] ?? 0);
+                $this->variants[$index]['quantity'] = $current + 1;
+                return;
+            }
+        }
+
+        // Caso contrario, usar la lógica existente de addProduct
+        $this->variant_id = $variant->id;
+        $this->addProduct();
+        $this->reset('variant_id');
     }
 
     public function save()

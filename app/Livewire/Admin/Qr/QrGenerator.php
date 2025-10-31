@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Qr;
 
 use Livewire\Component;
 use App\Models\Product;
+use App\Models\QrStyle;
 use App\Models\Purchase;
 use App\Models\Variant;
 
@@ -15,12 +16,20 @@ class QrGenerator extends Component
     public array $labels = [];
     public array $modalLabels = [];
 
+    // Estilos de QR
+    public $styles;
+    public $selectedStyleId;
+
     // Controles de diseño
-    public int $qrSize = 200; // px
-    public int $columns = 3;  // columnas por fila
-    public bool $showPrice = true;
-    public bool $showSku = true;
-    public bool $showBarcodeText = true;
+    public int $qrSize;
+    public string $layout_type;
+    public int $label_width;
+    public int $label_height;
+    public bool $show_product_name;
+    public bool $show_description;
+    public bool $showPrice;
+    public bool $showSku;
+    public bool $showBarcodeText;
 
     // Modal de cantidades
     public bool $qtyOpen = false;
@@ -29,6 +38,10 @@ class QrGenerator extends Component
     {
         $this->type = $type;
         $this->id = $id;
+
+        $this->styles = QrStyle::all();
+        $defaultStyle = $this->styles->where('is_default', true)->first() ?? $this->styles->first();
+        $this->applyStyle($defaultStyle);
 
         $variants = $this->loadVariants($type, $id);
 
@@ -64,6 +77,28 @@ class QrGenerator extends Component
     private function makeQrData(Variant $variant)
     {
         return $variant->barcode ?: ($variant->sku ?? (string) $variant->id);
+    }
+
+    public function updatedSelectedStyleId($styleId): void
+    {
+        $style = $this->styles->find($styleId);
+        if ($style) {
+            $this->applyStyle($style);
+        }
+    }
+
+    private function applyStyle(?QrStyle $style): void
+    {
+        $this->selectedStyleId = $style?->id;
+        $this->layout_type = $style?->layout_type ?? 'default';
+        $this->label_width = $style?->label_width ?? 50;
+        $this->label_height = $style?->label_height ?? 50;
+        $this->qrSize = $style?->qr_size ?? 200;
+        $this->show_product_name = $style?->show_product_name ?? true;
+        $this->show_description = $style?->show_description ?? true;
+        $this->showPrice = $style?->show_price ?? true;
+        $this->showSku = $style?->show_sku ?? true;
+        $this->showBarcodeText = $style?->show_barcode_text ?? true;
     }
 
     public function inc(int $index): void

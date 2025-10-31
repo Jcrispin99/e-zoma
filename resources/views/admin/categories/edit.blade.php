@@ -20,15 +20,11 @@
 
             @csrf
             @method('put')
-            <x-wire-input label="Nombre" name="name" placeholder="Nombre de la categoría"
-                value="{{ old('name', $category->name) }}" />
-            <x-wire-textarea label="Descripción" name="description"
-                placeholder="Descripción de la categoría">{{ old('description', $category->description) }}</x-wire-textarea>
+            <x-wire-input label="Nombre" name="name" placeholder="Nombre de la categoría" value="{{ old('name', $category->name) }}" />
+            <x-wire-textarea label="Descripción" name="description" placeholder="Descripción de la categoría">{{ old('description', $category->description) }}</x-wire-textarea>
 
 
-            <x-wire-select label="Categoría padre" placeholder="Seleccione una opción" :options="$categories"
-                option-label="name" option-value="id" name="parent_id" value="{{ $category->parent_id }}"
-                :clearable="true" />
+            <x-wire-select label="Categoría padre" placeholder="Seleccione una opción" :options="$categories" option-label="name" option-value="id" name="parent_id" value="{{ $category->parent_id }}" :clearable="true" />
 
             <div class="flex justify-end">
                 <x-button type="submit">

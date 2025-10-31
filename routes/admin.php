@@ -1,6 +1,11 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+// Home del área de administración
+Route::get('/', function () {
+    return view('admin.dashboard');
+})->name('dashboard');
+
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\VariantController;
@@ -24,8 +29,8 @@ use App\Http\Controllers\Admin\SunatConnectionController;
 use App\Http\Controllers\Admin\LoyaltyProgramController;
 use App\Http\Controllers\Admin\Companycontroller as CompanycontrollerLower;
 
-// Dashboard
 
+// Dashboard
 Route::get('/', function () {
     return view('admin.dashboard');
 })->name('dashboard');

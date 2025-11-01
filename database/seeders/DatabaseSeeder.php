@@ -38,10 +38,11 @@ class DatabaseSeeder extends Seeder
             LoyaltyEarnRulesSeeder::class,
             LoyaltyRewardsSeeder::class,
             QrStyleSeeder::class,
+            CustomerSeeder::class,
         ]);
 
-        Customer::factory(50)->create();
-        Supplier::factory(50)->create();
+        //ustomer::factory(50)->create();
+        //Supplier::factory(50)->create();
         //Product::factory(100)->create();
         //Variant::factory(100)->create();
     }

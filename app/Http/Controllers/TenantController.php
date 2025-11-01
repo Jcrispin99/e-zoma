@@ -35,7 +35,7 @@ class TenantController extends Controller
         ]);
 
         $tenant = Tenant::create($validated);
-        $tenant->domains()->create(['domain' => $validated['id'] . '.' . config('tenancy.central_domains')[0]]);
+        $tenant->domains()->create(['domain' => $validated['id'] . '.' . config('app.domain')]);
 
         return redirect()->route('tenants.index')->with('success', 'Cliente creado exitosamente.');
     }
@@ -68,7 +68,7 @@ class TenantController extends Controller
         $tenant->update($validated);
 
         $tenant->domains()->update([
-            'domain' => $validated['id'] . '.' . config('tenancy.central_domains')[0]
+            'domain' => $validated['id'] . '.' . config('app.domain')
         ]);
 
         return redirect()->route('tenants.index')->with('success', 'Cliente actualizado exitosamente.');

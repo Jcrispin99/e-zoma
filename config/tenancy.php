@@ -17,9 +17,12 @@ return [
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
-    'central_domains' => [
-        'e-zoma.test',
-    ],
+    // Lee dominios centrales desde .env. Si no se define CENTRAL_DOMAINS,
+    // toma el host de APP_URL (sin esquema ni puerto).
+    'central_domains' => array_values(array_filter(array_map('trim', explode(',', env(
+        'CENTRAL_DOMAINS',
+        parse_url(env('APP_URL'), PHP_URL_HOST)
+    ))))),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

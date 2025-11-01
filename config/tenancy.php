@@ -17,9 +17,7 @@ return [
      *
      * Only relevant if you're using the domain or subdomain identification middleware.
      */
-    'central_domains' => [
-        'ikoodev.com',
-    ],
+    'central_domains' => explode(',', env('APP_DOMAIN', 'localhost')),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

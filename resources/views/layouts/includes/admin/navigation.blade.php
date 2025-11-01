@@ -1,5 +1,5 @@
 <nav class="fixed top-0 z-50 w-full bg-white border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-    <div class="px-3 py-3 lg:px-5 lg:pl-3">
+    <div class="px-3 py-0 lg:px-1 lg:pl-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center justify-start rtl:justify-end">
                 <button data-drawer-target="logo-sidebar" data-drawer-toggle="logo-sidebar" aria-controls="logo-sidebar"
@@ -19,7 +19,7 @@
                             @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&display=swap');
                             @import url('https://fonts.googleapis.com/css2?family=Consolas&display=swap');
                         </style>
-                        <svg class="group cursor-pointer select-none h-14 md:h-16 me-0" viewBox="0 0 320 140"
+                        <svg class="group cursor-pointer select-none h-12 md:h-14 me-0" viewBox="0 0 210 150"
                             preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg">
                             <text x="16" y="108" text-anchor="start" font-size="120" font-family="'Nunito', sans-serif"
                                 font-weight="900" letter-spacing="-0.02em" fill="#2D9B9B">o</text>

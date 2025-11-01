@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Root Domain
+    |--------------------------------------------------------------------------
+    |
+    | This URL is used by the tenancy package to generate tenant subdomains.
+    | You should set this to the root of your application's domain.
+    |
+    */
+
+    'domain' => env('APP_DOMAIN', 'localhost'),
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

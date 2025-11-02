@@ -22,9 +22,9 @@ class IdentitySeeder extends Seeder
         ];
 
         foreach ($identities as $identity) {
-            \App\Models\Identity::create([
+            \App\Models\Identity::updateOrCreate([
                 'name' => $identity,
-            ]);
+            ], []);
         }
     }
 }

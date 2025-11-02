@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('pos_sessions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
+            $table->unsignedBigInteger('user_id');
+            $table->index('user_id');
             $table->foreignId('pos_config_id')->constrained('pos_configs');
             $table->decimal('opening_balance', 10, 2);
             $table->decimal('closing_balance', 10, 2)->nullable();

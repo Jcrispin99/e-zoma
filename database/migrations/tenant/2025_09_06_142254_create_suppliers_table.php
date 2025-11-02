@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('suppliers', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('identity_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('identity_id');
+            $table->index('identity_id');
 
             $table->string('document_number')->unique();
 

@@ -14,36 +14,12 @@ use App\Models\Supplier;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Seed the application's database.
+     * Seed the application's central database.
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-
         $this->call([
-            UbigeoDepartmentSeeder::class,
-            UbigeoProvinceSeeder::class,
-            UbigeoDistrictSeeder::class,
-            IdentitySeeder::class,
-            CompanySeeder::class,
-            CategorySeder::class,
-            WarehouseSeeder::class,
-            ReasonSeeder::class,
-            AttributeSeeder::class,
-            RolesSeeder::class,
-            SequenceSeeder::class,
-            PaymentMethodSeeder::class,
-            LoyaltyProgramSeeder::class,
-            LoyaltyEarnRulesSeeder::class,
-            LoyaltyRewardsSeeder::class,
-            QrStyleSeeder::class,
-            CustomerSeeder::class,
+            CentralDatabaseSeeder::class,
         ]);
-
-        //ustomer::factory(50)->create();
-        //Supplier::factory(50)->create();
-        //Product::factory(100)->create();
-        //Variant::factory(100)->create();
     }
 }

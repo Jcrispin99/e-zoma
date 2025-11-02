@@ -18,15 +18,14 @@ return new class extends Migration
             $table->string('name');
             $table->string('trade_name')->nullable();
 
-            $table->foreignId('identity_id')->nullable()->constrained('identities')->onDelete('cascade');
+            $table->unsignedBigInteger('identity_id')->nullable();
+            $table->index('identity_id');
             $table->string('document_number')->nullable()->unique();
 
             $table->string('address')->nullable();
             // Ubigeo: solo almacenamos el id de distrito
             $table->string('district_id', 6)->nullable();
-            $table->foreign('district_id')
-                ->references('id')
-                ->on('ubigeo_districts');
+            $table->index('district_id');
             $table->text('policies')->nullable();
             $table->string('slogan')->nullable();
 

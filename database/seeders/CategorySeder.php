@@ -30,12 +30,16 @@ class CategorySeder extends Seeder
         ];
 
         foreach ($mainCategories as $categoryName) {
-            Category::create([
-                'name' => $categoryName,
-                'slug' => Str::slug($categoryName),
-                'full_name' => $categoryName,
-                'description' => 'Descripción de la categoría ' . $categoryName,
-            ]);
+            Category::updateOrCreate(
+                [
+                    'name' => $categoryName,
+                ],
+                [
+                    'slug' => Str::slug($categoryName),
+                    'full_name' => $categoryName,
+                    'description' => 'Descripción de la categoría ' . $categoryName,
+                ]
+            );
         }
     }
 }

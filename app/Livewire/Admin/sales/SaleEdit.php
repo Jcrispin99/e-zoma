@@ -10,6 +10,7 @@ use App\Models\Customer;
 use Livewire\Component;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\PdfSend;
+use App\Jobs\SendSunatInvoice;
 
 class SaleEdit extends Component
 {
@@ -28,6 +29,7 @@ class SaleEdit extends Component
 
     public $status;
     public $payment_status;
+    public $sunat_status;
 
     // Propiedades para el modal de envío de correo
     public $form = [
@@ -51,6 +53,7 @@ class SaleEdit extends Component
         $this->observation = $sale->observation;
         $this->status = $sale->status;
         $this->payment_status = $sale->payment_status;
+        $this->sunat_status = $sale->sunat_status;
 
         $this->variants = $sale->variants->map(function ($variant) {
             return [
@@ -115,7 +118,7 @@ class SaleEdit extends Component
             return;
         }
 
-        $index = collect($this->variants)->search(fn ($v) => ($v['id'] ?? null) === $variant->id);
+        $index = collect($this->variants)->search(fn($v) => ($v['id'] ?? null) === $variant->id);
         if ($index !== false) {
             $current = $this->variants[$index];
             $current['quantity'] = (int)($current['quantity'] ?? 0) + 1;
@@ -298,8 +301,62 @@ class SaleEdit extends Component
         $this->reset('form');
     }
 
+    /**
+     * Enviar manualmente la venta a SUNAT.
+     */
+    public function sendSunat()
+    {
+        try {
+            // Evitar reenvío si ya está aceptado
+            if ($this->sale->sunat_status === 'accepted') {
+                $this->dispatch('swal', [
+                    'icon' => 'info',
+                    'title' => 'Ya aceptada por SUNAT',
+                    'text' => 'La venta ya fue aceptada. No se reenviará.',
+                ]);
+                return;
+            }
+            // Evitar duplicar si está en curso
+            if (in_array($this->sale->sunat_status, ['processing', 'queued'])) {
+                $this->dispatch('swal', [
+                    'icon' => 'info',
+                    'title' => 'Envío en curso',
+                    'text' => 'Ya hay un envío en curso a SUNAT. Espere el resultado.',
+                ]);
+                return;
+            }
+            // Marcar como en cola y despachar job
+            $this->sale->sunat_status = 'queued';
+            $this->sale->save();
+
+            SendSunatInvoice::dispatch($this->sale->id)->afterCommit();
+
+            $this->sunat_status = 'queued';
+            $this->dispatch('swal', [
+                'icon' => 'success',
+                'title' => 'Envío iniciado',
+                'text' => 'Se programó el envío a SUNAT. Verifique el estado en unos segundos.',
+            ]);
+        } catch (\Throwable $e) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'No se pudo enviar',
+                'text' => 'Error: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
     public function render()
     {
         return view('livewire.admin.sales.sale-edit');
+    }
+
+    /**
+     * Actualizar datos desde BD periódicamente para reflejar estado SUNAT.
+     */
+    public function refreshSale()
+    {
+        $this->sale->refresh();
+        $this->sunat_status = $this->sale->sunat_status;
     }
 }

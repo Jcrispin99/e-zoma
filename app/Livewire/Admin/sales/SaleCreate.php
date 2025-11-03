@@ -320,6 +320,8 @@ class SaleCreate extends Component
             $quote->update(['status' => 'converted']);
         }
 
+        // Envío a SUNAT ahora se realiza mediante Job disparado en el evento created del modelo Sale
+
         session()->flash('swalt', [
             'icon' => 'success',
             'title' => 'Venta creada',

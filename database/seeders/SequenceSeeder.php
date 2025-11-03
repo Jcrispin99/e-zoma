@@ -16,9 +16,11 @@ class SequenceSeeder extends Seeder
     {
         // 1️⃣ Define los diarios (igual que antes)
         $journals = [
+
+            ['name' => 'NOTA DE VENTA',   'type' => 'sale',           'code' => 'NV', 'document_type_code' => null],
+            ['name' => 'FACTURA DE VENTA',              'type' => 'sale',           'code' => 'F002', 'document_type_code' => '01'],
+            ['name' => 'BOLETA DE VENTA',               'type' => 'sale',           'code' => 'B002', 'document_type_code' => '03'],
             ['name' => 'Cotizaciones',              'type' => 'quote',          'code' => 'COT',  'document_type_code' => null],
-            ['name' => 'Factura F001',              'type' => 'sale',           'code' => 'F001', 'document_type_code' => '01'],
-            ['name' => 'Boleta B001',               'type' => 'sale',           'code' => 'B001', 'document_type_code' => '03'],
             ['name' => 'Nota de Crédito Factura',   'type' => 'sale',           'code' => 'NCF001', 'document_type_code' => '07'],
             ['name' => 'Nota de Crédito Boleta',    'type' => 'sale',           'code' => 'NCB001', 'document_type_code' => '07'],
             ['name' => 'Nota de Débito Factura',    'type' => 'sale',           'code' => 'NDF001', 'document_type_code' => '08'],

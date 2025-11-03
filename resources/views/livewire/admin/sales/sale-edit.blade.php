@@ -31,6 +31,20 @@ x-on:keydown.window="handleScanner($event)">
                 @if($sale->payment_status)
                 <x-wire-badge :label="str($sale->payment_status)->upper()" :color="$sale->payment_status === 'paid' ? 'emerald' : ($sale->payment_status === 'partial' ? 'amber' : 'slate')" />
                 @endif
+                @if($sale->sunat_status)
+                @php
+                    $sunatColor = match($sale->sunat_status) {
+                        'accepted' => 'emerald',
+                        'sent' => 'sky',
+                        'processing' => 'amber',
+                        'queued' => 'slate',
+                        'pending' => 'slate',
+                        'error' => 'rose',
+                        default => 'gray',
+                    };
+                @endphp
+                <x-wire-badge :label="'SUNAT: ' . str($sale->sunat_status)->upper()" :color="$sunatColor" />
+                @endif
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
@@ -58,9 +72,20 @@ x-on:keydown.window="handleScanner($event)">
                     descargar
                 </x-wire-button>
 
+                @php $canSendSunat = !(data_get($sale->sunat_response,'accepted') === true || in_array($sale->sunat_status, ['accepted','queued','processing'])); @endphp
+                @if($canSendSunat)
+                    <x-wire-button light indigo label="Enviar SUNAT" wire:click="sendSunat" wire:loading.attr="disabled" spinner class="ml-2" />
+                @else
+                    <x-wire-button light gray label="Enviar SUNAT" disabled class="ml-2" />
+                @endif
+
                 <x-wire-button light gray :href="route('admin.sales.index')" label="Volver" />
             </div>
         </div>
+        @php $pollStatuses = ['queued','processing']; @endphp
+        @if(in_array($sale->sunat_status, $pollStatuses))
+            <div class="hidden" wire:poll.15s="refreshSale"></div>
+        @endif
     </x-wire-card>
 
 

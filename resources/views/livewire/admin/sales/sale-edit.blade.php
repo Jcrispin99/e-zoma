@@ -79,6 +79,13 @@ x-on:keydown.window="handleScanner($event)">
                     <x-wire-button light gray label="Enviar SUNAT" disabled class="ml-2" />
                 @endif
 
+                <!-- Acciones: Notas -->
+                <div class="inline-flex items-center gap-2">
+                    <x-wire-button light amber label="Nota de Crédito" wire:click="sendStaticCreditNote" />
+                    <x-wire-button light sky label="Nota de Débito" wire:click="sendStaticDebitNote" />
+                    <x-wire-button light slate label="Nota de Venta" wire:click="openSalesNoteModal" />
+                </div>
+
                 <x-wire-button light gray :href="route('admin.sales.index')" label="Volver" />
             </div>
         </div>
@@ -175,5 +182,31 @@ x-on:keydown.window="handleScanner($event)">
                 Enviar
             </x-wire-button>
         </form>
+    </x-wire-modal-card>
+
+    <!-- Modal para crear Notas (Crédito/Débito/Venta) -->
+    <x-wire-modal-card wire:model="noteForm.open" width="xl">
+        <x-slot name="title">
+            <p class="text-xl text-center mb-2">Generar {{ str($noteForm['title'] ?? 'Nota')->title() }}</p>
+            <p class="text-lg text-center uppercase font-bold mb-2">{{ $sale->serie }}-{{ $sale->correlative }}</p>
+            <p class="text-sm text-center text-gray-600">Cliente: {{ optional($sale->customer)->document_number }} - {{ optional($sale->customer)->name }}</p>
+        </x-slot>
+
+        <div class="space-y-4">
+            <div class="grid lg:grid-cols-3 gap-4">
+                <x-wire-input label="Motivo" wire:model="noteForm.reason_label" placeholder="Ej: ANULACION DE LA OPERACION" />
+                <x-wire-input label="Código motivo (SUNAT)" wire:model="noteForm.reason_code" placeholder="01 / 02" />
+                <x-wire-input label="Observaciones" wire:model="noteForm.observation" placeholder="Opcional" />
+            </div>
+
+            <div class="text-sm text-gray-700">
+                <p>Modo: <strong>{{ $noteForm['mode'] ?? 'total' }}</strong>. Por ahora solo se admite anulación total para NC y ajuste total para ND.</p>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <x-wire-button light gray wire:click="closeNoteModal">Cancelar</x-wire-button>
+                <x-wire-button light emerald wire:click="confirmCreateNote" spinner>Confirmar</x-wire-button>
+            </div>
+        </div>
     </x-wire-modal-card>
 </div>

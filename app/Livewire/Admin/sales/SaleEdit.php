@@ -11,6 +11,7 @@ use Livewire\Component;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\PdfSend;
 use App\Jobs\SendSunatInvoice;
+use App\Services\GreenterInvoiceService;
 
 class SaleEdit extends Component
 {
@@ -39,6 +40,17 @@ class SaleEdit extends Component
         'email' => '',
         'model' => null,
         'view_pdf_patch' => 'admin.sales.pdf',
+    ];
+
+    // Estado para el flujo de creación de notas (Crédito/Débito/Venta)
+    public $noteForm = [
+        'open' => false,
+        'type' => null, // 'credit' | 'debit' | 'sales_note'
+        'title' => null,
+        'reason_code' => null, // 01 | 02 (SUNAT)
+        'reason_label' => null,
+        'mode' => 'total', // 'total' por ahora
+        'observation' => null,
     ];
 
     public function mount(Sale $sale)
@@ -344,6 +356,290 @@ class SaleEdit extends Component
                 'text' => 'Error: ' . $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Abrir modal para Nota de Crédito (07).
+     */
+    public function openCreditNoteModal()
+    {
+        $this->noteForm = [
+            'open' => true,
+            'type' => 'credit',
+            'title' => 'Nota de Crédito (07)',
+            'reason_code' => '01',
+            'reason_label' => 'ANULACION DE LA OPERACION',
+            'mode' => 'total',
+            'observation' => 'Generada desde venta ' . $this->sale->serie . '-' . $this->sale->correlative,
+        ];
+    }
+
+    /**
+     * Abrir modal para Nota de Débito (08).
+     */
+    public function openDebitNoteModal()
+    {
+        $this->noteForm = [
+            'open' => true,
+            'type' => 'debit',
+            'title' => 'Nota de Débito (08)',
+            'reason_code' => '02',
+            'reason_label' => 'AUMENTO EN EL VALOR',
+            'mode' => 'total',
+            'observation' => 'Generada desde venta ' . $this->sale->serie . '-' . $this->sale->correlative,
+        ];
+    }
+
+    /**
+     * Crear Nota de Crédito (07) y enviar con payload estático.
+     */
+    public function sendStaticCreditNote()
+    {
+        $this->sendStaticNote('07');
+    }
+
+    /**
+     * Crear Nota de Débito (08) y enviar con payload estático.
+     */
+    public function sendStaticDebitNote()
+    {
+        $this->sendStaticNote('08');
+    }
+
+    /**
+     * Helper para crear la venta de nota y enviar a SUNAT con payload estático.
+     */
+    protected function sendStaticNote(string $docType)
+    {
+        try {
+            $companyId = (int) ($this->sale->company_id ?? 0);
+            // Determinar tipo de documento afectado (01 factura, 03 boleta)
+            $affectedType = (string) (optional($this->sale->journal)->document_type_code ?? '');
+            if (! in_array($affectedType, ['01', '03'], true)) {
+                $serieGuess = (string) ($this->sale->serie ?? '');
+                $affectedType = str_starts_with($serieGuess, 'F') ? '01' : (str_starts_with($serieGuess, 'B') ? '03' : '01');
+            }
+
+            $journal = $this->findJournalForType($companyId, $docType, $affectedType);
+            if (! $journal) {
+                $this->dispatch('swal', [
+                    'icon' => 'error',
+                    'title' => 'Journal no encontrado',
+                    'text' => 'Configure un diario fiscal de venta para el tipo ' . $docType . ' en la compañía.',
+                ]);
+                return;
+            }
+
+            // Obtener serie y correlativo
+            $parts = \App\Services\SequenceService::getNextParts($journal->id);
+
+            // Construir nueva venta (nota)
+            $newSale = \App\Models\Sale::create([
+                'serie' => $parts['serie'],
+                'correlative' => $parts['correlative'],
+                'date' => now(),
+                'quote_id' => null,
+                'customer_id' => $this->sale->customer_id,
+                'warehouse_id' => $this->sale->warehouse_id,
+                'total' => $this->sale->total,
+                'observation' => 'Generada desde venta ' . $this->sale->serie . '-' . $this->sale->correlative,
+                'company_id' => $companyId,
+                'journal_id' => $journal->id,
+                // SUNAT referencia a documento afectado
+                'original_sale_id' => $this->sale->id,
+                'original_document_type_code' => (string) optional($this->sale->journal)->document_type_code,
+                'original_serie' => (string) $this->sale->serie,
+                'original_correlative' => (string) $this->sale->correlative,
+            ]);
+
+            // Adjuntar variantes replicando cantidades y precios
+            $syncData = [];
+            foreach ($this->variants as $variant) {
+                $syncData[$variant['id']] = [
+                    'quantity' => $variant['quantity'],
+                    'price' => $variant['price'],
+                    'subtotal' => $variant['quantity'] * $variant['price'],
+                ];
+            }
+            $newSale->variants()->sync($syncData);
+
+            // Movimiento de inventario para NC (devolución)
+            if ($docType === '07') {
+                foreach ($this->variants as $variant) {
+                    \App\Facades\Kardex::registerEntry($newSale, $variant, $this->sale->warehouse_id, 'Devolución por Nota de Crédito');
+                }
+            }
+
+            // Enviar a SUNAT con payload estático
+            $svc = new GreenterInvoiceService();
+            $ok = $svc->sendInvoiceFromSale($newSale);
+
+            $this->dispatch('swal', [
+                'icon' => $ok ? 'success' : 'warning',
+                'title' => $ok ? 'Nota enviada a SUNAT' : 'Envío realizado con observaciones',
+                'text' => $ok ? 'Se envió la nota con datos estáticos.' : 'Revise el estado de SUNAT en la nueva nota.',
+            ]);
+
+            // Ir a la nueva venta/nota
+            return redirect()->route('admin.sales.edit', $newSale->id);
+        } catch (\Throwable $e) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'No se pudo enviar la nota',
+                'text' => 'Error: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Abrir modal para Nota de Venta (no fiscal).
+     */
+    public function openSalesNoteModal()
+    {
+        $this->noteForm = [
+            'open' => true,
+            'type' => 'sales_note',
+            'title' => 'Nota de Venta (No fiscal)',
+            'reason_code' => null,
+            'reason_label' => null,
+            'mode' => 'total',
+            'observation' => 'Generada desde venta ' . $this->sale->serie . '-' . $this->sale->correlative,
+        ];
+    }
+
+    public function closeNoteModal()
+    {
+        $this->noteForm['open'] = false;
+    }
+
+    /**
+     * Confirmar creación de la nota según tipo seleccionado.
+     * - NC (07): crea venta con journal fiscal 07, referencia documento original y registra ENTRADA en inventario.
+     * - ND (08): crea venta con journal fiscal 08, referencia documento original (sin movimiento de inventario).
+     * - NV: crea venta con journal no fiscal (sin movimiento de inventario).
+     */
+    public function confirmCreateNote()
+    {
+        try {
+            $type = (string) ($this->noteForm['type'] ?? '');
+            if (! in_array($type, ['credit', 'debit', 'sales_note'], true)) {
+                $this->dispatch('swal', [
+                    'icon' => 'warning',
+                    'title' => 'Tipo inválido',
+                    'text' => 'Seleccione un tipo de nota válido.',
+                ]);
+                return;
+            }
+
+            // Seleccionar Journal adecuado por tipo
+            $companyId = (int) ($this->sale->company_id ?? 0);
+            $targetDocType = $type === 'credit' ? '07' : ($type === 'debit' ? '08' : null);
+            // Determinar tipo afectado para seleccionar el prefijo de serie correcto
+            $affectedType = (string) (optional($this->sale->journal)->document_type_code ?? '');
+            if (! in_array($affectedType, ['01', '03'], true)) {
+                $serieGuess = (string) ($this->sale->serie ?? '');
+                $affectedType = str_starts_with($serieGuess, 'F') ? '01' : (str_starts_with($serieGuess, 'B') ? '03' : '01');
+            }
+            $journal = $this->findJournalForType($companyId, $targetDocType, $affectedType);
+            if (! $journal) {
+                $this->dispatch('swal', [
+                    'icon' => 'error',
+                    'title' => 'Journal no encontrado',
+                    'text' => $targetDocType
+                        ? 'Configure un diario fiscal de venta para el tipo ' . $targetDocType . ' en la compañía.'
+                        : 'Configure un diario de venta NO fiscal para notas de venta en la compañía.',
+                ]);
+                return;
+            }
+
+            // Obtener serie y correlativo
+            $parts = \App\Services\SequenceService::getNextParts($journal->id);
+
+            // Construir nueva venta (nota)
+            $newSale = Sale::create([
+                'serie' => $parts['serie'],
+                'correlative' => $parts['correlative'],
+                'date' => now(),
+                'quote_id' => null,
+                'customer_id' => $this->sale->customer_id,
+                'warehouse_id' => $this->sale->warehouse_id,
+                'total' => $this->sale->total,
+                'observation' => $this->noteForm['observation'] ?? null,
+                'company_id' => $companyId,
+                'journal_id' => $journal->id,
+                // SUNAT referencia a documento afectado (solo NC/ND)
+                'original_sale_id' => in_array($type, ['credit', 'debit'], true) ? $this->sale->id : null,
+                'original_document_type_code' => in_array($type, ['credit', 'debit'], true)
+                    ? (string) optional($this->sale->journal)->document_type_code
+                    : null,
+                'original_serie' => in_array($type, ['credit', 'debit'], true) ? (string) $this->sale->serie : null,
+                'original_correlative' => in_array($type, ['credit', 'debit'], true) ? (string) $this->sale->correlative : null,
+            ]);
+
+            // Adjuntar variantes replicando cantidades y precios
+            $syncData = [];
+            foreach ($this->variants as $variant) {
+                $syncData[$variant['id']] = [
+                    'quantity' => $variant['quantity'],
+                    'price' => $variant['price'],
+                    'subtotal' => $variant['quantity'] * $variant['price'],
+                ];
+            }
+            $newSale->variants()->sync($syncData);
+
+            // Movimiento de inventario
+            if ($type === 'credit') {
+                // Devolución: ENTRADA al inventario
+                foreach ($this->variants as $variant) {
+                    \App\Facades\Kardex::registerEntry($newSale, $variant, $this->sale->warehouse_id, 'Devolución por Nota de Crédito');
+                }
+            }
+            // ND y NV: sin movimientos por defecto (ajusta valor / documento no fiscal)
+
+            $this->dispatch('swal', [
+                'icon' => 'success',
+                'title' => 'Nota creada',
+                'text' => 'Se creó la ' . ($this->noteForm['title'] ?? 'nota') . ' correctamente.',
+            ]);
+            $this->noteForm['open'] = false;
+
+            // Redirigir a edición de la nueva venta/nota
+            return redirect()->route('admin.sales.edit', $newSale->id);
+        } catch (\Throwable $e) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'No se pudo crear la nota',
+                'text' => 'Error: ' . $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Seleccionar el Journal según tipo de documento objetivo.
+     * - '07' / '08': fiscal, type 'sale', company igual a la venta.
+     * - null: no fiscal (document_type_code null), type 'sale'.
+     */
+    protected function findJournalForType(int $companyId, ?string $docType, ?string $affectedType = null)
+    {
+        $query = \App\Models\Journal::query()
+            ->where('company_id', $companyId)
+            ->where('type', 'sale');
+        if ($docType) {
+            $query->where('document_type_code', $docType)->where('is_fiscal', true);
+            // Para NC/ND, elegir prefijo de serie según afectado: FC/BC o FD/BD
+            if (in_array($docType, ['07', '08'], true) && in_array($affectedType, ['01', '03'], true)) {
+                $prefix = ($docType === '07')
+                    ? ($affectedType === '01' ? 'FC' : 'BC')
+                    : ($affectedType === '01' ? 'FD' : 'BD');
+                $query->where('code', 'like', $prefix . '%');
+            }
+        } else {
+            // Nota de Venta: diario de venta no fiscal sin tipo SUNAT
+            $query->where(function($q){
+                $q->whereNull('document_type_code')->orWhere('document_type_code', '');
+            })->where('is_fiscal', false);
+        }
+        return $query->orderBy('id')->first();
     }
 
     public function render()

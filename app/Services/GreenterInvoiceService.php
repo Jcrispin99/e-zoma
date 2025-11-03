@@ -7,19 +7,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use App\Models\Sale;
 use App\Models\PosOrder;
+use App\Models\PosConfig;
 use App\Models\Company;
 
 class GreenterInvoiceService
 {
     protected string $url;
-    protected ?string $token;
 
     public function __construct()
     {
-        // Usar URL base desde .env, el endpoint se elige por tipo de documento
-        $this->url = config('services.greenter.url') ?? env('GREENTER_API_URL', 'http://greenter.test/api/');
-        // Permitir que el token sea null y resolver dinámicamente por venta/empresa
-        $this->token = config('services.greenter.token') ?? env('GREENTER_API_TOKEN') ?? null;
+        $this->url = env('GREENTER_API_URL', 'http://greenter.test/api/');
     }
 
 
@@ -51,74 +48,11 @@ class GreenterInvoiceService
     {
         $sale->loadMissing(['customer.identity', 'journal', 'variants.product', 'variants.attributeValues']);
 
-        // === Configuración de impuestos desde POS (si aplica) ===
-        $applyTax = true;
-        $taxRate = 0.18; // 18% por defecto
-        $pricesIncludeTax = false;
-
-        if (!empty($sale->pos_order_id)) {
-            $posOrder = PosOrder::query()->with('posSession.posConfig')->find($sale->pos_order_id);
-            $cfg = optional(optional($posOrder)->posSession)->posConfig;
-            if ($cfg) {
-                $applyTax = (bool) ($cfg->apply_tax ?? true);
-                $taxRate = (float) ($cfg->tax_rate ?? 0.18);
-                $pricesIncludeTax = (bool) ($cfg->prices_include_tax ?? false);
-            }
-        }
-
-        $identityName = optional(optional($sale->customer)->identity)->name;
-        $clientTipoDoc = $this->mapIdentityNameToTipoDoc($identityName);
-
-        // Calcular detalles desde las variantes de la venta
-        $details = [];
-        $baseTotal = 0.0;
-        $igvTotal = 0.0;
-        $igvRate = $applyTax ? $taxRate : 0.0;
-
-        foreach ($sale->variants as $variant) {
-            $qty = (float) ($variant->pivot->quantity ?? 0);
-            $price = (float) ($variant->pivot->price ?? 0);
-
-            // Determinar precios según configuración
-            if ($igvRate > 0 && $pricesIncludeTax) {
-                // Precio incluye IGV: neto = bruto / (1 + tasa), bruto = price
-                $unitGross = round($price, 2);
-                $unitNet = round($unitGross / (1 + $igvRate), 2);
-            } else {
-                // Precio no incluye IGV, o no se aplica impuesto
-                $unitNet = round($price, 2);
-                $unitGross = $igvRate > 0 ? round($unitNet * (1 + $igvRate), 2) : $unitNet;
-            }
-
-            $base = round($qty * $unitNet, 2);
-            $igv = round($base * $igvRate, 2);
-
-            $desc = (string) $variant->fullName;
-
-            $details[] = [
-                'tipAfeIgv' => ($igvRate > 0 ? 10 : 20),
-                'codProducto' => (string) $variant->barcode,
-                'unidad' => 'NIU',
-                'descripcion' => $desc,
-                'cantidad' => $qty,
-                'mtoValorUnitario' => $unitNet,
-                'mtoValorVenta' => $base,
-                'mtoBaseIgv' => $base,
-                'porcentajeIgv' => round($igvRate * 100, 2),
-                'igv' => $igv,
-                'totalImpuestos' => $igv,
-                'mtoPrecioUnitario' => $unitGross,
-            ];
-
-            $baseTotal += $base;
-            $igvTotal += $igv;
-        }
-
-        $baseTotal = round($baseTotal, 2);
-        $igvTotal = round($igvTotal, 2);
-        $subTotal = round($baseTotal + $igvTotal, 2);
-
         $docType = (string) ($sale->journal->document_type_code ?? '01');
+        $tax = $this->getTaxConfig($sale);
+        $totals = $this->buildDetailsAndTotals($sale, $tax);
+        $company = $this->buildCompanyPayload($sale, false);
+        $client = $this->buildClientPayload($sale);
 
         $payload = [
             'ublVersion' => '2.1',
@@ -134,82 +68,142 @@ class GreenterInvoiceService
                 'tipo' => 'Contado',
             ],
             'tipoMoneda' => 'PEN',
-            'company' => [
-                // Mantener estático por ahora
-                'ruc' => 20614550440,
-                'razonSocial' => 'KOODI SOLUTIONS S.A.C.',
-                'nombreComercial' => 'Ikoo Dev',
-                'address' => [
-                    'ubigueo' => '100601',
-                    'departamento' => 'HUANUCO',
-                    'provincia' => 'LEONCIO PRADO',
-                    'distrito' => 'RUPA-RUPA',
-                    'urbanizacion' => '',
-                    'direccion' => 'Jr. Callao Nro. 545',
-                    'codLocal' => '0000',
-                ],
-            ],
-            'client' => [
-                'tipoDoc' => $clientTipoDoc,
-                'numDoc' => (string)optional($sale->customer)->document_number,
-                'rznSocial' => (string)optional($sale->customer)->name,
-            ],
-            // Totales según afectación
-            'mtoOperGravadas' => $igvRate > 0 ? $baseTotal : 0,
-            'mtoOperExoneradas' => $igvRate > 0 ? 0 : $baseTotal,
-            'mtoIGV' => $igvTotal,
-            'totalImpuestos' => $igvTotal,
-            'valorVenta' => $baseTotal,
-            'subTotal' => $subTotal,
-            'mtoImpVenta' => $subTotal,
-            'details' => $details,
-            // Alias para compatibilidad con servicios que esperan 'items'
-            'items' => $details,
-            // Añadir pista de configuración usada
+            'company' => $company,
+            'client' => $client,
+            'mtoOperGravadas' => $tax['igv_rate'] > 0 ? $totals['baseTotal'] : 0,
+            'mtoOperExoneradas' => $tax['igv_rate'] > 0 ? 0 : $totals['baseTotal'],
+            'mtoIGV' => $totals['igvTotal'],
+            'totalImpuestos' => $totals['igvTotal'],
+            'valorVenta' => $totals['baseTotal'],
+            'subTotal' => $totals['subTotal'],
+            'mtoImpVenta' => $totals['subTotal'],
+            'details' => $totals['details'],
+            'items' => $totals['details'],
             'meta' => [
-                'apply_tax' => $applyTax,
-                'tax_rate' => $taxRate,
-                'prices_include_tax' => $pricesIncludeTax,
+                'apply_tax' => $tax['apply_tax'],
+                'tax_rate' => $tax['tax_rate'],
+                'prices_include_tax' => $tax['prices_include_tax'],
             ],
         ];
 
         // === Notas de Crédito/Débito (07/08) ===
         if (in_array($docType, ['07', '08'], true)) {
-            // Determinar documento afectado (tipo y número)
-            $affectedType = (string) (
-                $sale->original_document_type_code
-                ?? optional(optional($sale->originalSale)->journal)->document_type_code
-                ?? ''
-            );
-            if ($affectedType === '') {
-                $serieGuess = (string) ($sale->original_serie ?? '');
-                $affectedType = str_starts_with($serieGuess, 'F') ? '01' : (str_starts_with($serieGuess, 'B') ? '03' : '01');
-            }
-
-            $affectedNumber = (string) (trim((string) ($sale->original_serie ?? '')) !== '' && trim((string) ($sale->original_correlative ?? '')) !== ''
-                ? ($sale->original_serie . '-' . $sale->original_correlative)
-                : (optional($sale->originalSale)->serie && optional($sale->originalSale)->correlative
-                    ? (optional($sale->originalSale)->serie . '-' . optional($sale->originalSale)->correlative)
-                    : '')
-            );
-
-            // Motivo por defecto si no existe en la BD todavía
-            if ($docType === '07') {
-                $codMotivo = '01';
-                $desMotivo = 'ANULACION DE LA OPERACION';
-            } else { // '08'
-                $codMotivo = '02';
-                $desMotivo = 'AUMENTO EN EL VALOR';
-            }
-
-            // Agregar campos específicos de NC/ND
+            ['type' => $affectedType, 'number' => $affectedNumber] = $this->resolveAffectedDocument($sale);
             $payload['tipDocAfectado'] = $affectedType;
             $payload['numDocAfectado'] = $affectedNumber;
-            // Compatibilidad con algunos payloads que usan la clave con typo
             $payload['numDocfectado'] = $affectedNumber;
-            $payload['codMotivo'] = $codMotivo;
-            $payload['desMotivo'] = $desMotivo;
+            if ($docType === '07') {
+                $payload['codMotivo'] = '01';
+                $payload['desMotivo'] = 'ANULACION DE LA OPERACION';
+            } else {
+                $payload['codMotivo'] = '02';
+                $payload['desMotivo'] = 'AUMENTO EN EL VALOR';
+            }
         }
+
+        return $payload;
+    }
+
+    /**
+     * Resolver tipo y número del documento AFECTADO para NC/ND.
+     * Navega hacia la venta original hasta encontrar un comprobante base (01/03).
+     */
+    private function resolveAffectedDocument(Sale $sale): array
+    {
+        $sale->loadMissing(['originalSale.journal']);
+        $origin = $sale->originalSale ?: $sale;
+        // Subir hasta encontrar un doc base 01/03
+        $guard = 0;
+        while ($guard < 3) {
+            $docType = (string) (optional($origin->journal)->document_type_code ?? '');
+            if (in_array($docType, ['01', '03'], true)) {
+                break;
+            }
+            if (! $origin->originalSale) {
+                break;
+            }
+            $origin = $origin->originalSale;
+            $guard++;
+        }
+
+        $type = (string) (optional($origin->journal)->document_type_code ?? '');
+        if (! in_array($type, ['01', '03'], true)) {
+            $serieGuess = (string) ($origin->serie ?? '');
+            $type = str_starts_with($serieGuess, 'F') ? '01' : (str_starts_with($serieGuess, 'B') ? '03' : '01');
+        }
+
+        $number = '';
+        $serie = (string) ($origin->serie ?? '');
+        $corr = (string) ($origin->correlative ?? '');
+        if ($serie !== '' && $corr !== '') {
+            $number = $serie . '-' . $corr;
+        } else {
+            $origSerie = (string) ($sale->original_serie ?? '');
+            $origCorr = (string) ($sale->original_correlative ?? '');
+            if ($origSerie !== '' && $origCorr !== '') {
+                $number = $origSerie . '-' . $origCorr;
+            }
+        }
+
+        return ['type' => $type, 'number' => $number];
+    }
+
+    /**
+     * Construir payload ESTÁTICO para Notas de Crédito/Débito (07/08).
+     * Usa los valores proporcionados en el ejemplo, con alias 'items'.
+     */
+    public function buildNotePayloadFromSale(Sale $sale, string $docType): array
+    {
+        $sale->loadMissing(['customer.identity', 'journal', 'variants.product', 'variants.attributeValues']);
+
+        $tax = $this->getTaxConfig($sale);
+        $totals = $this->buildDetailsAndTotals($sale, $tax);
+        $company = $this->buildCompanyPayload($sale, true);
+        $client = $this->buildClientPayload($sale);
+
+        ['type' => $affectedType, 'number' => $affectedNumber] = $this->resolveAffectedDocument($sale);
+
+        $payload = [
+            'ublVersion' => '2.1',
+            'tipoDoc' => $docType,
+            'serie' => (string) ($sale->serie ?? ''),
+            'correlativo' => (string) ($sale->correlative ?? ''),
+            'fechaEmision' => ($sale->date ?? now())
+                ->setTimezone('America/Lima')
+                ->format('Y-m-d\TH:i:sP'),
+            'tipDocAfectado' => $affectedType,
+            'numDocAfectado' => $affectedNumber,
+            'numDocfectado' => $affectedNumber,
+            'formaPago' => [
+                'moneda' => 'PEN',
+                'tipo' => 'Contado',
+            ],
+            'tipoMoneda' => 'PEN',
+            'company' => $company,
+            'client' => $client,
+            'details' => $totals['details'],
+            'items' => $totals['details'],
+            'mtoIGV' => $totals['igvTotal'],
+            'totalImpuestos' => $totals['igvTotal'],
+            'valorVenta' => $totals['baseTotal'],
+            'subTotal' => $totals['subTotal'],
+            'mtoImpVenta' => $totals['subTotal'],
+        ];
+
+        if ($docType === '07') {
+            $payload['codMotivo'] = '01';
+            $payload['desMotivo'] = 'ANULACION DE LA OPERACION';
+        } else {
+            $payload['codMotivo'] = '02';
+            $payload['desMotivo'] = 'AUMENTO EN EL VALOR';
+        }
+
+        // Meta para rastrear configuración utilizada
+        $payload['meta'] = [
+            'apply_tax' => $tax['apply_tax'],
+            'tax_rate' => $tax['tax_rate'],
+            'prices_include_tax' => $tax['prices_include_tax'],
+        ];
 
         return $payload;
     }
@@ -298,7 +292,9 @@ class GreenterInvoiceService
                 ]);
             }
 
-            $payload = $this->buildPayloadFromSale($sale);
+            $payload = in_array($docType, ['07', '08'], true)
+                ? $this->buildNotePayloadFromSale($sale, $docType)
+                : $this->buildPayloadFromSale($sale);
             // Guardar payload para depuración
             try {
                 Storage::disk('local')->put(
@@ -468,5 +464,166 @@ class GreenterInvoiceService
             'pasaporte' => '7',
             default => '0', // otros / sin documento
         };
+    }
+
+    private function getTaxConfig(Sale $sale): array
+    {
+        $applyTax = true;
+        $taxRate = 0.18;
+        $pricesIncludeTax = false;
+
+        // 1) Prioridad: tomar configuración desde el POS de la venta
+        $cfg = null;
+        if (!empty($sale->pos_order_id)) {
+            $posOrder = PosOrder::query()->with('posSession.posConfig')->find($sale->pos_order_id);
+            $cfg = optional(optional($posOrder)->posSession)->posConfig;
+        }
+
+        // 2) Fallback: buscar PosConfig por journal asociado (invoice/receipt)
+        if (!$cfg) {
+            $journalId = $sale->journal_id;
+            $docType = (string) (optional($sale->journal)->document_type_code ?? '');
+            if ($journalId) {
+                if ($docType === '01') {
+                    $cfg = PosConfig::query()->where('invoice_journal_id', $journalId)->first();
+                } elseif ($docType === '03') {
+                    $cfg = PosConfig::query()->where('receipt_journal_id', $journalId)->first();
+                }
+            }
+        }
+
+        // 3) Fallback: PosConfig activo por empresa
+        if (!$cfg) {
+            if (!empty($sale->company_id)) {
+                $cfg = PosConfig::query()
+                    ->where('company_id', $sale->company_id)
+                    ->where('is_active', true)
+                    ->orderBy('id')
+                    ->first();
+            }
+        }
+
+        // 4) Fallback general: cualquier PosConfig activo
+        if (!$cfg) {
+            $cfg = PosConfig::query()
+                ->where('is_active', true)
+                ->orderBy('id')
+                ->first();
+        }
+
+        if ($cfg) {
+            $applyTax = (bool) ($cfg->apply_tax ?? true);
+            $taxRate = (float) ($cfg->tax_rate ?? 0.18);
+            $pricesIncludeTax = (bool) ($cfg->prices_include_tax ?? false);
+        }
+        return [
+            'apply_tax' => $applyTax,
+            'tax_rate' => $taxRate,
+            'prices_include_tax' => $pricesIncludeTax,
+            'igv_rate' => $applyTax ? $taxRate : 0.0,
+        ];
+    }
+
+    private function buildDetailsAndTotals(Sale $sale, array $tax): array
+    {
+        $details = [];
+        $baseTotal = 0.0;
+        $igvTotal = 0.0;
+        $igvRate = (float) ($tax['igv_rate'] ?? 0.0);
+
+        foreach ($sale->variants as $variant) {
+            $qty = (float) ($variant->pivot->quantity ?? 0);
+            $price = (float) ($variant->pivot->price ?? 0);
+
+            if ($igvRate > 0 && ($tax['prices_include_tax'] ?? false)) {
+                $unitGross = round($price, 2);
+                $unitNet = round($unitGross / (1 + $igvRate), 2);
+            } else {
+                $unitNet = round($price, 2);
+                $unitGross = $igvRate > 0 ? round($unitNet * (1 + $igvRate), 2) : $unitNet;
+            }
+
+            $base = round($qty * $unitNet, 2);
+            $igv = round($base * $igvRate, 2);
+            $desc = (string) $variant->fullName;
+
+            $details[] = [
+                'tipAfeIgv' => ($igvRate > 0 ? 10 : 20),
+                'codProducto' => (string) $variant->barcode,
+                'unidad' => 'NIU',
+                'descripcion' => $desc,
+                'cantidad' => $qty,
+                'mtoValorUnitario' => $unitNet,
+                'mtoValorVenta' => $base,
+                'mtoBaseIgv' => $base,
+                'porcentajeIgv' => round($igvRate * 100, 2),
+                'igv' => $igv,
+                'totalImpuestos' => $igv,
+                'mtoPrecioUnitario' => $unitGross,
+            ];
+
+            $baseTotal += $base;
+            $igvTotal += $igv;
+        }
+
+        $baseTotal = round($baseTotal, 2);
+        $igvTotal = round($igvTotal, 2);
+        $subTotal = round($baseTotal + $igvTotal, 2);
+
+        return [
+            'details' => $details,
+            'baseTotal' => $baseTotal,
+            'igvTotal' => $igvTotal,
+            'subTotal' => $subTotal,
+        ];
+    }
+
+    private function buildCompanyPayload(Sale $sale, bool $withGeoNames = false): array
+    {
+        $company = null;
+        if (!empty($sale->company_id)) {
+            $company = Company::query()
+                ->when($withGeoNames, fn($q) => $q->with(['district.province', 'district.department']))
+                ->find($sale->company_id);
+        }
+        if (!$company) {
+            $company = Company::query()
+                ->when($withGeoNames, fn($q) => $q->with(['district.province', 'district.department']))
+                ->orderBy('id')
+                ->first();
+        }
+        $companyRuc = (string) ($company->document_number ?? '');
+        $companyRazon = (string) ($company->name ?? '');
+        $companyComercial = (string) ($company->trade_name ?? $companyRazon);
+        $ubigeo = (string) ($company->district_id ?? '');
+        $direccionFiscal = (string) ($company->tax_address ?? $company->address ?? '');
+
+        $address = [
+            'ubigueo' => $ubigeo,
+            'departamento' => $withGeoNames ? (string) (optional(optional($company)->district)->department->name ?? '') : '',
+            'provincia' => $withGeoNames ? (string) (optional(optional($company)->district)->province->name ?? '') : '',
+            'distrito' => $withGeoNames ? (string) (optional($company->district)->name ?? '') : '',
+            'urbanizacion' => '',
+            'direccion' => $direccionFiscal,
+            'codLocal' => '0000',
+        ];
+
+        return [
+            'ruc' => $companyRuc,
+            'razonSocial' => $companyRazon,
+            'nombreComercial' => $companyComercial,
+            'address' => $address,
+        ];
+    }
+
+    private function buildClientPayload(Sale $sale): array
+    {
+        $identityName = optional(optional($sale->customer)->identity)->name;
+        $clientTipoDoc = $this->mapIdentityNameToTipoDoc($identityName);
+        return [
+            'tipoDoc' => $clientTipoDoc,
+            'numDoc' => (string) optional($sale->customer)->document_number,
+            'rznSocial' => (string) optional($sale->customer)->name,
+        ];
     }
 }

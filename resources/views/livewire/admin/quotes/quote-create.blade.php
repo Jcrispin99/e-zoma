@@ -1,6 +1,9 @@
 <div x-data="{
     variants: @entangle('variants'),
+    taxes: @entangle('taxes'),
     total: @entangle('total'),
+    subtotal: 0,
+    taxTotal: 0,
     scanBuffer: '',
     lastKeyTime: 0,
 
@@ -9,13 +12,27 @@
     },
 
     init() {
-        this.$watch('variants', (newVariants) => {
-            let total = 0;
-            newVariants.forEach(variant => {
-                total += (Number(variant.quantity) || 0) * (Number(variant.price) || 0);
+        const calc = () => {
+            let subtotal = 0;
+            let taxTotal = 0;
+            (this.variants || []).forEach(variant => {
+                const qty = Number(variant.quantity) || 0;
+                const price = Number(variant.price) || 0;
+                const lineTotal = qty * price;
+                const tax = (this.taxes || []).find(t => String(t.id) === String(variant.tax_id)) || null;
+                const rate = tax ? Number(tax.rate_percent) || 0 : 0;
+                const inclusive = tax ? Boolean(tax.is_price_inclusive) : false;
+                const base = inclusive && rate > 0 ? (lineTotal / (1 + (rate / 100))) : lineTotal;
+                const taxAmt = base * (rate / 100);
+                subtotal += base;
+                taxTotal += taxAmt;
             });
-            this.total = total;
-        });
+            $data.subtotal = subtotal;
+            $data.taxTotal = taxTotal;
+            $data.total = subtotal + taxTotal;
+        };
+        calc();
+        this.$watch('variants', () => calc(), { deep: true });
     },
 
     handleScanner(e) {
@@ -44,8 +61,7 @@
             this.lastKeyTime = now;
         }
     }
-}"
-x-on:keydown.window="handleScanner($event)">
+}" x-on:keydown.window="handleScanner($event)">
 
     <x-wire-card>
 
@@ -54,10 +70,10 @@ x-on:keydown.window="handleScanner($event)">
             <div class="grid lg:grid-cols-4 gap-4">
                 <x-wire-native-select label="Diario" wire:model.live="journal_id">
                     @if($journals->isEmpty())
-                        <option value="">No hay series para cotizaciones</option>
+                    <option value="">No hay series para cotizaciones</option>
                     @endif
                     @foreach ($journals as $journal)
-                        <option value="{{ $journal->id }}">{{ $journal->name }} ({{ $journal->code }})</option>
+                    <option value="{{ $journal->id }}">{{ $journal->name }} ({{ $journal->code }})</option>
                     @endforeach
                 </x-wire-native-select>
                 <x-wire-input label="Correlativo" wire:model="correlative" readonly disabled />
@@ -70,7 +86,8 @@ x-on:keydown.window="handleScanner($event)">
                 ]" option-label="name" option-value="id" class="flex-1" />
 
             <div class="lg:flex lg:space-x-4">
-                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto" :async-data="[
+                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"
+                    :async-data="[
                         'api' => route('api.product.index'),
                         'method' => 'POST',
                     ]" option-label="name" option-value="id" class="flex-1" />
@@ -91,7 +108,8 @@ x-on:keydown.window="handleScanner($event)">
                             <th class="px-6 py-2">Producto</th>
                             <th class="px-6 py-2">Cantidad</th>
                             <th class="px-6 py-2">Precio</th>
-                            <th class="px-6 py-2">Subtotal</th>
+                            <th class="px-6 py-2">Impuesto</th>
+                            <th class="px-6 py-2">Sin Imp.</th>
                             <th class="px-6 py-2"></th>
                         </tr>
                     </thead>
@@ -105,7 +123,18 @@ x-on:keydown.window="handleScanner($event)">
                                 <td class="px-4 py-1">
                                     <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20" />
                                 </td>
-                                <td class="px-4 py-1" x-text="(variant.quantity * variant.price).toFixed(2)"></td>
+                                <td class="px-4 py-1">
+                                    <x-wire-native-select x-model="variant.tax_id">
+                                        <template x-for="tax in taxes" :key="tax.id">
+                                            <option :value="tax.id"
+                                                x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`">
+                                            </option>
+                                        </template>
+                                    </x-wire-native-select>
+                                </td>
+                                <td class="px-4 py-1"
+                                    x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return base.toFixed(2); })()">
+                                </td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
                                 </td>
@@ -113,7 +142,7 @@ x-on:keydown.window="handleScanner($event)">
                         </template>
                         <template x-if="variants.length === 0">
                             <tr>
-                                <td colspan="5" class="text-center text-gray-500 py-4">No hay productos agregados
+                                <td colspan="6" class="text-center text-gray-500 py-4">No hay productos agregados
                                 </td>
                             </tr>
                         </template>
@@ -127,6 +156,8 @@ x-on:keydown.window="handleScanner($event)">
                 <x-wire-input wire:model="observation" placeholder="Ingrese observaciones" class="flex-1" />
             </div>
             <div>
+                Subtotal: $<span x-text="subtotal.toFixed(2)"></span><br>
+                Impuestos: $<span x-text="taxTotal.toFixed(2)"></span><br>
                 Total: $<span x-text="total.toFixed(2)"></span>
             </div>
 

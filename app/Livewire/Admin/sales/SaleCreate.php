@@ -11,6 +11,7 @@ use App\Models\Quote;
 use App\Models\Journal;
 use App\Services\SequenceService;
 use App\Services\KardexServices;
+use App\Models\Tax;
 
 class SaleCreate extends Component
 {
@@ -31,12 +32,14 @@ class SaleCreate extends Component
     public $variant_id;
     public $variants = [];
 
+    public $taxes = [];
+    public $default_tax_id = null;
+
     public $journals = [];
     public $journal_id;
 
     public function boot()
     {
-        //Verificar si hay errores de validación previos
         $this->withValidator(function ($validator) {
             if ($validator->fails()) {
 
@@ -76,7 +79,26 @@ class SaleCreate extends Component
             $this->updatePreview();
         }
 
-        // Cargar datos desde cotización si viene en la URL
+        // Cargar impuestos activos (dinámicos) y definir uno por defecto
+        $this->taxes = Tax::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'rate_percent' => (float) $t->rate_percent,
+                    'is_price_inclusive' => (bool) $t->is_price_inclusive,
+                    'is_default' => (bool) $t->is_default,
+                    'invoice_label' => $t->invoice_label ?? null,
+                ];
+            })
+            ->toArray();
+        $default = collect($this->taxes)->firstWhere('is_default', true) ?? collect($this->taxes)->first();
+        $this->default_tax_id = $default['id'] ?? null;
+
         if ($this->quote_id) {
             $quote = Quote::with('variants.product')->find($this->quote_id);
             if ($quote) {
@@ -89,13 +111,23 @@ class SaleCreate extends Component
                     $this->quote_id = null;
                 } else {
                     $this->customer_id = $quote->customer_id;
-                    $this->variants = $quote->variants->map(function ($variant) {
+                    $taxesCol = collect($this->taxes);
+                    $this->variants = $quote->variants->map(function ($variant) use ($taxesCol) {
+                        $pivotRate = (float) ($variant->pivot->tax_rate ?? 0);
+                        $matched = $taxesCol->firstWhere('rate_percent', $pivotRate) ?? $taxesCol->first();
+                        $rate = (float) ($matched['rate_percent'] ?? 0);
+                        $inclusive = (bool) ($matched['is_price_inclusive'] ?? false);
+                        $lineTotal = (float) ($variant->pivot->quantity ?? 0) * (float) ($variant->pivot->price ?? 0);
+                        $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
                         return [
                             'id' => $variant->id,
                             'name' => $variant->fullName,
                             'quantity' => $variant->pivot->quantity,
                             'price' => $variant->pivot->price,
-                            'subtotal' => $variant->pivot->subtotal,
+                            'tax_id' => $matched['id'] ?? null,
+                            'tax_rate' => $rate,
+                            'tax_inclusive' => $inclusive,
+                            'subtotal' => $base,
                         ];
                     })->toArray();
                     $this->total = $quote->total;
@@ -122,13 +154,23 @@ class SaleCreate extends Component
 
                 $this->customer_id = $quote->customer_id;
 
-                $this->variants = $quote->variants->map(function ($variant) {
+                $taxesCol = collect($this->taxes);
+                $this->variants = $quote->variants->map(function ($variant) use ($taxesCol) {
+                    $pivotRate = (float) ($variant->pivot->tax_rate ?? 0);
+                    $matched = $taxesCol->firstWhere('rate_percent', $pivotRate) ?? $taxesCol->first();
+                    $rate = (float) ($matched['rate_percent'] ?? 0);
+                    $inclusive = (bool) ($matched['is_price_inclusive'] ?? false);
+                    $lineTotal = (float) ($variant->pivot->quantity ?? 0) * (float) ($variant->pivot->price ?? 0);
+                    $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
                     return [
                         'id' => $variant->id,
                         'name' => $variant->product->name,
                         'quantity' => $variant->pivot->quantity,
                         'price' => $variant->pivot->price,
-                        'subtotal' => $variant->pivot->subtotal,
+                        'tax_id' => $matched['id'] ?? null,
+                        'tax_rate' => $rate,
+                        'tax_inclusive' => $inclusive,
+                        'subtotal' => $base,
                     ];
                 })->toArray();
             }
@@ -156,12 +198,21 @@ class SaleCreate extends Component
 
         $variant = Variant::with('product')->find($this->variant_id);
 
+        $tax = $this->default_tax_id ? Tax::find($this->default_tax_id) : null;
+        $rate = (float) optional($tax)->rate_percent ?? 0;
+        $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+        $lineTotal = 1 * ((float) ($variant->price ?? 0));
+        $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
+
         $this->variants[] = [
             'id' => $variant->id,
             'name' => $variant->fullName,
             'quantity' => 1,
             'price' => $variant->price,
-            'subtotal' => $variant->price,
+            'tax_id' => $this->default_tax_id,
+            'tax_rate' => $rate,
+            'tax_inclusive' => $inclusive,
+            'subtotal' => $base,
         ];
         $this->reset('variant_id');
     }
@@ -190,7 +241,12 @@ class SaleCreate extends Component
         if ($index !== false) {
             $current = $this->variants[$index];
             $current['quantity'] = (int)($current['quantity'] ?? 0) + 1;
-            $current['subtotal'] = (float)($current['quantity'] ?? 0) * (float)($current['price'] ?? 0);
+            $rate = (float) ($current['tax_rate'] ?? 0);
+            $inclusive = (bool) ($current['tax_inclusive'] ?? false);
+            $lineTotal = (float)($current['quantity'] ?? 0) * (float)($current['price'] ?? 0);
+            $current['subtotal'] = ($inclusive && $rate > 0)
+                ? ($lineTotal / (1 + ($rate / 100)))
+                : $lineTotal;
             $this->variants[$index] = $current;
             return;
         }
@@ -254,6 +310,7 @@ class SaleCreate extends Component
                 'variants.*.id' => 'required|exists:variants,id',
                 'variants.*.quantity' => 'required|numeric|min:1',
                 'variants.*.price' => 'required|numeric|min:0',
+                'variants.*.tax_id' => 'required|exists:taxes,id',
             ],
             [],
             [
@@ -263,6 +320,7 @@ class SaleCreate extends Component
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
                 'variants.*.price' => 'precio',
+                'variants.*.tax_id' => 'impuesto',
             ]
         );
 
@@ -277,6 +335,17 @@ class SaleCreate extends Component
             return redirect()->back();
         }
 
+        // Calcular total en backend con impuestos dinámicos (incluyendo precio con impuesto)
+        $totalCalculado = 0;
+        foreach ($this->variants as $variant) {
+            $tax = Tax::find($variant['tax_id']);
+            $rate = (float) optional($tax)->rate_percent ?? 0;
+            $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+            $lineTotal = (float)($variant['quantity'] ?? 0) * (float)($variant['price'] ?? 0);
+            $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
+            $totalCalculado += $base * (1 + ($rate / 100));
+        }
+
         $parts = app(SequenceService::class)->getNextParts($this->journal_id);
 
         $sale = Sale::create([
@@ -286,17 +355,24 @@ class SaleCreate extends Component
             'quote_id' => $this->quote_id,
             'customer_id' => $this->customer_id,
             'warehouse_id' => $this->warehouse_id,
-            'total' => $this->total,
+            'total' => $totalCalculado,
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
             'journal_id' => $this->journal_id,
         ]);
 
         foreach ($this->variants as $variant) {
+            $tax = Tax::find($variant['tax_id']);
+            $rate = (float) optional($tax)->rate_percent ?? 0;
+            $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+            $lineSubtotal = (float)($variant['quantity'] ?? 0) * (float)($variant['price'] ?? 0);
+            $base = ($inclusive && $rate > 0) ? ($lineSubtotal / (1 + ($rate / 100))) : $lineSubtotal;
+
             $sale->variants()->attach($variant['id'], [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
-                'subtotal' => $variant['quantity'] * $variant['price'],
+                'tax_rate' => $rate,
+                'subtotal' => $base,
             ]);
 
             //Kardex

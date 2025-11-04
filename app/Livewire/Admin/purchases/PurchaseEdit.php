@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
 use App\Mail\PdfSend;
+use App\Models\Tax;
 
 class PurchaseEdit extends Component
 {
@@ -28,6 +29,8 @@ class PurchaseEdit extends Component
 
     public $variant_id;
     public $variants = [];
+    public $taxes = [];
+    public $default_tax_id = null;
 
     // Estados y datos del comprobante del proveedor
     public $status;
@@ -68,6 +71,26 @@ class PurchaseEdit extends Component
     {
         $this->purchase = $purchase->load('variants.product', 'variants.attributeValues', 'supplier', 'warehouse', 'purchaseOrder');
 
+        // Cargar impuestos activos (dinámicos) y definir uno por defecto
+        $this->taxes = Tax::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'rate_percent' => (float) $t->rate_percent,
+                    'is_price_inclusive' => (bool) $t->is_price_inclusive,
+                    'is_default' => (bool) $t->is_default,
+                    'invoice_label' => $t->invoice_label ?? null,
+                ];
+            })
+            ->toArray();
+        $default = collect($this->taxes)->firstWhere('is_default', true) ?? collect($this->taxes)->first();
+        $this->default_tax_id = $default['id'] ?? null;
+
         // 1. Cargar journals y asignar el de la compra existente
         $this->journals = Journal::where('type', 'purchase')->get();
         $this->journal_id = $purchase->journal_id;
@@ -83,13 +106,18 @@ class PurchaseEdit extends Component
         $this->vendor_bill_number = $purchase->vendor_bill_number;
         $this->vendor_bill_date = optional($purchase->vendor_bill_date)->format('Y-m-d');
 
-        $this->variants = $purchase->variants->map(function ($variant) {
+        $taxesCol = collect($this->taxes);
+        $this->variants = $purchase->variants->map(function ($variant) use ($taxesCol) {
+            $pivotRate = (float) ($variant->pivot->tax_rate ?? 0);
+            $matched = $taxesCol->firstWhere('rate_percent', $pivotRate) ?? $taxesCol->first();
             return [
                 'id' => $variant->id,
                 'name' => $variant->fullName,
                 'quantity' => $variant->pivot->quantity,
                 'price' => $variant->pivot->price,
-                'tax_rate' => (int) ($variant->pivot->tax_rate ?? 0),
+                'tax_id' => $matched['id'] ?? null,
+                'tax_rate' => $matched['rate_percent'] ?? 0,
+                'tax_inclusive' => (bool) ($matched['is_price_inclusive'] ?? false),
                 'subtotal' => $variant->pivot->subtotal,
             ];
         })->toArray();
@@ -120,13 +148,23 @@ class PurchaseEdit extends Component
         $variant = Variant::with('product')->find($this->variant_id);
         $lastRecord = Kardex::getLastRecord($variant->id, $this->warehouse_id);
 
+        $defaultTax = collect($this->taxes)->firstWhere('id', $this->default_tax_id) ?? collect($this->taxes)->first();
+        $rate = (float) ($defaultTax['rate_percent'] ?? 0);
+        $inclusive = (bool) ($defaultTax['is_price_inclusive'] ?? false);
+        $qty = 1;
+        $price = (float) $lastRecord['cost'];
+        $lineTotal = $qty * $price;
+        $baseSubtotal = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
+
         $this->variants[] = [
             'id' => $variant->id,
             'name' => $variant->fullName,
-            'quantity' => 1,
-            'price' => $lastRecord['cost'],
-            'tax_rate' => 18,
-            'subtotal' => $lastRecord['cost'] * 1,
+            'quantity' => $qty,
+            'price' => $price,
+            'tax_id' => $defaultTax['id'] ?? null,
+            'tax_rate' => $rate,
+            'tax_inclusive' => $inclusive,
+            'subtotal' => $baseSubtotal,
         ];
         $this->reset('variant_id');
     }
@@ -159,7 +197,12 @@ class PurchaseEdit extends Component
                 if (array_key_exists('subtotal', $this->variants[$index])) {
                     $price = (float) ($this->variants[$index]['price'] ?? 0);
                     $qty = (int) ($this->variants[$index]['quantity'] ?? 0);
-                    $this->variants[$index]['subtotal'] = $price * $qty;
+                    $rate = (float) ($this->variants[$index]['tax_rate'] ?? 0);
+                    $inclusive = (bool) ($this->variants[$index]['tax_inclusive'] ?? false);
+                    $lineTotal = $price * $qty;
+                    $this->variants[$index]['subtotal'] = ($inclusive && $rate > 0)
+                        ? ($lineTotal / (1 + ($rate / 100)))
+                        : $lineTotal;
                 }
                 return;
             }
@@ -184,7 +227,7 @@ class PurchaseEdit extends Component
                 'variants.*.id' => 'required|exists:variants,id',
                 'variants.*.quantity' => 'required|numeric|min:1',
                 'variants.*.price' => 'required|numeric|min:0',
-                'variants.*.tax_rate' => 'required|numeric|min:0',
+                'variants.*.tax_id' => 'required|exists:taxes,id',
             ],
             [],
             [
@@ -194,16 +237,20 @@ class PurchaseEdit extends Component
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
                 'variants.*.price' => 'precio',
-                'variants.*.tax_rate' => 'IGV',
+                'variants.*.tax_id' => 'IGV',
             ]
         );
 
-        // Calcular total basado en líneas y IGV
+        // Calcular total basado en impuestos inclusivos/aditivos
         $computedTotal = 0;
         foreach ($this->variants as $variant) {
-            $lineSubtotal = ($variant['quantity'] ?? 0) * ($variant['price'] ?? 0);
-            $lineTax = $lineSubtotal * (($variant['tax_rate'] ?? 0) / 100);
-            $computedTotal += $lineSubtotal + $lineTax;
+            $tax = Tax::find($variant['tax_id']);
+            $rate = (float) optional($tax)->rate_percent ?? 0;
+            $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+            $lineTotal = ($variant['quantity'] ?? 0) * ($variant['price'] ?? 0);
+            $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
+            $taxAmount = $base * ($rate / 100);
+            $computedTotal += $base + $taxAmount;
         }
         $this->total = $computedTotal;
 
@@ -220,12 +267,16 @@ class PurchaseEdit extends Component
 
         $syncData = [];
         foreach ($this->variants as $variant) {
-            $subtotal = $variant['quantity'] * $variant['price'];
+            $tax = Tax::find($variant['tax_id']);
+            $rate = (float) optional($tax)->rate_percent ?? 0;
+            $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+            $lineTotal = ($variant['quantity'] ?? 0) * ($variant['price'] ?? 0);
+            $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
             $syncData[$variant['id']] = [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
-                'tax_rate' => $variant['tax_rate'],
-                'subtotal' => $subtotal,
+                'tax_rate' => $rate,
+                'subtotal' => $base,
             ];
         }
         $this->purchase->variants()->sync($syncData);

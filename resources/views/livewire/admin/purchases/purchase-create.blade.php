@@ -3,6 +3,7 @@
     total: @entangle('total'),
     subtotal: 0,
     taxTotal: 0,
+    taxes: @js($taxes),
     scanBuffer: '',
     lastKeyTime: 0,
 
@@ -13,9 +14,13 @@
         let taxTotal = 0;
 
         this.variants.forEach(variant => {
-            const lineSubtotal = (variant.quantity || 0) * (variant.price || 0);
-            subtotal += lineSubtotal;
-            taxTotal += lineSubtotal * ((variant.tax_rate || 0) / 100);
+            const rate = Number(variant.tax_rate) || 0;
+            const inclusive = Boolean(variant.tax_inclusive);
+            const lineTotal = (Number(variant.quantity) || 0) * (Number(variant.price) || 0);
+            const base = (inclusive && rate > 0) ? (lineTotal / (1 + (rate / 100))) : lineTotal;
+            const tax = base * (rate / 100);
+            subtotal += base;
+            taxTotal += tax;
         });
 
         this.subtotal = subtotal;
@@ -54,8 +59,7 @@
             this.lastKeyTime = now;
         }
     }
-}"
-x-on:keydown.window="handleScanner($event)">
+}" x-on:keydown.window="handleScanner($event)">
 
     <x-wire-card>
 
@@ -64,10 +68,10 @@ x-on:keydown.window="handleScanner($event)">
             <div class="grid lg:grid-cols-4 gap-4">
                 <x-wire-native-select label="Serie del Documento" wire:model.live="journal_id">
                     @if($journals->isEmpty())
-                        <option value="">No hay series para compras</option>
+                    <option value="">No hay series para compras</option>
                     @endif
                     @foreach ($journals as $journal)
-                        <option value="{{ $journal->id }}">{{ $journal->name }} ({{ $journal->code }})</option>
+                    <option value="{{ $journal->id }}">{{ $journal->name }} ({{ $journal->code }})</option>
                     @endforeach
                 </x-wire-native-select>
 
@@ -75,19 +79,22 @@ x-on:keydown.window="handleScanner($event)">
 
                 <x-wire-input label="Fecha" wire:model="date" type="date" />
 
-                <x-wire-select label="Orden de Compra" wire:model.live="purchase_order_id" placeholder="Seleccione una orden de compra" :async-data="[
+                <x-wire-select label="Orden de Compra" wire:model.live="purchase_order_id"
+                    placeholder="Seleccione una orden de compra" :async-data="[
                         'api' => route('api.purchase-orders.index'),
                         'method' => 'POST',
                     ]" option-label="name" option-value="id" option-description="description" class="flex-1" />
 
                 <div class="col-span-2">
-                    <x-wire-select label="Proveedor" wire:model="supplier_id" placeholder="Seleccione un proveedor" :async-data="[
+                    <x-wire-select label="Proveedor" wire:model="supplier_id" placeholder="Seleccione un proveedor"
+                        :async-data="[
                             'api' => route('api.suppliers.index'),
                             'method' => 'POST',
                         ]" option-label="name" option-value="id" class="flex-1" option-description="description" />
                 </div>
                 <div class="col-span-2">
-                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén" :async-data="[
+                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén"
+                        :async-data="[
                             'api' => route('api.warehouse.index'),
                             'method' => 'POST',
                             'params' => [
@@ -100,7 +107,8 @@ x-on:keydown.window="handleScanner($event)">
 
 
             <div class="lg:flex lg:space-x-4">
-                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto" :async-data="[
+                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"
+                    :async-data="[
                         'api' => route('api.product.index'),
                         'method' => 'POST',
                     ]" option-label="name" option-value="id" class="flex-1" />
@@ -122,7 +130,7 @@ x-on:keydown.window="handleScanner($event)">
                             <th class="px-6 py-2">Cantidad</th>
                             <th class="px-6 py-2">Precio</th>
                             <th class="px-6 py-2">Impuesto</th>
-                            <th class="px-6 py-2">Subtotal</th>
+                            <th class="px-6 py-2">Sin Imp.</th>
                             <th class="px-6 py-2"></th>
                         </tr>
                     </thead>
@@ -134,16 +142,23 @@ x-on:keydown.window="handleScanner($event)">
                                     <x-wire-input type="number" x-model.number="variant.quantity" />
                                 </td>
                                 <td class="px-4 py-1">
-                                    <x-wire-input type="number" x-model.number="variant.price" step="0.01" class="w-20" />
+                                    <x-wire-input type="number" x-model.number="variant.price" step="0.01"
+                                        class="w-20" />
                                 </td>
                                 <td class="px-4 py-1">
-                                    <x-wire-native-select x-model="variant.tax_rate">
-                                        <option value="0">Inafecto</option>
-                                        <option value="10">IGV 10%</option>
-                                        <option value="18">IGV 18%</option>
-                                    </x-wire-native-select>
+                                    <select x-model="variant.tax_id"
+                                        x-on:change="(() => { const t = taxes.find(t => t.id == Number(variant.tax_id)); variant.tax_rate = t ? Number(t.rate_percent) : 0; variant.tax_inclusive = t ? Boolean(t.is_price_inclusive) : false; calculateTotals(); })()"
+                                        class="form-select block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        @foreach($taxes as $tax)
+                                        <option value="{{ $tax['id'] }}">
+                                            {{ $tax['invoice_label'] ?? $tax['name'] }}
+                                            @if(!empty($tax['is_price_inclusive'])) (TTC) @endif
+                                        </option>
+                                        @endforeach
+                                    </select>
                                 </td>
-                                <td class="px-4 py-1" x-text="(variant.quantity * variant.price).toFixed(2)"></td>
+                                <td class="px-4 py-1"
+                                    x-text="(((variant.tax_inclusive && Number(variant.tax_rate) > 0) ? ((Number(variant.quantity) * Number(variant.price)) / (1 + (Number(variant.tax_rate) / 100))) : (Number(variant.quantity) * Number(variant.price)))).toFixed(2)"></td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
                                 </td>

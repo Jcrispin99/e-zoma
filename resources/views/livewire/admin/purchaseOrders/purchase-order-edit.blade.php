@@ -3,11 +3,13 @@
     total: @entangle('total'),
     subtotal: 0,
     taxTotal: 0,
+    taxes: @js($taxes),
     scanBuffer: '',
     lastKeyTime: 0,
 
     removeVariant(index) {
         this.variants.splice(index, 1);
+        this.calculateTotals();
     },
 
     calculateTotals() {
@@ -15,9 +17,23 @@
         let taxTotal = 0;
 
         this.variants.forEach(variant => {
-            const lineSubtotal = (variant.quantity || 0) * (variant.price || 0);
-            subtotal += lineSubtotal;
-            taxTotal += lineSubtotal * ((variant.tax_rate || 0) / 100);
+            const q = Number(variant.quantity || 0);
+            const p = Number(variant.price || 0);
+            const r = Number(variant.tax_rate || 0) / 100;
+            const inclusive = Boolean(variant.tax_inclusive || false);
+
+            const gross = q * p;
+            if (inclusive && r > 0) {
+                const base = gross / (1 + r);
+                const tax = gross - base;
+                subtotal += base;
+                taxTotal += tax;
+            } else {
+                const base = gross;
+                const tax = base * r;
+                subtotal += base;
+                taxTotal += tax;
+            }
         });
 
         this.subtotal = subtotal;
@@ -27,7 +43,7 @@
 
     init() {
         this.calculateTotals();
-        this.$watch('variants', () => this.calculateTotals());
+        this.$watch('variants', () => this.calculateTotals(), { deep: true });
     },
 
     handleScanner(e) {
@@ -60,9 +76,11 @@
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
-                <x-wire-badge :label="str($purchaseOrder->status)->upper()" :color="$purchaseOrder->status === 'draft' ? 'slate' : ($purchaseOrder->status === 'confirmed' ? 'blue' : ($purchaseOrder->status === 'done' ? 'emerald' : 'rose'))" />
+                <x-wire-badge :label="str($purchaseOrder->status)->upper()"
+                    :color="$purchaseOrder->status === 'draft' ? 'slate' : ($purchaseOrder->status === 'confirmed' ? 'blue' : ($purchaseOrder->status === 'done' ? 'emerald' : 'rose'))" />
                 @if($purchaseOrder->billing_status)
-                <x-wire-badge :label="str($purchaseOrder->billing_status)->upper()" :color="$purchaseOrder->billing_status === 'complete' ? 'emerald' : ($purchaseOrder->billing_status === 'partial' ? 'amber' : 'slate')" />
+                <x-wire-badge :label="str($purchaseOrder->billing_status)->upper()"
+                    :color="$purchaseOrder->billing_status === 'complete' ? 'emerald' : ($purchaseOrder->billing_status === 'partial' ? 'amber' : 'slate')" />
                 @endif
             </div>
 
@@ -113,7 +131,8 @@
                 ]" option-label="name" option-value="id" class="flex-1" />
 
             <div class="lg:flex lg:space-x-4">
-                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto" :async-data="[
+                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"
+                    :async-data="[
                         'api' => route('api.product.index'),
                         'method' => 'POST',
                     ]" option-label="name" option-value="id" class="flex-1" />
@@ -135,7 +154,7 @@
                             <th class="px-6 py-2">Cantidad</th>
                             <th class="px-6 py-2">Precio</th>
                             <th class="px-6 py-2">Impuesto</th>
-                            <th class="px-6 py-2">Subtotal</th>
+                            <th class="px-6 py-2">Sin Imp.</th>
                             <th class="px-6 py-2"></th>
                         </tr>
                     </thead>
@@ -150,13 +169,20 @@
                                     <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20" />
                                 </td>
                                 <td class="px-4 py-1">
-                                    <x-wire-native-select x-model="variant.tax_rate">
-                                        <option value="0">Inafecto</option>
-                                        <option value="10">IGV 10%</option>
-                                        <option value="18">IGV 18%</option>
-                                    </x-wire-native-select>
+                                    <select x-model="variant.tax_id"
+                                        x-on:change="(() => { const t = taxes.find(t => t.id == Number(variant.tax_id)); variant.tax_rate = t ? Number(t.rate_percent) : 0; variant.tax_inclusive = t ? Boolean(t.is_price_inclusive) : false; calculateTotals(); })()"
+                                        class="form-select block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
+                                        @foreach($taxes as $tax)
+                                        <option value="{{ $tax['id'] }}">
+                                            {{ $tax['invoice_label'] ?? $tax['name'] }}
+                                            @if(!empty($tax['is_price_inclusive'])) (TTC) @endif
+                                        </option>
+                                        @endforeach
+                                    </select>
                                 </td>
-                                <td class="px-4 py-1" x-text="(variant.quantity * variant.price).toFixed(2)"></td>
+                                <td class="px-4 py-1"
+                                    x-text="( (variant.tax_inclusive && Number(variant.tax_rate) > 0) ? ((variant.quantity * variant.price) / (1 + (Number(variant.tax_rate) / 100))) : (variant.quantity * variant.price) ).toFixed(2)">
+                                </td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
                                 </td>

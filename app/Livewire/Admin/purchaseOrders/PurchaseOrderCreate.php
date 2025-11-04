@@ -3,6 +3,7 @@
 namespace App\Livewire\Admin\purchaseOrders;
 
 use App\Models\Journal;
+use App\Models\Tax;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\PurchaseOrder;
@@ -22,6 +23,7 @@ class PurchaseOrderCreate extends Component
 
     public $variant_id;
     public $variants = [];
+    public $taxes = [];
 
     public function boot()
     {
@@ -57,6 +59,12 @@ class PurchaseOrderCreate extends Component
             ->orderBy('name')
             ->get();
 
+        // Cargar impuestos activos desde BD para la vista
+        $this->taxes = Tax::active()
+            ->orderBy('name')
+            ->get(['id', 'name', 'invoice_label', 'rate_percent', 'is_price_inclusive'])
+            ->toArray();
+
         $journalsCol = collect($this->journals);
         if ($journalsCol->isNotEmpty()) {
             $first = $journalsCol->first();
@@ -87,12 +95,20 @@ class PurchaseOrderCreate extends Component
 
         $variant = Variant::with('product')->find($this->variant_id);
 
+        // Impuesto por defecto (marcado en BD) o el primero activo
+        $defaultTax = Tax::where('is_active', true)->where('is_default', true)->first();
+        if (!$defaultTax) {
+            $defaultTax = Tax::active()->orderBy('name')->first();
+        }
+
         $this->variants[] = [
             'id' => $variant->id,
             'name' => $variant->fullName,
             'quantity' => 1,
             'price' => 0,
-            'tax_rate' => 0, // Valor inicial para el impuesto
+            'tax_id' => optional($defaultTax)->id,
+            'tax_rate' => optional($defaultTax)->rate_percent ?? 0,
+            'tax_inclusive' => (bool) (optional($defaultTax)->is_price_inclusive ?? false),
             'subtotal' => 0,
         ];
         $this->reset('variant_id');
@@ -129,12 +145,19 @@ class PurchaseOrderCreate extends Component
         if ($existingIndex !== false) {
             $this->variants[$existingIndex]['quantity'] = (int) ($this->variants[$existingIndex]['quantity'] ?? 0) + 1;
         } else {
+            $defaultTax = Tax::where('is_active', true)->where('is_default', true)->first();
+            if (!$defaultTax) {
+                $defaultTax = Tax::active()->orderBy('name')->first();
+            }
+
             $this->variants[] = [
                 'id' => $variant->id,
                 'name' => $variant->fullName,
                 'quantity' => 1,
                 'price' => 0,
-                'tax_rate' => 0,
+                'tax_id' => optional($defaultTax)->id,
+                'tax_rate' => optional($defaultTax)->rate_percent ?? 0,
+                'tax_inclusive' => (bool) (optional($defaultTax)->is_price_inclusive ?? false),
                 'subtotal' => 0,
             ];
         }
@@ -192,7 +215,7 @@ class PurchaseOrderCreate extends Component
                 'variants.*.id' => 'required|exists:variants,id',
                 'variants.*.quantity' => 'required|numeric|min:1',
                 'variants.*.price' => 'required|numeric|min:0',
-                'variants.*.tax_rate' => 'required|numeric|in:0,10,18', // Validar impuesto
+                'variants.*.tax_id' => 'required|exists:taxes,id',
             ],
             [],
             [
@@ -202,7 +225,7 @@ class PurchaseOrderCreate extends Component
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
                 'variants.*.price' => 'precio',
-                'variants.*.tax_rate' => 'impuesto', // Mensaje para impuesto
+                'variants.*.tax_id' => 'impuesto',
             ]
         );
 
@@ -219,9 +242,35 @@ class PurchaseOrderCreate extends Component
 
         // Calcular el total en el backend para seguridad
         $totalCalculado = 0;
+        $linesPivot = [];
         foreach ($this->variants as $variant) {
-            $subtotal = $variant['quantity'] * $variant['price'];
-            $totalCalculado += $subtotal * (1 + $variant['tax_rate'] / 100);
+            $qty = (float) $variant['quantity'];
+            $price = (float) $variant['price'];
+
+            $tax = Tax::find($variant['tax_id']);
+            $rate = (float) optional($tax)->rate_percent ?? 0.0;
+            $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+
+            $gross = $qty * $price; // monto que el usuario ve
+            if ($inclusive && $rate > 0) {
+                $base = $gross / (1 + ($rate / 100));
+                $taxAmount = $gross - $base;
+                $lineTotal = $gross; // ya incluye impuesto
+            } else {
+                $base = $gross;
+                $taxAmount = $base * ($rate / 100);
+                $lineTotal = $base + $taxAmount;
+            }
+
+            $totalCalculado += $lineTotal;
+
+            $linesPivot[] = [
+                'variant_id' => $variant['id'],
+                'quantity' => $qty,
+                'price' => $price,
+                'tax_rate' => $rate,
+                'subtotal' => $base,
+            ];
         }
 
         // Obtener serie y correlativo con consumo de secuencia
@@ -238,12 +287,12 @@ class PurchaseOrderCreate extends Component
             'journal_id' => $this->journal_id,
         ]);
 
-        foreach ($this->variants as $variant) {
-            $purchaseOrder->variants()->attach($variant['id'], [
-                'quantity' => $variant['quantity'],
-                'price' => $variant['price'],
-                'tax_rate' => $variant['tax_rate'], // Guardar el impuesto
-                'subtotal' => $variant['quantity'] * $variant['price'],
+        foreach ($linesPivot as $line) {
+            $purchaseOrder->variants()->attach($line['variant_id'], [
+                'quantity' => $line['quantity'],
+                'price' => $line['price'],
+                'tax_rate' => $line['tax_rate'],
+                'subtotal' => $line['subtotal'],
             ]);
         }
 

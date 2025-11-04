@@ -33,6 +33,7 @@ class DatabaseSeeder extends Seeder
             AttributeSeeder::class,
             RolesSeeder::class,
             SequenceSeeder::class,
+            TaxSeeder::class,
             PaymentMethodSeeder::class,
             LoyaltyProgramSeeder::class,
             LoyaltyEarnRulesSeeder::class,

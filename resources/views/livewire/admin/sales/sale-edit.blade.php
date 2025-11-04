@@ -1,10 +1,35 @@
 <div x-data="{
     variants: @entangle('variants'),
+    taxes: @entangle('taxes'),
     total: @entangle('total'),
+    subtotal: 0,
+    taxTotal: 0,
     scanBuffer: '',
     lastKeyTime: 0,
     removeVariant(index) { this.variants.splice(index, 1); },
-    init() { this.$watch('variants', (vs) => { let t = 0; vs.forEach(v => t += (v.quantity||0)*(v.price||0)); this.total = t; }); },
+    init() {
+        const calc = () => {
+            let subtotal = 0;
+            let taxTotal = 0;
+            (variants || []).forEach(v => {
+                const qty = Number(v.quantity) || 0;
+                const price = Number(v.price) || 0;
+                const line = qty * price;
+                const tax = (taxes || []).find(t => String(t.id) === String(v.tax_id)) || null;
+                const rate = tax ? Number(tax.rate_percent) || 0 : 0;
+                const inclusive = tax ? Boolean(tax.is_price_inclusive) : false;
+                const base = (inclusive && rate > 0) ? (line / (1 + (rate / 100))) : line;
+                const taxAmt = base * (rate / 100);
+                subtotal += base;
+                taxTotal += taxAmt;
+            });
+            $data.subtotal = subtotal;
+            $data.taxTotal = taxTotal;
+            $data.total = subtotal + taxTotal;
+        };
+        calc();
+        this.$watch('variants', () => calc(), { deep: true });
+    },
     handleScanner(e) {
         const key = e.key;
         const now = Date.now();
@@ -22,26 +47,27 @@
             this.scanBuffer += key; this.lastKeyTime = now;
         }
     }
-}"
-x-on:keydown.window="handleScanner($event)">
+}" x-on:keydown.window="handleScanner($event)">
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
-                <x-wire-badge :label="str($sale->status)->upper()" :color="$sale->status === 'draft' ? 'slate' : ($sale->status === 'posted' ? 'emerald' : 'rose')" />
+                <x-wire-badge :label="str($sale->status)->upper()"
+                    :color="$sale->status === 'draft' ? 'slate' : ($sale->status === 'posted' ? 'emerald' : 'rose')" />
                 @if($sale->payment_status)
-                <x-wire-badge :label="str($sale->payment_status)->upper()" :color="$sale->payment_status === 'paid' ? 'emerald' : ($sale->payment_status === 'partial' ? 'amber' : 'slate')" />
+                <x-wire-badge :label="str($sale->payment_status)->upper()"
+                    :color="$sale->payment_status === 'paid' ? 'emerald' : ($sale->payment_status === 'partial' ? 'amber' : 'slate')" />
                 @endif
                 @if($sale->sunat_status)
                 @php
-                    $sunatColor = match($sale->sunat_status) {
-                        'accepted' => 'emerald',
-                        'sent' => 'sky',
-                        'processing' => 'amber',
-                        'queued' => 'slate',
-                        'pending' => 'slate',
-                        'error' => 'rose',
-                        default => 'gray',
-                    };
+                $sunatColor = match($sale->sunat_status) {
+                'accepted' => 'emerald',
+                'sent' => 'sky',
+                'processing' => 'amber',
+                'queued' => 'slate',
+                'pending' => 'slate',
+                'error' => 'rose',
+                default => 'gray',
+                };
                 @endphp
                 <x-wire-badge :label="'SUNAT: ' . str($sale->sunat_status)->upper()" :color="$sunatColor" />
                 @endif
@@ -53,7 +79,8 @@ x-on:keydown.window="handleScanner($event)">
                 <x-wire-button light red label="Cancelar" wire:click="cancel" wire:loading.attr="disabled" />
                 @elseif($sale->status === 'posted')
                 @if($sale->payment_status !== 'paid')
-                <x-wire-button light emerald label="Registrar pago" wire:click="markPaid" wire:loading.attr="disabled" />
+                <x-wire-button light emerald label="Registrar pago" wire:click="markPaid"
+                    wire:loading.attr="disabled" />
                 @endif
                 <x-wire-button light red label="Anular" wire:click="cancel" wire:loading.attr="disabled" />
                 @elseif($sale->status === 'cancelled')
@@ -72,11 +99,13 @@ x-on:keydown.window="handleScanner($event)">
                     descargar
                 </x-wire-button>
 
-                @php $canSendSunat = !(data_get($sale->sunat_response,'accepted') === true || in_array($sale->sunat_status, ['accepted','queued','processing'])); @endphp
+                @php $canSendSunat = !(data_get($sale->sunat_response,'accepted') === true ||
+                in_array($sale->sunat_status, ['accepted','queued','processing'])); @endphp
                 @if($canSendSunat)
-                    <x-wire-button light indigo label="Enviar SUNAT" wire:click="sendSunat" wire:loading.attr="disabled" spinner class="ml-2" />
+                <x-wire-button light indigo label="Enviar SUNAT" wire:click="sendSunat" wire:loading.attr="disabled"
+                    spinner class="ml-2" />
                 @else
-                    <x-wire-button light gray label="Enviar SUNAT" disabled class="ml-2" />
+                <x-wire-button light gray label="Enviar SUNAT" disabled class="ml-2" />
                 @endif
 
                 <!-- Acciones: Notas -->
@@ -91,11 +120,53 @@ x-on:keydown.window="handleScanner($event)">
         </div>
         @php $pollStatuses = ['queued','processing']; @endphp
         @if(in_array($sale->sunat_status, $pollStatuses))
-            <div class="hidden" wire:poll.15s="refreshSale"></div>
+        <div class="hidden" wire:poll.15s="refreshSale"></div>
         @endif
     </x-wire-card>
 
 
+
+    @php
+    $docType = (string) (optional($sale->journal)->document_type_code ?? '');
+    $isNote = in_array($docType, ['07','08'], true);
+    $isCredit = $docType === '07';
+    $motivoCode = $isCredit ? '01' : ($docType === '08' ? '02' : null);
+    $motivoLabel = $isCredit ? 'ANULACION DE LA OPERACION' : ($docType === '08' ? 'AUMENTO EN EL VALOR' : null);
+    // Documento afectado (tipo y número) desde los campos persistidos o la relación
+    $affType = (string) ($sale->original_document_type_code ??
+    (optional(optional($sale->originalSale)->journal)->document_type_code ?? ''));
+    $affSerie = (string) ($sale->original_serie ?? (optional($sale->originalSale)->serie ?? ''));
+    $affCorr = (string) ($sale->original_correlative ?? (optional($sale->originalSale)->correlative ?? ''));
+    $affNumber = trim(($affSerie !== '' && $affCorr !== '') ? ($affSerie . '-' . $affCorr) : '');
+    if ($affType === '' && $affSerie !== '') {
+    $affType = str_starts_with($affSerie, 'F') ? '01' : (str_starts_with($affSerie, 'B') ? '03' : '');
+    }
+    @endphp
+
+    @if($isNote)
+    <x-wire-card>
+        <div class="grid lg:grid-cols-4 gap-4">
+            <div>
+                <x-label>Tipo de comprobante</x-label>
+                <div class="text-sm text-gray-800">{{ $isCredit ? 'Nota de Crédito (07)' : 'Nota de Débito (08)' }}
+                </div>
+            </div>
+            <div>
+                <x-label>Documento afectado (tipo)</x-label>
+                <div class="text-sm text-gray-800">{{ $affType !== '' ? $affType : '—' }}</div>
+            </div>
+            <div>
+                <x-label>Documento afectado (número)</x-label>
+                <div class="text-sm text-gray-800">{{ $affNumber !== '' ? $affNumber : '—' }}</div>
+            </div>
+            <div>
+                <x-label>Motivo SUNAT</x-label>
+                <div class="text-sm text-gray-800">{{ $motivoCode && $motivoLabel ? ($motivoCode . ' - ' . $motivoLabel)
+                    : '—' }}</div>
+            </div>
+        </div>
+    </x-wire-card>
+    @endif
 
     <x-wire-card>
         <form wire:submit="save" class="space-y-4" x-on:keydown.enter.prevent>
@@ -105,17 +176,24 @@ x-on:keydown.window="handleScanner($event)">
                 <x-wire-input label="Fecha" wire:model.live="date" type="date" />
 
                 <div class="col-span-2">
-                    <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente" :async-data="['api' => route('api.customers.index'), 'method' => 'POST']" option-label="name" option-value="id" class="flex-1" option-description="description" />
+                    <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente"
+                        :async-data="['api' => route('api.customers.index'), 'method' => 'POST']" option-label="name"
+                        option-value="id" class="flex-1" option-description="description" />
                 </div>
                 <div class="col-span-2">
-                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén" :async-data="['api' => route('api.warehouse.index'), 'method' => 'POST', 'params' => ['company_ids' => session()->get('selected_company_ids', [])]]" option-label="name" option-value="id" class="flex-1" option-description="description" />
+                    <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén"
+                        :async-data="['api' => route('api.warehouse.index'), 'method' => 'POST', 'params' => ['company_ids' => session()->get('selected_company_ids', [])]]"
+                        option-label="name" option-value="id" class="flex-1" option-description="description" />
                 </div>
             </div>
 
             <div class="lg:flex lg:space-x-4">
-                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto" :async-data="['api' => route('api.product.index'), 'method' => 'POST']" option-label="name" option-value="id" class="flex-1" />
+                <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"
+                    :async-data="['api' => route('api.product.index'), 'method' => 'POST']" option-label="name"
+                    option-value="id" class="flex-1" />
                 <div class="flex-shrink-0">
-                    <x-wire-button wire:click="addProduct" class="mt-4 w-full lg:mt-6.5" spinner>Agregar producto</x-wire-button>
+                    <x-wire-button wire:click="addProduct" class="mt-4 w-full lg:mt-6.5" spinner>Agregar producto
+                    </x-wire-button>
                 </div>
             </div>
 
@@ -126,7 +204,8 @@ x-on:keydown.window="handleScanner($event)">
                             <th class="px-6 py-2">Producto</th>
                             <th class="px-6 py-2">Cantidad</th>
                             <th class="px-6 py-2">Precio</th>
-                            <th class="px-6 py-2">Subtotal</th>
+                            <th class="px-6 py-2">Impuesto</th>
+                            <th class="px-6 py-2">Sin Imp.</th>
                             <th class="px-6 py-2"></th>
                         </tr>
                     </thead>
@@ -140,7 +219,14 @@ x-on:keydown.window="handleScanner($event)">
                                 <td class="px-4 py-1">
                                     <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20" />
                                 </td>
-                                <td class="px-4 py-1" x-text="(variant.quantity * variant.price).toFixed(2)"></td>
+                                <td class="px-4 py-1">
+                                    <x-wire-native-select x-model="variant.tax_id">
+                                        <template x-for="tax in taxes" :key="tax.id">
+                                            <option :value="tax.id" x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`"></option>
+                                        </template>
+                                    </x-wire-native-select>
+                                </td>
+                                <td class="px-4 py-1" x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return base.toFixed(2); })()"></td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
                                 </td>
@@ -148,7 +234,7 @@ x-on:keydown.window="handleScanner($event)">
                         </template>
                         <template x-if="variants.length === 0">
                             <tr>
-                                <td colspan="5" class="text-center text-gray-500 py-4">No hay productos agregados</td>
+                                <td colspan="6" class="text-center text-gray-500 py-4">No hay productos agregados</td>
                             </tr>
                         </template>
                     </tbody>
@@ -160,6 +246,8 @@ x-on:keydown.window="handleScanner($event)">
                 <x-wire-input wire:model="observation" placeholder="Ingrese observaciones" class="flex-1" />
             </div>
             <div>
+                Subtotal: $<span x-text="Number(subtotal ?? 0).toFixed(2)"></span><br>
+                Impuestos: $<span x-text="Number(taxTotal ?? 0).toFixed(2)"></span><br>
                 Total: $<span x-text="Number(total ?? 0).toFixed(2)"></span>
             </div>
 
@@ -189,18 +277,21 @@ x-on:keydown.window="handleScanner($event)">
         <x-slot name="title">
             <p class="text-xl text-center mb-2">Generar {{ str($noteForm['title'] ?? 'Nota')->title() }}</p>
             <p class="text-lg text-center uppercase font-bold mb-2">{{ $sale->serie }}-{{ $sale->correlative }}</p>
-            <p class="text-sm text-center text-gray-600">Cliente: {{ optional($sale->customer)->document_number }} - {{ optional($sale->customer)->name }}</p>
+            <p class="text-sm text-center text-gray-600">Cliente: {{ optional($sale->customer)->document_number }} - {{
+                optional($sale->customer)->name }}</p>
         </x-slot>
 
         <div class="space-y-4">
             <div class="grid lg:grid-cols-3 gap-4">
-                <x-wire-input label="Motivo" wire:model="noteForm.reason_label" placeholder="Ej: ANULACION DE LA OPERACION" />
+                <x-wire-input label="Motivo" wire:model="noteForm.reason_label"
+                    placeholder="Ej: ANULACION DE LA OPERACION" />
                 <x-wire-input label="Código motivo (SUNAT)" wire:model="noteForm.reason_code" placeholder="01 / 02" />
                 <x-wire-input label="Observaciones" wire:model="noteForm.observation" placeholder="Opcional" />
             </div>
 
             <div class="text-sm text-gray-700">
-                <p>Modo: <strong>{{ $noteForm['mode'] ?? 'total' }}</strong>. Por ahora solo se admite anulación total para NC y ajuste total para ND.</p>
+                <p>Modo: <strong>{{ $noteForm['mode'] ?? 'total' }}</strong>. Por ahora solo se admite anulación total
+                    para NC y ajuste total para ND.</p>
             </div>
 
             <div class="flex justify-end gap-2">

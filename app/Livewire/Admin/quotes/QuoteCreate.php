@@ -2,14 +2,17 @@
 
 namespace App\Livewire\Admin\quotes;
 
+use App\Livewire\Concerns\WithTaxes;
 use App\Models\Variant;
 use Livewire\Component;
 use App\Models\Quote;
 use App\Services\SequenceService;
 use App\Models\Journal;
+use App\Models\Tax;
 
 class QuoteCreate extends Component
 {
+
     public $date;
     public $customer_id;
     public $total = 0;
@@ -17,6 +20,9 @@ class QuoteCreate extends Component
 
     public $variant_id;
     public $variants = [];
+    public $taxes = [];
+    public $default_tax_id = null;
+
 
     public $correlative;
     public $journals = [];
@@ -26,6 +32,27 @@ class QuoteCreate extends Component
     {
         $this->date = now()->format('Y-m-d');
         $this->variants = [];
+
+        // Cargar impuestos activos (dinámicos) y definir uno por defecto
+        $this->taxes = Tax::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'rate_percent' => (float) $t->rate_percent,
+                    'is_price_inclusive' => (bool) $t->is_price_inclusive,
+                    'is_default' => (bool) $t->is_default,
+                    'invoice_label' => $t->invoice_label ?? null,
+                ];
+            })
+            ->toArray();
+
+        $default = collect($this->taxes)->firstWhere('is_default', true) ?? collect($this->taxes)->first();
+        $this->default_tax_id = $default['id'] ?? null;
 
         // 1. Cargar journals de tipo 'quote' con sus secuencias para evitar N+1
         $this->journals = Journal::where('type', 'quote')
@@ -117,12 +144,22 @@ class QuoteCreate extends Component
 
         $variant = Variant::with('product')->find($this->variant_id);
 
+        // Impuesto por defecto
+        $tax = $this->default_tax_id ? Tax::find($this->default_tax_id) : null;
+        $rate = (float) optional($tax)->rate_percent ?? 0;
+        $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+        $lineTotal = 1 * ((float) ($variant->price ?? 0));
+        $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
+
         $this->variants[] = [
             'id' => $variant->id,
             'name' => $variant->fullName,
             'quantity' => 1,
             'price' => $variant->price,
-            'subtotal' => $variant->price,
+            'tax_id' => $this->default_tax_id,
+            'tax_rate' => $rate,
+            'tax_inclusive' => $inclusive,
+            'subtotal' => $base,
         ];
         $this->reset('variant_id');
     }
@@ -151,7 +188,12 @@ class QuoteCreate extends Component
         if ($index !== false) {
             $current = $this->variants[$index];
             $current['quantity'] = (int)($current['quantity'] ?? 0) + 1;
-            $current['subtotal'] = (float)($current['quantity'] ?? 0) * (float)($current['price'] ?? 0);
+            $rate = (float) ($current['tax_rate'] ?? 0);
+            $inclusive = (bool) ($current['tax_inclusive'] ?? false);
+            $lineTotal = (float)($current['quantity'] ?? 0) * (float)($current['price'] ?? 0);
+            $current['subtotal'] = ($inclusive && $rate > 0)
+                ? ($lineTotal / (1 + ($rate / 100)))
+                : $lineTotal;
             $this->variants[$index] = $current;
             return;
         }
@@ -174,6 +216,7 @@ class QuoteCreate extends Component
                 'variants.*.id' => 'required|exists:variants,id',
                 'variants.*.quantity' => 'required|numeric|min:1',
                 'variants.*.price' => 'required|numeric|min:0',
+                'variants.*.tax_id' => 'required|exists:taxes,id',
             ],
             [],
             [
@@ -183,6 +226,7 @@ class QuoteCreate extends Component
                 'variants.*.id' => 'producto',
                 'variants.*.quantity' => 'cantidad',
                 'variants.*.price' => 'precio',
+                'variants.*.tax_id' => 'impuesto',
             ]
         );
 
@@ -197,6 +241,18 @@ class QuoteCreate extends Component
             return redirect()->back();
         }
 
+        // Calcular total con impuestos dinámicos (incluyendo precios TTC si aplica)
+        $totalCalculado = 0;
+        foreach ($this->variants as $variant) {
+            $tax = Tax::find($variant['tax_id']);
+            $rate = (float) optional($tax)->rate_percent ?? 0;
+            $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+            $lineTotal = ($variant['quantity'] ?? 0) * ($variant['price'] ?? 0);
+            $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
+            $taxAmount = $base * ($rate / 100);
+            $totalCalculado += $base + $taxAmount;
+        }
+
         $sequenceData = app(SequenceService::class)->getNextParts($this->journal_id);
 
         $quote = Quote::create([
@@ -205,17 +261,24 @@ class QuoteCreate extends Component
             'correlative' => $sequenceData['correlative'],
             'date' => $this->date ?? now(),
             'customer_id' => $this->customer_id,
-            'total' => $this->total,
+            'total' => $totalCalculado,
             'observation' => $this->observation,
             'company_id' => $activeCompanyId,
             'status' => 'draft',
         ]);
 
         foreach ($this->variants as $variant) {
+            $tax = Tax::find($variant['tax_id']);
+            $rate = (float) optional($tax)->rate_percent ?? 0;
+            $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
+            $lineTotal = ($variant['quantity'] ?? 0) * ($variant['price'] ?? 0);
+            $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
+
             $quote->variants()->attach($variant['id'], [
                 'quantity' => $variant['quantity'],
                 'price' => $variant['price'],
-                'subtotal' => $variant['quantity'] * $variant['price'],
+                'tax_rate' => $rate,
+                'subtotal' => $base,
             ]);
         }
 

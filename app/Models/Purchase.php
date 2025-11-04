@@ -28,7 +28,7 @@ class Purchase extends Model
         'vendor_bill_date' => 'date',
     ];
 
-     public function journal()
+    public function journal()
     {
         return $this->belongsTo(Journal::class);
     }

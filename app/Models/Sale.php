@@ -68,7 +68,7 @@ class Sale extends Model
     public function variants()
     {
         return $this->morphToMany(Variant::class, 'variantable')
-            ->withPivot('quantity', 'price', 'subtotal')
+            ->withPivot('quantity', 'price', 'tax_rate', 'subtotal')
             ->withTimestamps();
     }
     public function inventories()

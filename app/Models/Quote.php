@@ -21,7 +21,7 @@ class Quote extends Model
     protected $casts = [
         'date' => 'datetime',
     ];
-    
+
     public function journal()
     {
         return $this->belongsTo(Journal::class);
@@ -35,7 +35,7 @@ class Quote extends Model
     public function variants()
     {
         return $this->morphToMany(Variant::class, 'variantable')
-            ->withPivot('quantity', 'price', 'subtotal')
+            ->withPivot('quantity', 'price', 'tax_rate', 'subtotal')
             ->withTimestamps();
     }
 

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { getCache, setCache } from '../composables/useCache.js';
+import { watch } from 'vue';
 
 // Util para origen backend (Blade inyecta meta)
 const backendOrigin =
@@ -23,6 +24,7 @@ export const useSessionStore = defineStore('pos-session', {
     variants: [],
     online: true,
     loading: false,
+    pendingSyncs: getCache('pos:pendingSyncs', []),
     error: null,
   }),
   actions: {
@@ -88,29 +90,52 @@ export const useSessionStore = defineStore('pos-session', {
       }
     },
     async sync(orders) {
-      if (!this.sessionId) throw new Error('No session');
-      if (!this.getXsrfToken()) {
-        await fetch(new URL(`/sanctum/csrf-cookie`, backendOrigin), {
-          credentials: 'include',
-        });
+      if (!this.online) {
+        console.log('Modo offline: venta guardada en cola.');
+        this.pendingSyncs.push(...orders);
+        // Persistir inmediatamente por robustez (además del watch)
+        try {
+          setCache('pos:pendingSyncs', this.pendingSyncs);
+        } catch (_) {}
+        // Simulamos una respuesta exitosa para el flujo offline
+        return { synced: [] };
       }
-      const token = this.getXsrfToken();
-      const res = await fetch(
-        new URL(`/api/pos-sessions/${this.sessionId}/sync`, backendOrigin),
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            ...(token ? { 'X-XSRF-TOKEN': token } : {}),
-          },
-          body: JSON.stringify({ orders }),
+
+      try {
+        if (!this.sessionId) throw new Error('No session');
+        if (!this.getXsrfToken()) {
+          await fetch(new URL(`/sanctum/csrf-cookie`, backendOrigin), {
+            credentials: 'include',
+          });
         }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      return data;
+        const token = this.getXsrfToken();
+        const res = await fetch(
+          new URL(`/api/pos-sessions/${this.sessionId}/sync`, backendOrigin),
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              ...(token ? { 'X-XSRF-TOKEN': token } : {}),
+            },
+            body: JSON.stringify({ orders }),
+          }
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        return data;
+      } catch (e) {
+        this.setOnline(false);
+        console.error('Error al sincronizar, guardando en cola:', e);
+        this.pendingSyncs.push(...orders);
+        // Persistir inmediatamente por robustez (además del watch)
+        try {
+          setCache('pos:pendingSyncs', this.pendingSyncs);
+        } catch (_) {}
+        // Lanzamos el error para que el fallback offline en PaymentPage se active
+        throw e;
+      }
     },
     async closeSession(closingBalance) {
       if (!this.sessionId) throw new Error('No session');
@@ -175,5 +200,41 @@ export const useSessionStore = defineStore('pos-session', {
     setSelectedCustomer(customer) {
       this.selectedCustomer = customer || null;
     },
+    async syncPending() {
+      if (this.pendingSyncs.length === 0 || !this.online) {
+        return;
+      }
+
+      const pending = [...this.pendingSyncs];
+      this.pendingSyncs = []; // Limpiar la cola optimistamente
+
+      try {
+        await this.sync(pending);
+        console.log('Sincronización de ventas pendientes completada.');
+      } catch (e) {
+        console.error('Fallo al sincronizar ventas pendientes, se reencolarán.');
+        // Si falla, las devolvemos al inicio de la cola para reintentar
+        this.pendingSyncs.unshift(...pending);
+      }
+    },
+    // Esta acción debe ser llamada una vez en tu componente principal (PosApp.vue)
+    setupSyncListeners() {
+      // Persistir la cola en localStorage cada vez que cambie
+      watch(
+        () => this.pendingSyncs,
+        (newPendingSyncs) => {
+          setCache('pos:pendingSyncs', newPendingSyncs);
+        },
+        { deep: true }
+      );
+
+      // Intentar sincronizar cuando la conexión se recupere
+      watch(() => this.online, (isOnline) => {
+        if (isOnline && this.pendingSyncs.length > 0) {
+          console.log('Conexión recuperada, intentando sincronizar ventas pendientes...');
+          this.syncPending();
+        }
+      });
+    }
   },
 });

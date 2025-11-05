@@ -198,53 +198,101 @@ async function pay() {
   try {
     const result = await sessionStore.sync([payload]);
     console.log('Sync OK', result);
-    const info = result?.synced?.[0] || {};
-
-    // Construir datos de boleta para impresión
-    const receiptRef = info.sale_id || String(Date.now());
-    const receiptData = {
-      type: payload.voucher_type,
-      serie:
-        info.serie ||
-        sessionStore.sequences?.[payload.voucher_type]?.serie_code ||
-        '',
-      correlative: info.correlative || null,
-      date: new Date().toISOString(),
-      customer: customer.value || sessionStore.defaultCustomer,
-      items: orderLines.value.map((item) => ({
-        name: item.name || item.product_name || `Var #${item.id}`,
-        variant_id: item.id,
-        quantity: Number(item.quantity || 1),
-        price: Number(item.price || 0),
-        subtotal: Number(item.price || 0) * Number(item.quantity || 1),
-      })),
-      payments: payments.map((p) => ({
-        name:
-          paymentMethods.value.find((m) => m.id === p.payment_method_id)
-            ?.name || 'Método',
-        amount: p.amount,
-      })),
-      subtotal: orderSubtotal.value,
-      tax: orderTax.value,
-      total: orderTotal.value,
-      isOffline: false,
-      loyalty: loyaltyMeta.value
-        ? {
-            points_spent: Number(loyaltyMeta.value.points_spent || 0),
-            discount_amount: Number(loyaltyMeta.value.discount_amount || 0),
-            points_earned: Number(loyaltyMeta.value.points_earned || 0),
-          }
-        : null,
-    };
-    setCache(`pos:receipt:${receiptRef}`, receiptData);
-    setCache('pos:receipt:last', receiptData);
-    // Emitir limpieza de carrito antes de navegar
-    emit('clear-cart');
-    // Navegar a vista de boleta para imprimir
-    router.push({
-      name: 'pos-receipt',
-      params: { id: route.params.id, ref: receiptRef },
-    });
+    const wasOffline = !sessionStore.online || !(result?.synced?.length > 0);
+    if (wasOffline) {
+      // Tratar como modo offline si no hay registros sincronizados
+      const counter = getCache('pos:offlineReceiptCounter', { next: 1 });
+      const offlineCorrelative = String(counter.next).padStart(8, '0');
+      const key = payload.voucher_type;
+      const serieCode = sessionStore.sequences?.[key]?.serie_code || 'LOCAL';
+      const receiptRef = `offline-${Date.now()}`;
+      const receiptData = {
+        type: payload.voucher_type,
+        serie: serieCode,
+        correlative: offlineCorrelative,
+        date: new Date().toISOString(),
+        customer: customer.value || sessionStore.defaultCustomer,
+        items: orderLines.value.map((item) => ({
+          name: item.name || item.product_name || `Var #${item.id}`,
+          variant_id: item.id,
+          quantity: Number(item.quantity || 1),
+          price: Number(item.price || 0),
+          subtotal: Number(item.price || 0) * Number(item.quantity || 1),
+        })),
+        payments: payments.map((p) => ({
+          name:
+            paymentMethods.value.find((m) => m.id === p.payment_method_id)
+              ?.name || 'Método',
+          amount: p.amount,
+        })),
+        subtotal: orderSubtotal.value,
+        tax: orderTax.value,
+        total: orderTotal.value,
+        isOffline: true,
+        loyalty: loyaltyMeta.value
+          ? {
+              points_spent: Number(loyaltyMeta.value.points_spent || 0),
+              discount_amount: Number(loyaltyMeta.value.discount_amount || 0),
+              points_earned: Number(loyaltyMeta.value.points_earned || 0),
+            }
+          : null,
+      };
+      setCache('pos:offlineReceiptCounter', {
+        next: Number(counter.next || 1) + 1,
+      });
+      setCache(`pos:receipt:${receiptRef}`, receiptData);
+      setCache('pos:receipt:last', receiptData);
+      emit('clear-cart');
+      router.push({
+        name: 'pos-receipt',
+        params: { id: route.params.id, ref: receiptRef },
+      });
+    } else {
+      // Flujo online
+      const info = result?.synced?.[0] || {};
+      const receiptRef = info.sale_id || String(Date.now());
+      const receiptData = {
+        type: payload.voucher_type,
+        serie:
+          info.serie ||
+          sessionStore.sequences?.[payload.voucher_type]?.serie_code ||
+          '',
+        correlative: info.correlative || null,
+        date: new Date().toISOString(),
+        customer: customer.value || sessionStore.defaultCustomer,
+        items: orderLines.value.map((item) => ({
+          name: item.name || item.product_name || `Var #${item.id}`,
+          variant_id: item.id,
+          quantity: Number(item.quantity || 1),
+          price: Number(item.price || 0),
+          subtotal: Number(item.price || 0) * Number(item.quantity || 1),
+        })),
+        payments: payments.map((p) => ({
+          name:
+            paymentMethods.value.find((m) => m.id === p.payment_method_id)
+              ?.name || 'Método',
+          amount: p.amount,
+        })),
+        subtotal: orderSubtotal.value,
+        tax: orderTax.value,
+        total: orderTotal.value,
+        isOffline: false,
+        loyalty: loyaltyMeta.value
+          ? {
+              points_spent: Number(loyaltyMeta.value.points_spent || 0),
+              discount_amount: Number(loyaltyMeta.value.discount_amount || 0),
+              points_earned: Number(loyaltyMeta.value.points_earned || 0),
+            }
+          : null,
+      };
+      setCache(`pos:receipt:${receiptRef}`, receiptData);
+      setCache('pos:receipt:last', receiptData);
+      emit('clear-cart');
+      router.push({
+        name: 'pos-receipt',
+        params: { id: route.params.id, ref: receiptRef },
+      });
+    }
   } catch (e) {
     console.error('Error al sincronizar:', e);
     // Fallback OFFLINE: generar numeración local y permitir imprimir

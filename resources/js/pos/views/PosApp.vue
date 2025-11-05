@@ -28,7 +28,21 @@ const sessionStore = useSessionStore();
 const backendOrigin =
   document.querySelector('meta[name="backend-origin"]')?.content ||
   window.location.origin;
+
+// Handlers de conexión para todo el ciclo de vida del componente
+const handleOnline = () => {
+  sessionStore.setOnline(true);
+  sessionStore.syncPending();
+};
+const handleOffline = () => {
+  sessionStore.setOnline(false);
+};
 onMounted(async () => {
+  // Activar los listeners para la sincronización offline
+  sessionStore.setupSyncListeners();
+  window.addEventListener('online', handleOnline);
+  window.addEventListener('offline', handleOffline);
+
   sessionStore.initFromUrl();
   // Prefetch de cookie CSRF para asegurar estado stateful
   try {
@@ -47,6 +61,10 @@ onMounted(async () => {
     ) {
       showOpeningModal.value = true;
     }
+    // Intentar sincronizar pendientes si ya estamos online
+    if (sessionStore.online) {
+      sessionStore.syncPending();
+    }
   });
 });
 
@@ -63,6 +81,9 @@ const isReceipt = computed(() => route.name === 'pos-receipt');
 // Limpiar errores cuando el componente se desmonte
 onUnmounted(() => {
   clearError();
+  // Remover listeners de conexión
+  window.removeEventListener('online', handleOnline);
+  window.removeEventListener('offline', handleOffline);
 });
 
 // Limpieza de carrito al completar venta

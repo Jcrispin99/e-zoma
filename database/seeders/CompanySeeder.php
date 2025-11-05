@@ -23,7 +23,7 @@ class CompanySeeder extends Seeder
             'phone' => '987654321',
             'tax_address' => 'Jr. Callao Nro. 545 Tingo Maria',
             'legal_representative' => 'Jhamil Crispin',
-            'district_id' => '010101',
+            'district_id' => '100601',
         ]);
 
         Company::create([

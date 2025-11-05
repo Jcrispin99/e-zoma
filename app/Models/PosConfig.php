@@ -18,6 +18,7 @@ class PosConfig extends Model
         'receipt_journal_id',
         'invoice_journal_id',
         'default_customer_id',
+        'default_tax_id',
         'is_active',
         // impuestos IGV
         'apply_tax',
@@ -59,5 +60,10 @@ class PosConfig extends Model
     public function sessions(): HasMany
     {
         return $this->hasMany(PosSession::class);
+    }
+
+    public function defaultTax(): BelongsTo
+    {
+        return $this->belongsTo(Tax::class, 'default_tax_id');
     }
 }

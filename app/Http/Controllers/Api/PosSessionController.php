@@ -291,11 +291,20 @@ class PosSessionController extends Controller
 
                 // Adjuntar variantes a la venta para edición en Admin
                 $syncData = [];
+                $ratePct = 0.0;
+                try {
+                    $ratePct = (float) ((bool) ($posConfig->apply_tax ?? true)
+                        ? round(((float) ($posConfig->tax_rate ?? 0.0)) * 100, 2)
+                        : 0.0);
+                } catch (\Throwable $e) {
+                    $ratePct = 0.0;
+                }
                 foreach ($order['lines'] as $line) {
                     $syncData[$line['variant_id']] = [
                         'quantity' => $line['quantity'],
                         'price' => $line['price'],
                         'subtotal' => $line['subtotal'],
+                        'tax_rate' => $ratePct,
                     ];
                 }
                 $sale->variants()->sync($syncData);

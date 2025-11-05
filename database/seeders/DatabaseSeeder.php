@@ -27,6 +27,7 @@ class DatabaseSeeder extends Seeder
             UbigeoDistrictSeeder::class,
             IdentitySeeder::class,
             CompanySeeder::class,
+            CustomerSupplierSeeder::class,
             CategorySeder::class,
             WarehouseSeeder::class,
             ReasonSeeder::class,
@@ -40,9 +41,7 @@ class DatabaseSeeder extends Seeder
             LoyaltyRewardsSeeder::class,
             QrStyleSeeder::class,
         ]);
-
-        Customer::factory(50)->create();
-        Supplier::factory(50)->create();
+        // Factories de Customer y Supplier deshabilitados: ahora usamos seeders específicos
         //Product::factory(100)->create();
         //Variant::factory(100)->create();
     }

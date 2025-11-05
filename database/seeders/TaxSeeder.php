@@ -21,17 +21,17 @@ class TaxSeeder extends Seeder
                 'affectation_type_code' => '10',
                 'rate_percent' => 18.00,
                 'is_active' => true,
-                'is_default' => false,
+                'is_default' => true,
             ],
             [
                 'name' => '0% Exo',
                 'description' => 'Exonerado',
                 'invoice_label' => 'EXO 0%',
                 'tax_type' => 'IGV',
-                'affectation_type_code' => '21',
+                'affectation_type_code' => '20',
                 'rate_percent' => 0.00,
                 'is_active' => true,
-                'is_default' => true,
+                'is_default' => false,
             ],
             [
                 'name' => '0% Ina',
@@ -40,7 +40,7 @@ class TaxSeeder extends Seeder
                 'tax_type' => 'IGV',
                 'affectation_type_code' => '31',
                 'rate_percent' => 0.00,
-                'is_active' => true,
+                'is_active' => false,
                 'is_default' => false,
             ],
             [
@@ -60,7 +60,7 @@ class TaxSeeder extends Seeder
                 'tax_type' => 'ISC',
                 'affectation_type_code' => null,
                 'rate_percent' => 0.00,
-                'is_active' => true,
+                'is_active' => false,
                 'is_default' => false,
             ],
             [
@@ -70,7 +70,7 @@ class TaxSeeder extends Seeder
                 'tax_type' => 'IGV',
                 'affectation_type_code' => '40',
                 'rate_percent' => 0.00,
-                'is_active' => true,
+                'is_active' => false,
                 'is_default' => false,
             ],
             [
@@ -80,7 +80,7 @@ class TaxSeeder extends Seeder
                 'tax_type' => 'IGV',
                 'affectation_type_code' => '11',
                 'rate_percent' => 18.00,
-                'is_active' => true,
+                'is_active' => false,
                 'is_default' => false,
             ],
             [
@@ -90,7 +90,7 @@ class TaxSeeder extends Seeder
                 'tax_type' => 'RETENCION',
                 'affectation_type_code' => null,
                 'rate_percent' => 3.00,
-                'is_active' => true,
+                'is_active' => false,
                 'is_default' => false,
             ],
             [
@@ -101,7 +101,7 @@ class TaxSeeder extends Seeder
                 'affectation_type_code' => '10',
                 'rate_percent' => 18.00,
                 'is_price_inclusive' => true,
-                'is_active' => true,
+                'is_active' => false,
                 'is_default' => false,
             ],
         ];

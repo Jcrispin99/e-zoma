@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Journal;
 use App\Models\PosConfig;
+use App\Models\Tax;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 
@@ -29,8 +30,13 @@ class PosConfigController extends Controller
         $warehouses = Warehouse::all();
         $customers = Customer::all();
         $journals = Journal::where('type', 'sale')->with('sequence')->get();
+        $taxes = Tax::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
 
-        return view('admin.posconfig.create', compact('companies', 'warehouses', 'customers', 'journals'));
+        return view('admin.posconfig.create', compact('companies', 'warehouses', 'customers', 'journals', 'taxes'));
     }
 
     /**
@@ -45,6 +51,7 @@ class PosConfigController extends Controller
             'receipt_journal_id' => 'required|exists:journals,id',
             'invoice_journal_id' => 'required|exists:journals,id',
             'default_customer_id' => 'required|exists:customers,id',
+            'default_tax_id' => 'nullable|exists:taxes,id',
             'is_active' => 'boolean',
             // IGV
             'apply_tax' => 'boolean',
@@ -82,8 +89,13 @@ class PosConfigController extends Controller
         $warehouses = Warehouse::all();
         $customers = Customer::all();
         $journals = Journal::where('type', 'sale')->with('sequence')->get();
+        $taxes = Tax::query()
+            ->where('is_active', true)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
 
-        return view('admin.posconfig.edit', compact('posConfig', 'companies', 'warehouses', 'customers', 'journals'));
+        return view('admin.posconfig.edit', compact('posConfig', 'companies', 'warehouses', 'customers', 'journals', 'taxes'));
     }
 
     /**
@@ -98,6 +110,7 @@ class PosConfigController extends Controller
             'receipt_journal_id' => 'required|exists:journals,id',
             'invoice_journal_id' => 'required|exists:journals,id',
             'default_customer_id' => 'required|exists:customers,id',
+            'default_tax_id' => 'nullable|exists:taxes,id',
             'is_active' => 'boolean',
             // IGV
             'apply_tax' => 'boolean',

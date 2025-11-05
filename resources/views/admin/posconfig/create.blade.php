@@ -60,7 +60,8 @@
                         $seq = $journal->sequence;
                         @endphp
                         @if($seq)
-                        — Secuencia: #{{ $seq->id }} Próximo {{ str_pad($seq->next_number, $seq->sequence_size, '0', STR_PAD_LEFT) }}
+                        — Secuencia: #{{ $seq->id }} Próximo {{ str_pad($seq->next_number, $seq->sequence_size, '0',
+                        STR_PAD_LEFT) }}
                         @endif
                     </option>
                     @endforeach
@@ -75,7 +76,8 @@
                         $seq = $journal->sequence;
                         @endphp
                         @if($seq)
-                        — Secuencia: #{{ $seq->id }} Próximo {{ str_pad($seq->next_number, $seq->sequence_size, '0', STR_PAD_LEFT) }}
+                        — Secuencia: #{{ $seq->id }} Próximo {{ str_pad($seq->next_number, $seq->sequence_size, '0',
+                        STR_PAD_LEFT) }}
                         @endif
                     </option>
                     @endforeach
@@ -88,20 +90,33 @@
 
 
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <x-wire-native-select label="Preset IGV (SUNAT)" name="tax_rate_preset" id="tax_rate_preset">
-                    <option value="">Seleccione preset (opcional)</option>
-                    <option value="0.18" @selected(old('tax_rate', 0.18)==0.18)>IGV 18% (Gravado)</option>
-                    <option value="0">0% Exonerado / Inafecto / Exportación</option>
+                <x-wire-native-select label="Impuesto por defecto (modelo Tax)" name="default_tax_id">
+                    <option value="">Sin impuesto por defecto</option>
+                    @foreach ($taxes as $tax)
+                    <option value="{{ $tax->id }}" data-rate-decimal="{{ number_format($tax->rate_percent / 100, 2) }}"
+                        data-price-inclusive="{{ $tax->is_price_inclusive ? 1 : 0 }}"
+                        @selected(old('default_tax_id')==$tax->id)
+                        >
+                        {{ $tax->name }} — {{ number_format($tax->rate_percent, 2) }}% {{ $tax->is_price_inclusive ?
+                        'incluido' : 'excluido' }} — {{ $tax->affectation_type_code }}
+                        @if($tax->is_default) (por defecto) @endif
+                    </option>
+                    @endforeach
                 </x-wire-native-select>
 
-                <x-wire-input type="number" step="0.01" min="0" max="1" label="Tasa IGV (0.18 = 18%)" name="tax_rate" value="{{ old('tax_rate', 0.18) }}" readonly />
+                <p class="text-sm text-gray-500 md:col-span-2">Si seleccionas un impuesto del catálogo, sincronizaremos
+                    automáticamente la tasa y si los precios incluyen IGV.</p>
+
+                <x-wire-input type="number" step="0.01" min="0" max="1" label="Tasa IGV (0.18 = 18%)" name="tax_rate"
+                    value="{{ old('tax_rate', 0.18) }}" readonly />
 
                 <div class="flex items-center">
                     <x-wire-toggle label="Aplicar IGV" name="apply_tax" value="1" :checked="old('apply_tax', true)" />
                 </div>
 
                 <div class="flex items-center">
-                    <x-wire-toggle label="Precios incluyen IGV" name="prices_include_tax" value="1" :checked="old('prices_include_tax', false)" />
+                    <x-wire-toggle label="Precios incluyen IGV" name="prices_include_tax" value="1"
+                        :checked="old('prices_include_tax', false)" />
                 </div>
             </div>
 
@@ -114,22 +129,43 @@
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                const preset = document.getElementById('tax_rate_preset');
+                const taxSelect = document.querySelector('select[name="default_tax_id"]');
                 const taxInput = document.querySelector('input[name="tax_rate"]');
                 const applyInput = document.querySelector('[name="apply_tax"]');
-                if (preset) {
-                    preset.addEventListener('change', function() {
-                        if (taxInput && this.value !== '') {
-                            taxInput.value = this.value;
+                const includeInput = document.querySelector('[name="prices_include_tax"]');
+
+                function syncFromOption(opt) {
+                    if (!opt || !opt.dataset) return;
+                    const rateDecimal = parseFloat(opt.dataset.rateDecimal || 'NaN');
+                    const priceInclusive = opt.dataset.priceInclusive === '1';
+                    if (!isNaN(rateDecimal) && taxInput) {
+                        taxInput.value = rateDecimal.toFixed(2);
+                    }
+                    if (applyInput) {
+                        const isZero = isNaN(rateDecimal) ? false : rateDecimal === 0;
+                        if (applyInput.type === 'checkbox') {
+                            applyInput.checked = !isZero;
                         }
-                        if (applyInput) {
-                            const isZero = this.value === '0';
-                            if (applyInput.type === 'checkbox') {
-                                applyInput.checked = !isZero;
-                            }
-                            applyInput.value = isZero ? 0 : 1;
+                        applyInput.value = isZero ? 0 : 1;
+                    }
+                    if (includeInput) {
+                        if (includeInput.type === 'checkbox') {
+                            includeInput.checked = priceInclusive;
                         }
-                    });
+                        includeInput.value = priceInclusive ? 1 : 0;
+                    }
+                }
+
+                taxSelect?.addEventListener('change', function() {
+                    const opt = this.options[this.selectedIndex];
+                    if (this.value === '') return; // no impuesto seleccionado
+                    syncFromOption(opt);
+                });
+
+                // Pre-sincronizar si viene seleccionada una opción (edición o old())
+                if (taxSelect && taxSelect.value !== '') {
+                    const opt = taxSelect.options[taxSelect.selectedIndex];
+                    syncFromOption(opt);
                 }
             });
 

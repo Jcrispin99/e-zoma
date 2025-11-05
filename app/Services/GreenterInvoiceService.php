@@ -9,6 +9,7 @@ use App\Models\Sale;
 use App\Models\PosOrder;
 use App\Models\PosConfig;
 use App\Models\Company;
+use App\Models\Tax;
 
 class GreenterInvoiceService
 {
@@ -49,13 +50,16 @@ class GreenterInvoiceService
         $sale->loadMissing(['customer.identity', 'journal', 'variants.product', 'variants.attributeValues']);
 
         $docType = (string) ($sale->journal->document_type_code ?? '01');
-        $tax = $this->getTaxConfig($sale);
-        $totals = $this->buildDetailsAndTotals($sale, $tax);
-        $company = $this->buildCompanyPayload($sale, false);
+        $isPos = !empty($sale->pos_order_id);
+        $tax = $isPos ? $this->getTaxConfig($sale) : null;
+        // Usar cálculo por línea para construir detalles y totales
+        $totals = $this->buildDetailsAndTotalsPerLine($sale);
+        // Incluir nombres geográficos (departamento, provincia, distrito) en address
+        $company = $this->buildCompanyPayload($sale, true);
         $client = $this->buildClientPayload($sale);
 
+        // Payload mínimo solicitado (sin totales de encabezado)
         $payload = [
-            'ublVersion' => '2.1',
             'tipoDoc' => $docType,
             'tipoOperacion' => '0101',
             'serie' => (string)($sale->serie ?? ''),
@@ -70,20 +74,7 @@ class GreenterInvoiceService
             'tipoMoneda' => 'PEN',
             'company' => $company,
             'client' => $client,
-            'mtoOperGravadas' => $tax['igv_rate'] > 0 ? $totals['baseTotal'] : 0,
-            'mtoOperExoneradas' => $tax['igv_rate'] > 0 ? 0 : $totals['baseTotal'],
-            'mtoIGV' => $totals['igvTotal'],
-            'totalImpuestos' => $totals['igvTotal'],
-            'valorVenta' => $totals['baseTotal'],
-            'subTotal' => $totals['subTotal'],
-            'mtoImpVenta' => $totals['subTotal'],
             'details' => $totals['details'],
-            'items' => $totals['details'],
-            'meta' => [
-                'apply_tax' => $tax['apply_tax'],
-                'tax_rate' => $tax['tax_rate'],
-                'prices_include_tax' => $tax['prices_include_tax'],
-            ],
         ];
 
         // === Notas de Crédito/Débito (07/08) ===
@@ -164,7 +155,6 @@ class GreenterInvoiceService
         ['type' => $affectedType, 'number' => $affectedNumber] = $this->resolveAffectedDocument($sale);
 
         $payload = [
-            'ublVersion' => '2.1',
             'tipoDoc' => $docType,
             'serie' => (string) ($sale->serie ?? ''),
             'correlativo' => (string) ($sale->correlative ?? ''),
@@ -182,7 +172,6 @@ class GreenterInvoiceService
             'company' => $company,
             'client' => $client,
             'details' => $totals['details'],
-            'items' => $totals['details'],
             'mtoIGV' => $totals['igvTotal'],
             'totalImpuestos' => $totals['igvTotal'],
             'valorVenta' => $totals['baseTotal'],
@@ -197,13 +186,6 @@ class GreenterInvoiceService
             $payload['codMotivo'] = '02';
             $payload['desMotivo'] = 'AUMENTO EN EL VALOR';
         }
-
-        // Meta para rastrear configuración utilizada
-        $payload['meta'] = [
-            'apply_tax' => $tax['apply_tax'],
-            'tax_rate' => $tax['tax_rate'],
-            'prices_include_tax' => $tax['prices_include_tax'],
-        ];
 
         return $payload;
     }
@@ -295,11 +277,28 @@ class GreenterInvoiceService
             $payload = in_array($docType, ['07', '08'], true)
                 ? $this->buildNotePayloadFromSale($sale, $docType)
                 : $this->buildPayloadFromSale($sale);
-            // Guardar payload para depuración
+
+            // Preparar meta de diagnóstico (no se envía)
+            $calcMode = !empty($sale->pos_order_id) ? 'pos_global' : 'sales_per_line';
+            $applyTax = null;
+            $taxRate = null;
+            $pricesIncludeTax = null;
+            if ($calcMode === 'pos_global') {
+                $tc = $this->getTaxConfig($sale);
+                $applyTax = $tc['apply_tax'] ?? null;
+                $taxRate = $tc['tax_rate'] ?? null;
+                $pricesIncludeTax = $tc['prices_include_tax'] ?? null;
+            }
+
+            // Sanitizar payload antes de enviar/guardar (remover items/meta)
+            $outPayload = $payload;
+            unset($outPayload['items'], $outPayload['meta']);
+
+            // Guardar payload sanitizado para depuración
             try {
                 Storage::disk('local')->put(
                     'greenter_outbox/sale-' . $sale->id . '-payload.json',
-                    json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    json_encode($outPayload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                 );
             } catch (\Throwable $e) {
                 Log::warning('No se pudo guardar payload de Greenter', [
@@ -309,15 +308,16 @@ class GreenterInvoiceService
             }
             Log::info('Greenter payload preview', [
                 'sale_id' => $sale->id,
-                'details_count' => is_array($payload['details'] ?? null) ? count($payload['details']) : 0,
-                'first_detail' => $payload['details'][0] ?? null,
-                'first_tipAfeIgv' => $payload['details'][0]['tipAfeIgv'] ?? null,
-                'serie' => $payload['serie'] ?? null,
-                'correlativo' => $payload['correlativo'] ?? null,
-                'tipoDoc' => $payload['tipoDoc'] ?? null,
-                'apply_tax' => $payload['meta']['apply_tax'] ?? null,
-                'tax_rate' => $payload['meta']['tax_rate'] ?? null,
-                'prices_include_tax' => $payload['meta']['prices_include_tax'] ?? null,
+                'details_count' => is_array($outPayload['details'] ?? null) ? count($outPayload['details']) : 0,
+                'first_detail' => $outPayload['details'][0] ?? null,
+                'first_tipAfeIgv' => $outPayload['details'][0]['tipAfeIgv'] ?? null,
+                'serie' => $outPayload['serie'] ?? null,
+                'correlativo' => $outPayload['correlativo'] ?? null,
+                'tipoDoc' => $outPayload['tipoDoc'] ?? null,
+                'calc_mode' => $calcMode,
+                'apply_tax' => $applyTax,
+                'tax_rate' => $taxRate,
+                'prices_include_tax' => $pricesIncludeTax,
             ]);
             // Elegir endpoint según tipo de documento
             $base = rtrim((string) $this->url, '/') . '/';
@@ -326,7 +326,7 @@ class GreenterInvoiceService
 
             $response = Http::withToken($dynamicToken)
                 ->acceptJson()
-                ->post($requestUrl, $payload);
+                ->post($requestUrl, $outPayload);
 
             // Guardar respuesta para depuración
             try {
@@ -405,7 +405,6 @@ class GreenterInvoiceService
                 'body' => $response->body(),
             ]);
             try {
-                // No sobreescribir "accepted" si un reintento falla
                 if ($sale->sunat_status !== 'accepted') {
                     $sale->sunat_status = 'error';
                 }
@@ -515,12 +514,141 @@ class GreenterInvoiceService
             $applyTax = (bool) ($cfg->apply_tax ?? true);
             $taxRate = (float) ($cfg->tax_rate ?? 0.18);
             $pricesIncludeTax = (bool) ($cfg->prices_include_tax ?? false);
+
+            // Si hay impuesto por defecto asociado al POS, tomar tasa y inclusión desde Tax
+            try {
+                $defaultTax = optional($cfg)->defaultTax;
+                if ($defaultTax && (bool) ($defaultTax->is_active ?? false)) {
+                    $taxRate = ((float) ($defaultTax->rate_percent ?? 0.0)) / 100.0;
+                    $pricesIncludeTax = (bool) ($defaultTax->is_price_inclusive ?? false);
+                    // Mantener applyTax como bandera general; si la tasa de Tax es 0, no aplicar
+                    if ($taxRate <= 0) {
+                        $applyTax = false;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Ignorar errores y continuar con configuración base
+            }
         }
         return [
             'apply_tax' => $applyTax,
             'tax_rate' => $taxRate,
             'prices_include_tax' => $pricesIncludeTax,
             'igv_rate' => $applyTax ? $taxRate : 0.0,
+        ];
+    }
+
+    /**
+     * Construye detalles y totales por LÍNEA usando el pivot de la venta (Sales).
+     * Respeta rate por línea y determina afectación desde Tax cuando sea posible.
+     */
+    private function buildDetailsAndTotalsPerLine(Sale $sale): array
+    {
+        $details = [];
+        $baseTotal = 0.0;
+        $igvTotal = 0.0;
+        $gravadasBase = 0.0;
+        $exoneradasBase = 0.0;
+        $inafectasBase = 0.0;
+
+        // Pre-cargar impuestos activos para mapear por tasa e inclusión
+        $activeTaxes = Tax::query()->where('is_active', true)->get();
+
+        $findTax = function (float $ratePct, bool $inclusive) use ($activeTaxes) {
+            $matched = $activeTaxes
+                ->first(function ($t) use ($ratePct, $inclusive) {
+                    return ((float) $t->rate_percent) === $ratePct
+                        && ((bool) ($t->is_price_inclusive ?? false)) === $inclusive
+                        && (string) ($t->tax_type ?? 'IGV') === 'IGV';
+                });
+            if (!$matched) {
+                // Fallback: misma tasa sin considerar inclusión
+                $matched = $activeTaxes->first(function ($t) use ($ratePct) {
+                    return ((float) $t->rate_percent) === $ratePct
+                        && (string) ($t->tax_type ?? 'IGV') === 'IGV';
+                });
+            }
+            return $matched; // puede ser null
+        };
+
+        foreach ($sale->variants as $variant) {
+            $qty = (float) ($variant->pivot->quantity ?? 0);
+            $price = (float) ($variant->pivot->price ?? 0);
+            $pivotRatePct = (float) ($variant->pivot->tax_rate ?? 0.0);
+            $rate = $pivotRatePct > 0 ? ($pivotRatePct / 100.0) : 0.0;
+            $pivotBase = round((float) ($variant->pivot->subtotal ?? 0.0), 2);
+            $lineTotal = round($qty * $price, 2);
+
+            // Inferir inclusión comparando base calculada vs base guardada
+            $inclusiveGuess = false;
+            if ($rate > 0) {
+                $calcBaseIfInclusive = round($lineTotal / (1 + $rate), 2);
+                $inclusiveGuess = abs($calcBaseIfInclusive - $pivotBase) < 0.02; // tolerancia por redondeo
+            }
+
+            $taxModel = $findTax($pivotRatePct, $inclusiveGuess);
+            $afe = (string) ($taxModel->affectation_type_code ?? '');
+            if ($afe === '') {
+                $afe = $rate > 0 ? '10' : '21'; // fallback: Gravado 18 / Exonerado 0%
+            }
+
+            // Calcular valores unitarios neto/bruto
+            if ($inclusiveGuess && $rate > 0) {
+                $unitGross = round($price, 2);
+                $unitNet = round($price / (1 + $rate), 2);
+            } else {
+                $unitNet = round($price, 2);
+                $unitGross = $rate > 0 ? round($unitNet * (1 + $rate), 2) : $unitNet;
+            }
+
+            // IGV por línea solo si afectación gravada (10)
+            $igv = ($afe === '10') ? round($pivotBase * $rate, 2) : 0.0;
+
+            // Acumulados por tipo
+            if ($afe === '10') {
+                $gravadasBase += $pivotBase;
+            } elseif ($afe === '31') {
+                $inafectasBase += $pivotBase;
+            } elseif ($afe === '40') {
+                // Exportación (no lo exponemos en payload actual, pero lo sumamos por consistencia)
+                // Greenter admite mtoOperExportacion; aquí no lo usamos.
+            } else {
+                // Exonerado u otros no gravados
+                $exoneradasBase += $pivotBase;
+            }
+
+            $desc = (string) $variant->fullName;
+            $details[] = [
+                'tipAfeIgv' => $afe,
+                'codProducto' => (string) $variant->barcode,
+                'unidad' => 'NIU',
+                'descripcion' => $desc,
+                'cantidad' => $qty,
+                'mtoValorUnitario' => $unitNet,
+                'mtoValorVenta' => $pivotBase,
+                'mtoBaseIgv' => $pivotBase,
+                'porcentajeIgv' => round($pivotRatePct, 2),
+                'igv' => $igv,
+                'totalImpuestos' => $igv,
+                'mtoPrecioUnitario' => $unitGross,
+            ];
+
+            $baseTotal += $pivotBase;
+            $igvTotal += $igv;
+        }
+
+        $baseTotal = round($baseTotal, 2);
+        $igvTotal = round($igvTotal, 2);
+        $subTotal = round($baseTotal + $igvTotal, 2);
+
+        return [
+            'details' => $details,
+            'baseTotal' => $baseTotal,
+            'igvTotal' => $igvTotal,
+            'subTotal' => $subTotal,
+            'gravadasBase' => round($gravadasBase, 2),
+            'exoneradasBase' => round($exoneradasBase, 2),
+            'inafectasBase' => round($inafectasBase, 2),
         ];
     }
 
@@ -603,7 +731,7 @@ class GreenterInvoiceService
             'departamento' => $withGeoNames ? (string) (optional(optional($company)->district)->department->name ?? '') : '',
             'provincia' => $withGeoNames ? (string) (optional(optional($company)->district)->province->name ?? '') : '',
             'distrito' => $withGeoNames ? (string) (optional($company->district)->name ?? '') : '',
-            'urbanizacion' => '',
+            'urbanizacion' => '-',
             'direccion' => $direccionFiscal,
             'codLocal' => '0000',
         ];

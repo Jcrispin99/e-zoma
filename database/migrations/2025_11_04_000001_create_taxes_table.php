@@ -22,6 +22,14 @@ return new class extends Migration {
             $table->boolean('is_active')->default(true);
             $table->boolean('is_default')->default(false);
             $table->timestamps();
+
+            // Índices para consultas frecuentes
+            $table->index('tax_type');
+            $table->index('affectation_type_code');
+            $table->index('is_active');
+            $table->index('is_default');
+            $table->index('rate_percent');
+            $table->index(['rate_percent', 'is_price_inclusive']);
         });
     }
 

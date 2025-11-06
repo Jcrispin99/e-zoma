@@ -48,18 +48,22 @@ Route::resource('suppliers', SupplierController::class)->except(['show']);
 
 Route::resource('purchases-orders', PurchaseOrderController::class)->parameters(['purchases-orders' => 'purchaseOrder'])->only(['index', 'create', 'edit']);
 Route::get('purchases-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'pdf'])->name('purchases-orders.pdf');
+Route::get('purchases-orders/{purchaseOrder}/pdf/view', [PurchaseOrderController::class, 'pdfView'])->name('purchases-orders.pdf.view');
 
 Route::resource('purchases', PurchaseController::class)->only(['index', 'create', 'edit']);
 Route::get('purchases/{purchase}/pdf', [PurchaseController::class, 'pdf'])->name('purchases.pdf');
+Route::get('purchases/{purchase}/pdf/view', [PurchaseController::class, 'pdfView'])->name('purchases.pdf.view');
 
 //ventas
 Route::resource('customers', CustomerController::class)->except(['show']);
 
 Route::resource('quotes', QuoteController::class)->only(['index', 'create', 'edit']);
 Route::get('quotes/{quote}/pdf', [QuoteController::class, 'pdf'])->name('quotes.pdf');
+Route::get('quotes/{quote}/pdf/view', [QuoteController::class, 'pdfView'])->name('quotes.pdf.view');
 
 Route::resource('sales', SaleController::class)->only(['index', 'create', 'edit']);
 Route::get('sales/{sale}/pdf', [SaleController::class, 'pdf'])->name('sales.pdf');
+Route::get('sales/{sale}/pdf/view', [SaleController::class, 'pdfView'])->name('sales.pdf.view');
 
 //movimientos
 Route::resource('movements', MovementController::class)->only(['index', 'create']);

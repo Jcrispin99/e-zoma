@@ -240,7 +240,6 @@ class PurchaseOrderCreate extends Component
             return;
         }
 
-        // Calcular el total en el backend para seguridad
         $totalCalculado = 0;
         $linesPivot = [];
         foreach ($this->variants as $variant) {
@@ -251,11 +250,11 @@ class PurchaseOrderCreate extends Component
             $rate = (float) optional($tax)->rate_percent ?? 0.0;
             $inclusive = (bool) optional($tax)->is_price_inclusive ?? false;
 
-            $gross = $qty * $price; // monto que el usuario ve
+            $gross = $qty * $price;
             if ($inclusive && $rate > 0) {
                 $base = $gross / (1 + ($rate / 100));
                 $taxAmount = $gross - $base;
-                $lineTotal = $gross; // ya incluye impuesto
+                $lineTotal = $gross;
             } else {
                 $base = $gross;
                 $taxAmount = $base * ($rate / 100);
@@ -314,7 +313,7 @@ class PurchaseOrderCreate extends Component
             'text' => 'Orden de compra creada exitosamente.',
         ]);
 
-        return redirect()->route('admin.purchases-orders.index');
+        return redirect()->route('admin.purchases-orders.edit', $purchaseOrder);
     }
 
     public function render()

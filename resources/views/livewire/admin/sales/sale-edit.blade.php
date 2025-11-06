@@ -51,6 +51,7 @@
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
+                <x-wire-button label="Guardar" right-icon="check" positive wire:click="save" />
                 <x-wire-badge :label="str($sale->status)->upper()"
                     :color="$sale->status === 'draft' ? 'slate' : ($sale->status === 'posted' ? 'emerald' : 'rose')" />
                 @if($sale->payment_status)
@@ -74,48 +75,41 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                @if($sale->status === 'draft')
-                <x-wire-button light emerald label="Contabilizar" wire:click="post" wire:loading.attr="disabled" />
-                <x-wire-button light red label="Cancelar" wire:click="cancel" wire:loading.attr="disabled" />
-                @elseif($sale->status === 'posted')
-                @if($sale->payment_status !== 'paid')
-                <x-wire-button light emerald label="Registrar pago" wire:click="markPaid"
-                    wire:loading.attr="disabled" />
-                @endif
-                <x-wire-button light red label="Anular" wire:click="cancel" wire:loading.attr="disabled" />
-                @elseif($sale->status === 'cancelled')
-                <x-wire-button light gray label="Reabrir" wire:click="reopen" wire:loading.attr="disabled" />
-                @endif
+                <x-wire-dropdown icon="bars-3" align="right">
+                    @if($sale->status === 'draft')
+                    <x-wire-dropdown.item label="Contabilizar" wire:click="post" />
+                    <x-wire-dropdown.item label="Cancelar" wire:click="cancel" />
+                    @elseif($sale->status === 'posted')
+                    @if($sale->payment_status !== 'paid')
+                    <x-wire-dropdown.item label="Registrar pago" wire:click="markPaid" />
+                    @endif
+                    <x-wire-dropdown.item label="Anular" wire:click="cancel" />
+                    @elseif($sale->status === 'cancelled')
+                    <x-wire-dropdown.item label="Reabrir" wire:click="reopen" />
+                    @endif
 
-                @if($sale->quote_id)
-                <x-wire-button light gray label="Ver cotización" :href="route('admin.quotes.edit', $sale->quote_id)" />
-                @endif
+                    @if($sale->quote_id)
+                    <x-wire-dropdown.item label="Ver cotización" :href="route('admin.quotes.edit', $sale->quote_id)" />
+                    @endif
 
-                <x-wire-button light gray label="Enviar factura por correo" wire:click="openModal({{ $sale }})">
-                    <i class="fa-solid fa-envelope"></i>
-                </x-wire-button>
+                    <x-wire-dropdown.header separator label="Acciones" />
+                    <x-wire-dropdown.item label="Enviar factura por correo" wire:click="openModal({{ $sale }})" />
+                    <x-wire-dropdown.item label="Descargar PDF" :href="route('admin.sales.pdf', $sale)" />
+                    <x-wire-dropdown.item label="Ver PDF (vista)" :href="route('admin.sales.pdf.view', $sale)" />
 
-                <x-wire-button light gray href="{{ route('admin.sales.pdf', $sale) }}">
-                    descargar
-                </x-wire-button>
+                    @php $canSendSunat = !(data_get($sale->sunat_response,'accepted') === true || in_array($sale->sunat_status, ['accepted','queued','processing'])); @endphp
+                    @if($canSendSunat)
+                    <x-wire-dropdown.item label="Enviar SUNAT" wire:click="sendSunat" spinner />
+                    @else
+                    <x-wire-dropdown.item label="Enviar SUNAT" disabled />
+                    @endif
 
-                @php $canSendSunat = !(data_get($sale->sunat_response,'accepted') === true ||
-                in_array($sale->sunat_status, ['accepted','queued','processing'])); @endphp
-                @if($canSendSunat)
-                <x-wire-button light indigo label="Enviar SUNAT" wire:click="sendSunat" wire:loading.attr="disabled"
-                    spinner class="ml-2" />
-                @else
-                <x-wire-button light gray label="Enviar SUNAT" disabled class="ml-2" />
-                @endif
+                    <x-wire-dropdown.item label="Nota de Crédito" wire:click="sendStaticCreditNote" />
+                    <x-wire-dropdown.item label="Nota de Débito" wire:click="sendStaticDebitNote" />
+                    <x-wire-dropdown.item label="Nota de Venta" wire:click="openSalesNoteModal" />
 
-                <!-- Acciones: Notas -->
-                <div class="inline-flex items-center gap-2">
-                    <x-wire-button light amber label="Nota de Crédito" wire:click="sendStaticCreditNote" />
-                    <x-wire-button light sky label="Nota de Débito" wire:click="sendStaticDebitNote" />
-                    <x-wire-button light slate label="Nota de Venta" wire:click="openSalesNoteModal" />
-                </div>
-
-                <x-wire-button light gray :href="route('admin.sales.index')" label="Volver" />
+                    <x-wire-dropdown.item label="Volver" :href="route('admin.sales.index')" />
+                </x-wire-dropdown>
             </div>
         </div>
         @php $pollStatuses = ['queued','processing']; @endphp
@@ -222,11 +216,15 @@
                                 <td class="px-4 py-1">
                                     <x-wire-native-select x-model="variant.tax_id">
                                         <template x-for="tax in taxes" :key="tax.id">
-                                            <option :value="tax.id" x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`"></option>
+                                            <option :value="tax.id"
+                                                x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`">
+                                            </option>
                                         </template>
                                     </x-wire-native-select>
                                 </td>
-                                <td class="px-4 py-1" x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return base.toFixed(2); })()"></td>
+                                <td class="px-4 py-1"
+                                    x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return base.toFixed(2); })()">
+                                </td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
                                 </td>
@@ -251,9 +249,7 @@
                 Total: $<span x-text="Number(total ?? 0).toFixed(2)"></span>
             </div>
 
-            <div>
-                <x-wire-button type="submit" icon="check" spinner>Guardar</x-wire-button>
-            </div>
+            
         </form>
     </x-wire-card>
 

@@ -76,36 +76,42 @@
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
+                <x-wire-button label="Guardar" right-icon="check" positive wire:click="save" />
+            </div>
+
+            <div>
                 <x-wire-badge :label="str($purchaseOrder->status)->upper()"
                     :color="$purchaseOrder->status === 'draft' ? 'slate' : ($purchaseOrder->status === 'confirmed' ? 'blue' : ($purchaseOrder->status === 'done' ? 'emerald' : 'rose'))" />
                 @if($purchaseOrder->billing_status)
                 <x-wire-badge :label="str($purchaseOrder->billing_status)->upper()"
                     :color="$purchaseOrder->billing_status === 'complete' ? 'emerald' : ($purchaseOrder->billing_status === 'partial' ? 'amber' : 'slate')" />
                 @endif
+
+
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                @if ($purchaseOrder->status == 'draft')
-                <x-wire-button light gray label="Confirmar Orden" wire:click="confirmOrder" />
-                <x-wire-button light red label="Cancelar" wire:click="cancelOrder" />
-                @elseif ($purchaseOrder->status == 'confirmed')
-                @if ($hasPurchase)
-                <x-wire-button light gray label="Ver factura" wire:click="viewPurchase" />
-                @else
-                <x-wire-button light emerald label="Crear Compra" wire:click="createPurchase" />
-                @endif
-                <x-wire-button light red label="Cancelar" wire:click="cancelOrder" />
-                @endif
 
-                <x-wire-button light gray label="Enviar OC por correo" wire:click="openModal({{ $purchaseOrder }})">
-                    <i class="fa-solid fa-envelope"></i>
-                </x-wire-button>
+                <x-wire-dropdown icon="bars-3" align="right">
+                    @if ($purchaseOrder->status == 'draft')
+                    <x-wire-dropdown.item label="Confirmar Orden" wire:click="confirmOrder" />
+                    <x-wire-dropdown.item label="Cancelar" wire:click="cancelOrder" />
+                    @elseif ($purchaseOrder->status == 'confirmed')
+                    @if ($hasPurchase)
+                    <x-wire-dropdown.item label="Ver factura" wire:click="viewPurchase" />
+                    @else
+                    <x-wire-dropdown.item label="Crear Compra" wire:click="createPurchase" />
+                    @endif
+                    <x-wire-dropdown.item label="Cancelar" wire:click="cancelOrder" />
+                    @endif
 
-                <x-wire-button light gray href="{{ route('admin.purchases-orders.pdf', $purchaseOrder) }}">
-                    descargar
-                </x-wire-button>
-
-                <x-wire-button light gray :href="route('admin.purchases-orders.index')" label="Volver" />
+                    <x-wire-dropdown.header separator label="Acciones" />
+                    <x-wire-dropdown.item label="Enviar OC por correo"
+                        wire:click="openModal({{ $purchaseOrder->id }})" />
+                    <x-wire-dropdown.item label="Ver PDF"
+                        :href="route('admin.purchases-orders.pdf.view', $purchaseOrder)" />
+                    <x-wire-dropdown.item label="Volver" :href="route('admin.purchases-orders.index')" />
+                </x-wire-dropdown>
             </div>
         </div>
     </x-wire-card>
@@ -209,9 +215,7 @@
                 Total: $<span x-text="total.toFixed(2)"></span>
             </div>
 
-            <x-wire-button type="submit" icon="check" spinner>
-                Guardar
-            </x-wire-button>
+
         </form>
     </x-wire-card>
 

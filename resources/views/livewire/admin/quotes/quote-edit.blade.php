@@ -52,32 +52,25 @@
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
+                <x-wire-button label="Guardar" right-icon="check" positive wire:click="save" />
                 <x-wire-badge :label="'COTIZACIÓN'" color="slate" />
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                <x-wire-button light gray label="Enviar cotización por correo" wire:click="openModal({{ $quote }})">
-                    <i class="fa-solid fa-envelope"></i>
-                </x-wire-button>
-
-                <x-wire-button light gray href="{{ route('admin.quotes.pdf', $quote) }}">
-                    descargar
-                </x-wire-button>
-
-                <div class="flex items-center gap-2">
-                    @if(!$quote->sales()->exists())
-                    <x-wire-button light gray href="{{ route('admin.sales.create', ['quote_id' => $quote->id]) }}">
-                        Crear venta
-                    </x-wire-button>
-                    @else
-                    <x-wire-button light gray
-                        href="{{ route('admin.sales.edit', $quote->sales()->latest()->value('id')) }}"
-                        label="Ver venta" />
-
-                    @endif
-                </div>
-
-                <x-wire-button light gray :href="route('admin.quotes.index')" label="Volver" />
+                <x-wire-dropdown icon="bars-3" align="right">
+                <x-wire-dropdown.header separator label="Acciones" />
+                <x-wire-dropdown.item label="Enviar cotización por correo" wire:click="openModal({{ $quote }})" />
+                <x-wire-dropdown.item label="Descargar PDF" :href="route('admin.quotes.pdf', $quote)" />
+                <x-wire-dropdown.item label="Ver PDF (vista)" :href="route('admin.quotes.pdf.view', $quote)" />
+                @if(!$quote->sales()->exists())
+                <x-wire-dropdown.item label="Crear venta"
+                    :href="route('admin.sales.create', ['quote_id' => $quote->id])" />
+                @else
+                <x-wire-dropdown.item label="Ver venta"
+                    :href="route('admin.sales.edit', $quote->sales()->latest()->value('id'))" />
+                @endif
+                <x-wire-dropdown.item label="Volver" :href="route('admin.quotes.index')" />
+                </x-wire-dropdown>
             </div>
         </div>
     </x-wire-card>
@@ -136,12 +129,15 @@
                                 <td class="px-4 py-1">
                                     <x-wire-native-select x-model="variant.tax_id">
                                         <template x-for="tax in taxes" :key="tax.id">
-                                            <option :value="tax.id" x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`"></option>
+                                            <option :value="tax.id"
+                                                x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`">
+                                            </option>
                                         </template>
                                     </x-wire-native-select>
                                 </td>
                                 <td class="px-4 py-1"
-                                    x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return Number(base).toFixed(2); })()"></td>
+                                    x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return Number(base).toFixed(2); })()">
+                                </td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
                                 </td>
@@ -166,9 +162,7 @@
                 Total: $<span x-text="Number(total ?? 0).toFixed(2)"></span>
             </div>
 
-            <div>
-                <x-wire-button type="submit" icon="check" spinner>Guardar</x-wire-button>
-            </div>
+            
         </form>
     </x-wire-card>
 

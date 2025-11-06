@@ -32,9 +32,35 @@ class PurchaseController extends Controller
 
     public function pdf(Purchase $purchase)
     {
-        $pdf = Pdf::loadView('admin.purchases.pdf', [
-            'model' => $purchase,
+        $pdf = Pdf::loadView('pdf.purchase.show', [
+            'purchase' => $purchase,
+            'useLayout' => false,
+            'isPublic' => false,
         ]);
         return $pdf->download('factura-' . $purchase->id . '.pdf');
+    }
+
+    /**
+     * Show a styled HTML preview of the Purchase PDF with a download button.
+     */
+    public function pdfView(Purchase $purchase)
+    {
+        return view('pdf.purchase.show', [
+            'purchase' => $purchase,
+            'useLayout' => true,
+            'isPublic' => false,
+        ]);
+    }
+
+    /**
+     * Public HTML preview of the Purchase PDF (signed URL required).
+     */
+    public function publicPdfView(Purchase $purchase)
+    {
+        return view('pdf.purchase.show', [
+            'purchase' => $purchase,
+            'useLayout' => false,
+            'isPublic' => true,
+        ]);
     }
 }

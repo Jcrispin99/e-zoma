@@ -3,6 +3,10 @@
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\PosController;
+use App\Http\Controllers\Admin\PurchaseOrderController;
+use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\SaleController;
+use App\Http\Controllers\Admin\QuoteController;
 
 // SPA POS: ruta base y comodín para deep links
 Route::get('/pos/{posSession}', [PosController::class, '__invoke'])
@@ -15,6 +19,26 @@ Route::get('/pos/{posSession}/{any?}', [PosController::class, '__invoke'])
     ->name('pos.any');
 
 Route::redirect('/', '/admin');
+
+// Ruta pública firmada para vista HTML de PDF de Orden de Compra
+Route::get('public/purchases-orders/{purchaseOrder}/pdf/view', [PurchaseOrderController::class, 'publicPdfView'])
+    ->name('public.purchases-orders.pdf.view')
+    ->middleware('signed');
+
+// Ruta pública firmada para vista HTML de PDF de Compra
+Route::get('public/purchases/{purchase}/pdf/view', [PurchaseController::class, 'publicPdfView'])
+    ->name('public.purchases.pdf.view')
+    ->middleware('signed');
+
+// Ruta pública firmada para vista HTML de PDF de Venta
+Route::get('public/sales/{sale}/pdf/view', [SaleController::class, 'publicPdfView'])
+    ->name('public.sales.pdf.view')
+    ->middleware('signed');
+
+// Ruta pública firmada para vista HTML de PDF de Cotización
+Route::get('public/quotes/{quote}/pdf/view', [QuoteController::class, 'publicPdfView'])
+    ->name('public.quotes.pdf.view')
+    ->middleware('signed');
 
 Route::middleware([
     'auth:sanctum',

@@ -35,9 +35,35 @@ class SaleController extends Controller
      */
     public function pdf(Sale $sale)
     {
-        $pdf = Pdf::loadView('admin.sales.pdf', [
-            'model' => $sale,
+        $pdf = Pdf::loadView('pdf.sale.show', [
+            'sale' => $sale,
+            'useLayout' => false,
+            'isPublic' => false,
         ]);
         return $pdf->download('comprobante-venta-' . $sale->id . '.pdf');
+    }
+
+    /**
+     * Show a styled HTML preview of the Sale PDF with a download button.
+     */
+    public function pdfView(Sale $sale)
+    {
+        return view('pdf.sale.show', [
+            'sale' => $sale,
+            'useLayout' => true,
+            'isPublic' => false,
+        ]);
+    }
+
+    /**
+     * Public HTML preview of the Sale PDF (signed URL required).
+     */
+    public function publicPdfView(Sale $sale)
+    {
+        return view('pdf.sale.show', [
+            'sale' => $sale,
+            'useLayout' => false,
+            'isPublic' => true,
+        ]);
     }
 }

@@ -64,6 +64,10 @@
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
+                <x-wire-button label="Guardar" right-icon="check" positive wire:click="save" />
+            </div>
+
+            <div>
                 <x-wire-badge :label="str($purchase->status)->upper()"
                     :color="$purchase->status === 'draft' ? 'slate' : ($purchase->status === 'posted' ? 'emerald' : 'rose')" />
                 @if($purchase->payment_status)
@@ -73,36 +77,32 @@
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-                @if($purchase->status === 'draft')
-                <x-wire-button light emerald label="Contabilizar" wire:click="post" wire:loading.attr="disabled" />
-                <x-wire-button light red label="Cancelar" wire:click="cancel" wire:loading.attr="disabled" />
-                @elseif($purchase->status === 'posted')
-                <x-wire-button light emerald label="Registrar pago" wire:click="markPaid"
-                    wire:loading.attr="disabled" />
-                <x-wire-button light red label="Anular" wire:click="cancel" wire:loading.attr="disabled" />
-                @elseif($purchase->status === 'cancelled')
-                <x-wire-button light gray label="Reabrir" wire:click="reopen" wire:loading.attr="disabled" />
-                @endif
+                <x-wire-dropdown icon="bars-3" align="right">
+                    @if($purchase->status === 'draft')
+                    <x-wire-dropdown.item label="Contabilizar" wire:click="post" />
+                    <x-wire-dropdown.item label="Cancelar" wire:click="cancel" />
+                    @elseif($purchase->status === 'posted')
+                    <x-wire-dropdown.item label="Registrar pago" wire:click="markPaid" />
+                    <x-wire-dropdown.item label="Anular" wire:click="cancel" />
+                    @elseif($purchase->status === 'cancelled')
+                    <x-wire-dropdown.item label="Reabrir" wire:click="reopen" />
+                    @endif
 
-                @if($purchase->purchase_order_id)
-                <x-wire-button light gray label="Ver OC"
-                    :href="route('admin.purchases-orders.edit', $purchase->purchase_order_id)" />
-                @endif
+                    @if($purchase->purchase_order_id)
+                    <x-wire-dropdown.item label="Ver OC"
+                        :href="route('admin.purchases-orders.edit', $purchase->purchase_order_id)" />
+                    @endif
 
-                <x-wire-button light gray label="Enviar factura por correo" wire:click="openModal({{ $purchase }})">
-                    <i class="fa-solid fa-envelope"></i>
-                </x-wire-button>
-
-                <x-wire-button light gray href="{{ route('admin.purchases.pdf', $purchase) }}">
-
-                    descargar
-                </x-wire-button>
-
-                <x-wire-button light gray
-                    href="{{ route('admin.qr.labels', ['type' => 'purchase', 'id' => $purchase->id]) }}"
-                    label="Generar QR" />
-
-                <x-wire-button light gray :href="route('admin.purchases.index')" label="Volver" />
+                    <x-wire-dropdown.header separator label="Acciones" />
+                    <x-wire-dropdown.item label="Enviar factura por correo" wire:click="openModal({{ $purchase }})" />
+                    <x-wire-dropdown.item label="Ver PDF" :href="route('admin.purchases.pdf.view', $purchase)" />
+                    <x-wire-dropdown.item label="Ver público"
+                        :href="URL::signedRoute('public.purchases.pdf.view', ['purchase' => $purchase])" />
+                    <x-wire-dropdown.item label="Descargar PDF" :href="route('admin.purchases.pdf', $purchase)" />
+                    <x-wire-dropdown.item label="Generar QR"
+                        :href="route('admin.qr.labels', ['type' => 'purchase', 'id' => $purchase->id])" />
+                    <x-wire-dropdown.item label="Volver" :href="route('admin.purchases.index')" />
+                </x-wire-dropdown>
             </div>
         </div>
     </x-wire-card>
@@ -219,9 +219,7 @@
                 Total: $<span x-text="Number(total || 0).toFixed(2)"></span>
             </div>
 
-            <x-wire-button type="submit" icon="check" spinner>
-                Guardar cambios
-            </x-wire-button>
+
         </form>
     </x-wire-card>
 

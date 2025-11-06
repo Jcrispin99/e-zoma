@@ -67,6 +67,20 @@
 
         <form wire:submit="save" class="space-y-4" x-on:keydown.enter.prevent>
 
+            <x-wire-card class="mb-3">
+                <div class="flex items-center gap-2">
+                    <x-wire-button color="primary" icon="check" spinner type="submit">
+                        Guardar
+                    </x-wire-button>
+                    <x-wire-button color="secondary" icon="x-mark" :href="route('admin.quotes.index')">
+                        Cancelar
+                    </x-wire-button>
+                    <x-wire-button icon="document-text" color="sky" disabled>
+                        Ver PDF (vista)
+                    </x-wire-button>
+                </div>
+            </x-wire-card>
+
             <div class="grid lg:grid-cols-4 gap-4">
                 <x-wire-native-select label="Diario" wire:model.live="journal_id">
                     @if($journals->isEmpty())
@@ -161,9 +175,7 @@
                 Total: $<span x-text="total.toFixed(2)"></span>
             </div>
 
-            <x-wire-button type="submit" icon="check" spinner>
-                Guardar
-            </x-wire-button>
+            
         </form>
     </x-wire-card>
 </div>

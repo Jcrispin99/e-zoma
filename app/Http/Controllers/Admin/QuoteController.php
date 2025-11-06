@@ -35,9 +35,35 @@ class QuoteController extends Controller
      */
     public function pdf(Quote $quote)
     {
-        $pdf = Pdf::loadView('admin.quotes.pdf', [
-            'model' => $quote,
+        $pdf = Pdf::loadView('pdf.quote.show', [
+            'quote' => $quote,
+            'useLayout' => false,
+            'isPublic' => false,
         ]);
         return $pdf->download('cotizacion-' . $quote->id . '.pdf');
+    }
+
+    /**
+     * Show a styled HTML preview of the Quote PDF with a download button.
+     */
+    public function pdfView(Quote $quote)
+    {
+        return view('pdf.quote.show', [
+            'quote' => $quote,
+            'useLayout' => true,
+            'isPublic' => false,
+        ]);
+    }
+
+    /**
+     * Public HTML preview of the Quote PDF (signed URL required).
+     */
+    public function publicPdfView(Quote $quote)
+    {
+        return view('pdf.quote.show', [
+            'quote' => $quote,
+            'useLayout' => false,
+            'isPublic' => true,
+        ]);
     }
 }

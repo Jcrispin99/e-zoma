@@ -51,6 +51,22 @@
     $watch('variants', () => calc(), { deep: true })
 " x-on:keydown.window="handleScanner($event)">
         <form wire:submit.prevent="save" class="space-y-4" x-on:keydown.enter.prevent>
+
+            <x-wire-card class="mb-3">
+                <div class="flex items-center gap-2">
+                    <x-wire-button color="primary" icon="check" spinner type="submit">
+                        Guardar
+                    </x-wire-button>
+                    <x-wire-button color="secondary" icon="x-mark" :href="route('admin.sales.index')">
+                        Cancelar
+                    </x-wire-button>
+                    <x-wire-button icon="document-text" color="sky"
+                        x-bind:href="quote_id ? `/admin/quotes/${quote_id}/pdf/view` : null"
+                        x-bind:disabled="!quote_id">
+                        Ver Cotización (vista)
+                    </x-wire-button>
+                </div>
+            </x-wire-card>
             <div class="grid lg:grid-cols-4 gap-4">
                 <x-wire-native-select label="Serie" wire:model="journal_id">
                     <option value="">Seleccione serie</option>
@@ -124,12 +140,15 @@
                                 <td class="px-4 py-1">
                                     <x-wire-native-select x-model="variant.tax_id">
                                         <template x-for="tax in taxes" :key="tax.id">
-                                            <option :value="tax.id" x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`"></option>
+                                            <option :value="tax.id"
+                                                x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`">
+                                            </option>
                                         </template>
                                     </x-wire-native-select>
                                 </td>
                                 <td class="px-4 py-1"
-                                    x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return base.toFixed(2); })()"></td>
+                                    x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return base.toFixed(2); })()">
+                                </td>
                                 <td class="px-4 py-1">
                                     <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
                                 </td>
@@ -155,9 +174,7 @@
                 Total: $<span x-text="Number(total).toFixed(2)"></span>
             </div>
 
-            <x-wire-button type="submit" icon="check" spinner>
-                Guardar
-            </x-wire-button>
+            
         </form>
     </div>
 </x-wire-card>

@@ -30,6 +30,23 @@ Route::get('/', function () {
     return view('admin.dashboard');
 })->name('dashboard');
 
+// Reportes
+Route::get('reports/sales/top-products', function () {
+    return view('admin.reports.sales-top-products');
+})->name('reports.sales.top-products');
+
+Route::get('reports/sales/payment-methods', function () {
+    return view('admin.reports.sales-payment-methods');
+})->name('reports.sales.payment-methods');
+
+Route::get('reports/customers/frequent', function () {
+    return view('admin.reports.customers-frequent');
+})->name('reports.customers.frequent');
+
+Route::get('reports/sunat/status', function () {
+    return view('admin.reports.sunat-status');
+})->name('reports.sunat.status');
+
 // Usuario
 Route::resource('users', UserController::class)->except(['show']);
 

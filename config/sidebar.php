@@ -135,6 +135,33 @@ $links = [
         'type' => 'group',
         'title' => 'Reportes',
         'icon' => 'fa-solid fa-chart-line',
+        'active' => ['admin.reports.*'],
+        'items' => [
+            [
+                'type' => 'link',
+                'title' => 'Ventas: Top productos',
+                'route' => 'admin.reports.sales.top-products',
+                'active' => 'admin.reports.sales.top-products',
+            ],
+            [
+                'type' => 'link',
+                'title' => 'Ventas: Métodos de pago',
+                'route' => 'admin.reports.sales.payment-methods',
+                'active' => 'admin.reports.sales.payment-methods',
+            ],
+            [
+                'type' => 'link',
+                'title' => 'Clientes: Frecuentes',
+                'route' => 'admin.reports.customers.frequent',
+                'active' => 'admin.reports.customers.frequent',
+            ],
+            [
+                'type' => 'link',
+                'title' => 'Sunat: Estados',
+                'route' => 'admin.reports.sunat.status',
+                'active' => 'admin.reports.sunat.status',
+            ],
+        ],
     ],
     [
         'type' => 'group',

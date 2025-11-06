@@ -17,7 +17,6 @@
                     <div class="flex items-center justify-center" aria-label="Logo del sistema ola" role="img">
                         <style>
                             @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@800;900&display=swap');
-                            @import url('https://fonts.googleapis.com/css2?family=Consolas&display=swap');
                         </style>
                         <svg class="group cursor-pointer select-none h-12 md:h-14 me-0" viewBox="0 0 210 150"
                             preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg">

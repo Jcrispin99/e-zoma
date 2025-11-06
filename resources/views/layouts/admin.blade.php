@@ -29,6 +29,9 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+    <!-- ApexCharts CDN para gráficos elegantes -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
     {{-- WireUI Styles --}}
     @wireUiStyles
 

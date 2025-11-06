@@ -29,8 +29,8 @@
     <!-- Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    {{-- wireui --}}
-    <wireui:scripts />
+    {{-- WireUI Styles --}}
+    @wireUiStyles
 
     @stack('css')
 </head>
@@ -62,6 +62,9 @@
     @stack('modals')
 
     @livewireScripts
+
+    {{-- WireUI Scripts --}}
+    @wireUiScripts
 
 
 

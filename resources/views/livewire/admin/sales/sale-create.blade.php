@@ -31,11 +31,11 @@
     const calc = () => {
         let subtotal = 0;
         let taxTotal = 0;
-        (variants || []).forEach(v => {
+        (this.variants || []).forEach(v => {
             const qty = Number(v.quantity) || 0;
             const price = Number(v.price) || 0;
             const line = qty * price;
-            const tax = (taxes || []).find(t => String(t.id) === String(v.tax_id)) || null;
+            const tax = (this.taxes || []).find(t => String(t.id) === String(v.tax_id)) || null;
             const rate = tax ? Number(tax.rate_percent) || 0 : 0;
             const inclusive = tax ? Boolean(tax.is_price_inclusive) : false;
             const base = (inclusive && rate > 0) ? (line / (1 + (rate / 100))) : line;
@@ -43,7 +43,7 @@
             subtotal += base;
             taxTotal += taxAmt;
         });
-        total = subtotal + taxTotal;
+        $data.total = subtotal + taxTotal;
         $data.subtotal = subtotal;
         $data.taxTotal = taxTotal;
     };

@@ -27,7 +27,13 @@ class PosConfigController extends Controller
     public function create()
     {
         $companies = Company::all();
-        $warehouses = Warehouse::all();
+        $activeCompanyId = session('active_company_id');
+        $warehousesQuery = Warehouse::query();
+        if ($activeCompanyId) {
+            $warehousesQuery->where('company_id', $activeCompanyId);
+        }
+        $warehouses = $warehousesQuery->get();
+        $defaultWarehouseId = optional($warehouses->first())->id;
         $customers = Customer::all();
         $journals = Journal::where('type', 'sale')->with('sequence')->get();
         $taxes = Tax::query()
@@ -36,7 +42,7 @@ class PosConfigController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.posconfig.create', compact('companies', 'warehouses', 'customers', 'journals', 'taxes'));
+        return view('admin.posconfig.create', compact('companies', 'warehouses', 'customers', 'journals', 'taxes', 'defaultWarehouseId'));
     }
 
     /**
@@ -46,7 +52,6 @@ class PosConfigController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'company_id' => 'required|exists:companies,id',
             'warehouse_id' => 'required|exists:warehouses,id',
             'receipt_journal_id' => 'required|exists:journals,id',
             'invoice_journal_id' => 'required|exists:journals,id',
@@ -69,6 +74,19 @@ class PosConfigController extends Controller
             $data['apply_tax'] = $preset !== '0';
         }
 
+        // Asignar compañía desde sesión
+        $activeCompanyId = session('active_company_id');
+        if (!$activeCompanyId) {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear la configuración POS.',
+            ]);
+            return redirect()->back();
+        }
+
+        $data['company_id'] = $activeCompanyId;
+
         $posConfig = PosConfig::create($data);
 
         session()->flash('swalt', [
@@ -85,8 +103,10 @@ class PosConfigController extends Controller
      */
     public function edit(PosConfig $posConfig)
     {
-        $companies = Company::all();
-        $warehouses = Warehouse::all();
+        // Filtrar almacenes por la compañía del POS config (no se edita compañía aquí)
+        $warehouses = Warehouse::query()
+            ->where('company_id', $posConfig->company_id)
+            ->get();
         $customers = Customer::all();
         $journals = Journal::where('type', 'sale')->with('sequence')->get();
         $taxes = Tax::query()
@@ -95,7 +115,7 @@ class PosConfigController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('admin.posconfig.edit', compact('posConfig', 'companies', 'warehouses', 'customers', 'journals', 'taxes'));
+        return view('admin.posconfig.edit', compact('posConfig', 'warehouses', 'customers', 'journals', 'taxes'));
     }
 
     /**
@@ -105,7 +125,6 @@ class PosConfigController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'company_id' => 'required|exists:companies,id',
             'warehouse_id' => 'required|exists:warehouses,id',
             'receipt_journal_id' => 'required|exists:journals,id',
             'invoice_journal_id' => 'required|exists:journals,id',

@@ -33,7 +33,8 @@
 
             @php($lockedFiscal = optional($journal->sequence)->next_number >= 2)
             <label class="inline-flex items-center space-x-2">
-                <input type="checkbox" id="is_fiscal" name="is_fiscal" value="1" class="rounded border-gray-300" @checked(old('is_fiscal', $journal->is_fiscal)) @disabled($lockedFiscal)>
+                <input type="checkbox" id="is_fiscal" name="is_fiscal" value="1" class="rounded border-gray-300"
+                    @checked(old('is_fiscal', $journal->is_fiscal)) @disabled($lockedFiscal)>
                 <span>Documento fiscal</span>
             </label>
             @if($lockedFiscal)
@@ -53,14 +54,6 @@
                 @foreach ($companies as $company)
                 <option value="{{ $company->id }}" @selected($journal->company_id == $company->id)>
                     {{ $company->name }}
-                </option>
-                @endforeach
-            </x-wire-native-select>
-
-            <x-wire-native-select label="Secuencia" name="sequence_id">
-                @foreach ($sequences as $sequence)
-                <option value="{{ $sequence->id }}" @selected($journal->sequence_id == $sequence->id)>
-                    {{ $sequence->id }}
                 </option>
                 @endforeach
             </x-wire-native-select>

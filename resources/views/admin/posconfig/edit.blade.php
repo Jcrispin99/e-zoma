@@ -24,6 +24,7 @@
 
                 <x-wire-input label="Nombre" name="name" value="{{ old('name', $posConfig->name) }}" />
 
+                @if(false)
                 <x-wire-native-select label="Compañía" name="company_id">
                     <option value="">Seleccione una compañía</option>
                     @foreach ($companies as $company)
@@ -33,6 +34,7 @@
                     </option>
                     @endforeach
                 </x-wire-native-select>
+                @endif
 
                 <x-wire-native-select label="Almacén" name="warehouse_id">
                     <option value="">Seleccione un almacén</option>

@@ -24,19 +24,13 @@
 
                 <x-wire-input label="Nombre" name="name" value="{{ old('name') }}" />
 
-                <x-wire-native-select label="Compañía" name="company_id">
-                    <option value="">Seleccione una compañía</option>
-                    @foreach ($companies as $company)
-                    <option value="{{ $company->id }}" @selected(old('company_id')==$company->id)>
-                        {{ $company->name }}
-                    </option>
-                    @endforeach
-                </x-wire-native-select>
+
 
                 <x-wire-native-select label="Almacén" name="warehouse_id">
                     <option value="">Seleccione un almacén</option>
                     @foreach ($warehouses as $warehouse)
-                    <option value="{{ $warehouse->id }}" @selected(old('warehouse_id')==$warehouse->id)>
+                    <option value="{{ $warehouse->id }}" @selected(old('warehouse_id',
+                        $defaultWarehouseId)==$warehouse->id)>
                         {{ $warehouse->name }}
                     </option>
                     @endforeach

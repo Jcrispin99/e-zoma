@@ -11,7 +11,8 @@ trait CompanyFilterable
         $selectedCompanyIds = session()->get('selected_company_ids', []);
 
         if (!empty($selectedCompanyIds)) {
-            return $query->whereIn('company_id', $selectedCompanyIds);
+            $table = $query->getModel()->getTable();
+            return $query->whereIn($table . '.company_id', $selectedCompanyIds);
         }
 
         return $query;

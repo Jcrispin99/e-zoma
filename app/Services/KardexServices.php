@@ -23,22 +23,30 @@ class KardexServices
     public function registerEntry($model, array $variant, $warehouse_id, $detail)
     {
         $lastRecord = $this->getLastRecord($variant['id'], $warehouse_id);
-        $newQuantityBalance = $lastRecord['cuantity'] + $variant['quantity'];
-        $newTotalBalance = $lastRecord['total'] + ($variant['quantity'] * $variant['price']);
+
+        $qty = (float) ($variant['quantity'] ?? 0);
+        // Normalizar costo unitario: si viene "subtotal" (monto base sin IGV) y es > 0, usarlo.
+        $baseSubtotal = $variant['subtotal'] ?? null;
+        $unitCost = ($baseSubtotal !== null && (float) $baseSubtotal > 0 && $qty > 0)
+            ? ((float) $baseSubtotal / $qty)
+            : (float) ($variant['price'] ?? 0);
+
+        $newQuantityBalance = $lastRecord['cuantity'] + $qty;
+        $newTotalBalance = $lastRecord['total'] + ($qty * $unitCost);
         $newCostBalance = $newTotalBalance / ($newQuantityBalance ?: 1);
 
         $model->inventories()->create([
             'detail' => $detail,
-            'quantity_in' => $variant['quantity'],
-            'cost_in' => $variant['price'],
-            'total_in' => $variant['quantity'] * $variant['price'],
+            'quantity_in' => $qty,
+            'cost_in' => $unitCost,
+            'total_in' => $qty * $unitCost,
             'quantity_balance' => $newQuantityBalance,
             'cost_balance' => $newCostBalance,
             'total_balance' => $newTotalBalance,
             'variant_id' => $variant['id'],
             'warehouse_id' => $warehouse_id,
         ]);
-        Variant::where('id', $variant['id'])->increment('stock', $variant['quantity']);
+        Variant::where('id', $variant['id'])->increment('stock', $qty);
     }
     public function registerExit($model, array $variant, $warehouse_id, $detail)
     {

@@ -17,6 +17,9 @@
             {{-- Resumen de ventas --}}
             @livewire('admin.dashboard.sales-summary')
 
+            {{-- Tendencia de ventas por día (ApexCharts) --}}
+            @livewire('admin.dashboard.sales-trend-chart')
+
             {{-- Cuadrícula para Top Productos y Top POS --}}
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 @livewire('admin.dashboard.sales-top-products')

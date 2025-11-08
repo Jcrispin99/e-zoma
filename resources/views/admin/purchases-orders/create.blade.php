@@ -14,6 +14,6 @@
     ],
 ]">
 
-    @livewire('admin.purchaseOrders.purchase-order-create')
+    @livewire('admin.form.purchase-order-form', ['mode' => 'create'])
 
 </x-admin-layout>

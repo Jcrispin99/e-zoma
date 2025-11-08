@@ -22,7 +22,9 @@ class ProductController extends Controller
      */
     public function create()
     {
-        return view('admin.products.form');
+        $categories = Category::all();
+        // Unificamos la vista a 'admin.products.form' para crear/editar
+        return view('admin.products.form', compact('categories'));
     }
 
     /**
@@ -53,7 +55,9 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
-        return view('admin.products.form', compact('product'));
+        $categories = Category::all();
+        // Usamos la misma vista 'admin.products.form' para edición
+        return view('admin.products.form', compact('product', 'categories'));
     }
 
     /**

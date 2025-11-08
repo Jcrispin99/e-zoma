@@ -73,6 +73,8 @@
         }
     }
 }" x-on:keydown.window="handleScanner($event)">
+
+    @if($mode === 'edit')
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
@@ -86,12 +88,9 @@
                 <x-wire-badge :label="str($purchaseOrder->billing_status)->upper()"
                     :color="$purchaseOrder->billing_status === 'complete' ? 'emerald' : ($purchaseOrder->billing_status === 'partial' ? 'amber' : 'slate')" />
                 @endif
-
-
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-
                 <x-wire-dropdown icon="bars-3" align="right">
                     @if ($purchaseOrder->status == 'draft')
                     <x-wire-dropdown.item label="Confirmar Orden" wire:click="confirmOrder" />
@@ -115,16 +114,27 @@
             </div>
         </div>
     </x-wire-card>
-    <x-wire-card class="border-2 border-gray-100">
-
+    @else
+    <x-wire-card class="mb-3">
         <form wire:submit="save" class="space-y-4" x-on:keydown.enter.prevent>
+            <div class="flex items-center gap-2">
+                <x-wire-button color="primary" icon="check" spinner wire:click="save">
+                    Guardar
+                </x-wire-button>
+                <x-wire-button color="secondary" icon="x-mark" href="{{ route('admin.purchases-orders.index') }}">
+                    Cancelar
+                </x-wire-button>
+            </div>
+        </form>
+    </x-wire-card>
+    @endif
 
+    <x-wire-card class="border-2 border-gray-100">
+        <form wire:submit="save" class="space-y-4" x-on:keydown.enter.prevent>
             <div class="grid lg:grid-cols-4 gap-4">
-                <x-wire-native-select label="Serie del Documento" wire:model="journal_id" disabled>
-                    @foreach ($journals as $journal)
-                    <option value="{{ $journal->id }}">{{ $journal->name }} ({{ $journal->code }})</option>
-                    @endforeach
-                </x-wire-native-select>
+                <x-wire-select label="Serie del Documento" :disabled="$mode === 'edit'" wire:model="journal_id"
+                    :options="$journalOptions" option-label="label" option-value="id"
+                    placeholder="Seleccione una serie" />
 
                 <x-wire-input label="Correlativo" wire:model="correlative" readonly disabled />
 
@@ -132,23 +142,21 @@
             </div>
 
             <x-wire-select label="Proveedor" wire:model="supplier_id" placeholder="Seleccione un proveedor" :async-data="[
-                    'api' => route('api.suppliers.index'),
-                    'method' => 'POST',
-                ]" option-label="name" option-value="id" class="flex-1" />
+                'api' => route('api.suppliers.index'),
+                'method' => 'POST',
+            ]" option-label="name" option-value="id" class="flex-1" />
 
             <div class="lg:flex lg:space-x-4">
                 <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"
                     :async-data="[
-                        'api' => route('api.product.index'),
-                        'method' => 'POST',
-                    ]" option-label="name" option-value="id" class="flex-1" />
+                    'api' => route('api.product.index'),
+                    'method' => 'POST',
+                ]" option-label="name" option-value="id" class="flex-1" />
 
                 <div class="flex-shrink-0">
-
                     <x-wire-button wire:click="addProduct" class="mt-4 w-full lg:mt-6.5" spinner>
                         Agregar producto
                     </x-wire-button>
-
                 </div>
             </div>
 
@@ -196,29 +204,29 @@
                         </template>
                         <template x-if="variants.length === 0">
                             <tr>
-                                <td colspan="5" class="text-center text-gray-500 py-4">No hay productos agregados
-                                </td>
+                                <td colspan="6" class="text-center text-gray-500 py-4">No hay productos agregados</td>
                             </tr>
                         </template>
 
                     </tbody>
-
                 </table>
             </div>
+
             <div class="fex items-center space-x-4">
                 <x-label>Observaciones</x-label>
                 <x-wire-input wire:model="observation" placeholder="Ingrese observaciones" class="flex-1" />
             </div>
+
             <div>
                 Subtotal: $<span x-text="subtotal.toFixed(2)"></span><br>
                 Impuestos: $<span x-text="taxTotal.toFixed(2)"></span><br>
                 Total: $<span x-text="total.toFixed(2)"></span>
             </div>
 
-
         </form>
     </x-wire-card>
 
+    @if($mode === 'edit')
     <x-wire-modal-card wire:model="form.open" width="lg">
         <x-slot name="title">
             <p class="text-xl text-center mb-2">Enviar email</p>
@@ -228,9 +236,8 @@
 
         <form wire:submit="sendEmail">
             <x-wire-input label="Correo" wire:model="form.email" class="mb-4" value="{{ $form['email'] }}" />
-            <x-wire-button type="submit" class="w-full">
-                Enviar
-            </x-wire-button>
+            <x-wire-button type="submit" class="w-full">Enviar</x-wire-button>
         </form>
     </x-wire-modal-card>
+    @endif
 </div>

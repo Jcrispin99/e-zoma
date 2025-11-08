@@ -14,6 +14,6 @@
     ],
 ]">
     <x-wire-card>
-        @livewire('admin.purchases.purchase-edit', ['purchase' => $purchase])
+        @livewire('admin.form.purchase-form', ['mode' => 'edit', 'purchase' => $purchase])
     </x-wire-card>
 </x-admin-layout>

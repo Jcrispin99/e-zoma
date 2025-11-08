@@ -2,93 +2,86 @@
 
 namespace App\Livewire\Admin\Form;
 
-use Livewire\Component;
 use App\Models\Variant;
-use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\DB;
+use Livewire\Component;
 
 class VariantForm extends Component
 {
+    public ?Variant $variant = null;
     public ?int $variantId = null;
+
+    // Campos editables
+    public ?string $sku = null;
+    public ?string $barcode = null;
+    public float $price = 0.0;
+    public ?float $stock = null; // Solo informativo si se usa por inventarios
+
     public bool $isEditing = true;
-    public bool $redirectAfterSave = true;
-
-    public string $productName = '';
-    public string $sku = '';
-    public string $barcode = '';
-    public string $price = '';
-
-    protected function rules(): array
-    {
-        return [
-            'sku' => ['nullable', 'string'],
-            'barcode' => ['nullable', 'string'],
-            'price' => ['required', 'numeric', 'min:0'],
-        ];
-    }
 
     public function mount(?int $variantId = null): void
     {
+        $this->variantId = $variantId;
         if ($variantId) {
-            $this->variantId = $variantId;
-            $variant = Variant::with(['product', 'images'])->findOrFail($variantId);
-            $this->productName = $variant->product ? $variant->product->name : '';
-            $this->sku = (string)($variant->sku ?? '');
-            $this->barcode = (string)($variant->barcode ?? '');
-            $this->price = (string)($variant->price ?? '');
-            $this->isEditing = true;
-        } else {
-            $this->isEditing = false;
+            $this->variant = Variant::with(['product', 'attributeValues', 'images'])->findOrFail($variantId);
+            $this->sku = $this->variant->sku;
+            $this->barcode = $this->variant->barcode;
+            $this->price = (float) $this->variant->price;
+            $this->stock = $this->variant->stock;
         }
     }
 
-    public function save()
+    public function rules(): array
+    {
+        return [
+            'sku' => ['nullable', 'string', 'max:255'],
+            'barcode' => ['nullable', 'string', 'max:255'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'stock' => ['nullable', 'numeric'],
+        ];
+    }
+
+    public function generateBarcode(): void
+    {
+        $this->barcode = Variant::generateUniqueBarcode();
+    }
+
+    public function save(): void
     {
         $this->validate();
 
-        if (!$this->variantId) {
-            session()->flash('swalt', [
+        if (!$this->variant) {
+            $this->dispatch('swal', [
                 'icon' => 'error',
                 'title' => 'Error',
-                'text' => 'No se encontró la variante para actualizar.',
+                'text' => 'No se encontró la variante a actualizar.',
             ]);
-            return redirect()->route('admin.variants.index');
+            return;
         }
 
-        DB::transaction(function () {
-            $variant = Variant::findOrFail($this->variantId);
+        $data = [
+            'sku' => $this->sku,
+            'price' => $this->price,
+            'barcode' => $this->barcode,
+            'stock' => $this->stock,
+        ];
 
-            $barcode = trim($this->barcode) !== '' ? $this->barcode : Variant::generateUniqueBarcode();
-
-            $variant->update([
-                'sku' => $this->sku !== '' ? $this->sku : $variant->sku,
-                'barcode' => $barcode,
-                'price' => $this->price !== '' ? $this->price : $variant->price,
-            ]);
-
-            session()->flash('swalt', [
-                'icon' => 'success',
-                'title' => 'Bien',
-                'text' => 'Variant actualizado correctamente.',
-            ]);
-        });
-
-        if ($this->redirectAfterSave) {
-            return redirect()->route('admin.variants.index');
+        // Generar código si está vacío
+        if (empty($data['barcode'])) {
+            $data['barcode'] = Variant::generateUniqueBarcode();
+            $this->barcode = $data['barcode'];
         }
 
-        return null;
+        $this->variant->update($data);
+
+        $this->dispatch('swal', [
+            'icon' => 'success',
+            'title' => 'Bien',
+            'text' => 'Variante actualizada correctamente.',
+        ]);
     }
 
     public function render()
     {
-        $variant = null;
-        if ($this->isEditing && $this->variantId) {
-            $variant = Variant::with(['product', 'images'])->find($this->variantId);
-        }
-
-        return view('livewire.admin.form.variant-form', [
-            'variant' => $variant,
-        ]);
+        return view('livewire.admin.form.variant-form');
     }
 }

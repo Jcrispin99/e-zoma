@@ -68,11 +68,12 @@ class VariantController extends Controller
             return redirect()->route('admin.variants.index');
         }
 
-        if ($variant->purchasesOrders()->exists() || $variant->quotes()->exists()) {
+        // Bloquear si la variante está usada en cualquier documento vía pivot variantables
+        if ($variant->variantables()->exists() || $variant->posOrderLines()->exists()) {
             session()->flash('swalt', [
                 'icon' => 'error',
                 'title' => 'Error',
-                'text' => 'No se puede eliminar el variant porque está relacionado con una orden de compra o una cotización.',
+                'text' => 'No se puede eliminar la variante porque está relacionada con documentos o transacciones.',
             ]);
 
             return redirect()->route('admin.variants.index');

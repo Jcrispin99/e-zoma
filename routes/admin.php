@@ -63,7 +63,7 @@ Route::resource('attributes', AttributeController::class)->except(['show', 'stor
 // compras
 Route::resource('suppliers', SupplierController::class)->except(['show']);
 
-Route::resource('purchases-orders', PurchaseOrderController::class)->parameters(['purchases-orders' => 'purchaseOrder'])->only(['index', 'create', 'edit']);
+Route::resource('purchases-orders', PurchaseOrderController::class)->parameters(['purchases-orders' => 'purchaseOrder'])->except(['show', 'destroy']);
 Route::get('purchases-orders/{purchaseOrder}/pdf', [PurchaseOrderController::class, 'pdf'])->name('purchases-orders.pdf');
 Route::get('purchases-orders/{purchaseOrder}/pdf/view', [PurchaseOrderController::class, 'pdfView'])->name('purchases-orders.pdf.view');
 

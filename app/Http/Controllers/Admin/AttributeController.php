@@ -25,7 +25,7 @@ class AttributeController extends Controller
      */
     public function create()
     {
-        return view('admin.attributes.create');
+        return view('admin.attributes.form');
     }
 
     /**
@@ -64,7 +64,7 @@ class AttributeController extends Controller
      */
     public function edit(Attribute $attribute)
     {
-        return view('admin.attributes.edit', [
+        return view('admin.attributes.form', [
             'attribute' => $attribute
         ]);
     }

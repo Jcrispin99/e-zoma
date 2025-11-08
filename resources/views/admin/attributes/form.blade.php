@@ -9,12 +9,13 @@
         'icon' => 'fa-regular fa-file-lines',
         'href' => route('admin.attributes.index'),
     ],
+    [
+        'name' => isset($attribute) ? 'Editar' : 'Nuevo',
+    ],
 ]">
-    <x-slot name="action">
-        <x-wire-button href="{{ route('admin.attributes.create') }}" green>
-            Nuevo
-        </x-wire-button>
-    </x-slot>
-    @livewire('admin.datatables.attribute-table')
+
+    <x-wire-card>
+        <livewire:admin.form.attribute-form :attributeId="isset($attribute) ? $attribute->id : null" />
+    </x-wire-card>
 
 </x-admin-layout>

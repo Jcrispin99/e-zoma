@@ -10,10 +10,12 @@
         'href' => route('admin.products.index'),
     ],
     [
-        'name' => 'Editar',
+        'name' => isset($product) ? 'Editar' : 'Nuevo',
     ],
 ]">
-     <x-wire-card>
-        @livewire('admin.products.product-edit', ['productId' => $product->id])
+
+    <x-wire-card>
+        <livewire:admin.form.product-form :productId="isset($product) ? $product->id : null" />
     </x-wire-card>
+
 </x-admin-layout>

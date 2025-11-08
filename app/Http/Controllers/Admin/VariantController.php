@@ -25,8 +25,7 @@ class VariantController extends Controller
      */
     public function edit(Variant $variant)
     {
-        $products = Product::all();
-        return view('admin.variants.edit', compact('variant', 'products'));
+        return view('admin.variants.form', compact('variant'));
     }
 
     /**

@@ -58,7 +58,7 @@ Route::get('products/import', [ProductController::class, 'import'])->name('produ
 Route::resource('variants', VariantController::class)->except(['show', 'create', 'store']);
 Route::get('variants/{variant}/kardex', [VariantController::class, 'kardex'])->name('variants.kardex');
 Route::resource('warehouses', WarehouseController::class)->except(['show']);
-Route::resource('attributes', AttributeController::class)->except(['show']);
+Route::resource('attributes', AttributeController::class)->except(['show', 'store', 'update']);
 
 // compras
 Route::resource('suppliers', SupplierController::class)->except(['show']);

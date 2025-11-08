@@ -93,7 +93,7 @@ Route::get('transfers/{transfer}/pdf', [TransferController::class, 'pdf'])->name
 Route::get('qr/labels/{type}/{id}', \App\Livewire\Admin\Qr\QrGenerator::class)->name('qr.labels');
 
 // POS
-Route::resource('posconfig', PosConfigController::class)->except(['show'])->parameters([
+Route::resource('posconfig', PosConfigController::class)->only(['index', 'create', 'edit', 'destroy'])->parameters([
     'posconfig' => 'posConfig'
 ]);
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin\Quotes;
+namespace App\Livewire\Admin\Form;
 
 use App\Mail\PdfSend;
 use App\Models\Journal;
@@ -454,6 +454,6 @@ class QuoteForm extends Component
 
     public function render()
     {
-        return view('livewire.admin.quotes.quote-form');
+        return view('livewire.admin.form.quote-form');
     }
 }

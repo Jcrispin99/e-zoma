@@ -14,6 +14,6 @@
     ],
 ]">
 
-    @livewire('admin.quotes.quote-form', ['mode' => 'create'])
+    @livewire('admin.form.quote-form', ['mode' => 'create'])
 
 </x-admin-layout>

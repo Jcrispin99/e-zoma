@@ -14,6 +14,6 @@
     ],
 ]">
     <x-wire-card>
-        @livewire('admin.quotes.quote-form', ['mode' => 'edit', 'quote' => $quote])
+        @livewire('admin.form.quote-form', ['mode' => 'edit', 'quote' => $quote])
     </x-wire-card>
 </x-admin-layout>

@@ -11,7 +11,7 @@
     ],
 ]">
     <x-slot name="action">
-        <x-wire-button href="{{ route('admin.categories.create') }}" green>
+        <x-wire-button href="{{ route('admin.categories.create') }}" wire:navigate green>
             Nuevo
         </x-wire-button>
     </x-slot>

@@ -1,5 +1,5 @@
 <div class="flex items-center space-x-2">
-    <x-wire-button href="{{ route('admin.categories.edit', $category->id) }}" blue xs>
+    <x-wire-button href="{{ route('admin.categories.edit', $category->id) }}" wire:navigate blue xs>
         Editar
     </x-wire-button>
 

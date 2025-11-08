@@ -5,7 +5,7 @@
             <x-wire-button color="primary" icon="check" spinner wire:click="save">
                 {{ $isEditing ? 'Actualizar' : 'Guardar' }}
             </x-wire-button>
-            <x-wire-button color="secondary" icon="x-mark" href="{{ route('admin.categories.index') }}">
+            <x-wire-button color="secondary" icon="x-mark" href="{{ route('admin.categories.index') }}" wire:navigate>
                 Cancelar
             </x-wire-button>
         </div>

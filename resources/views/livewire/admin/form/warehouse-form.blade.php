@@ -6,7 +6,7 @@
                 {{ $isEditing ? 'Actualizar' : 'Guardar' }}
             </x-wire-button>
             @if($redirectAfterSave)
-            <x-wire-button color="secondary" icon="x-mark" href="{{ route('admin.warehouses.index') }}">
+            <x-wire-button color="secondary" icon="x-mark" href="{{ route('admin.warehouses.index') }}" wire:navigate>
                 Cancelar
             </x-wire-button>
             @endif

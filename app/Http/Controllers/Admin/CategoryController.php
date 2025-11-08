@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
-use Illuminate\Http\Request;
+
 
 class CategoryController extends Controller
 {
@@ -26,37 +26,7 @@ class CategoryController extends Controller
         return view('admin.categories.form');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name',
-            'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:categories,id',
-        ]);
 
-        $data['slug'] = \Illuminate\Support\Str::slug($data['name']);
-
-        if (!empty($data['parent_id'])) {
-            $parent = Category::find($data['parent_id']);
-            $parent_full_name = $parent->full_name ?: $parent->name;
-            $data['full_name'] = $parent_full_name . ' / ' . $data['name'];
-        } else {
-            $data['full_name'] = $data['name'];
-        }
-
-        $category = Category::create($data);
-
-        session()->flash('swalt', [
-            'icon' => 'success',
-            'title' => '¡Bien hecho!',
-            'text' => 'Categoria ' . $category->name . ' ha sido creada',
-        ]);
-
-        return redirect()->route('admin.categories.edit', $category);
-    }
 
     /**
      * Show the form for editing the specified resource.
@@ -68,37 +38,7 @@ class CategoryController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Category $category)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
-            'description' => 'nullable|string',
-            'parent_id' => 'nullable|exists:categories,id',
-        ]);
 
-        $data['slug'] = \Illuminate\Support\Str::slug($data['name']);
-
-        if (!empty($data['parent_id'])) {
-            $parent = Category::find($data['parent_id']);
-            $parent_full_name = $parent->full_name ?: $parent->name;
-            $data['full_name'] = $parent_full_name . ' > ' . $data['name'];
-        } else {
-            $data['full_name'] = $data['name'];
-        }
-
-        $category->update($data);
-
-        session()->flash('swalt', [
-            'icon' => 'success',
-            'title' => '¡Bien hecho!',
-            'text' => 'Categoria ' . $category->name . ' ha sido actualizada',
-        ]);
-
-        return redirect()->route('admin.categories.edit', $category);
-    }
 
     /**
      * Remove the specified resource from storage.

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
-use Illuminate\Http\Request;
+
 
 class WarehouseController extends Controller
 {
@@ -25,36 +25,7 @@ class WarehouseController extends Controller
         return view('admin.warehouses.form');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-        ]);
 
-        $activeCompanyId = session('active_company_id');
-
-        if (!$activeCompanyId) {
-            session()->flash('swalt', [
-                'icon' => 'error',
-                'title' => 'Error',
-                'text' => 'No hay una compañía activa seleccionada. Por favor, seleccione una compañía antes de crear un almacén.',
-            ]);
-            return redirect()->back();
-        }
-
-        $warehouse = Warehouse::create($data + ['company_id' => $activeCompanyId]);
-
-        session()->flash('swalt', [
-            'icon' => 'success',
-            'title' => 'Bien',
-            'text' => 'Almacen guardado correctamente.',
-        ]);
-        return redirect()->route('admin.warehouses.edit', $warehouse);
-    }
 
     /**
      * Show the form for editing the specified resource.
@@ -64,24 +35,7 @@ class WarehouseController extends Controller
         return view('admin.warehouses.form', compact('warehouse'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Warehouse $warehouse)
-    {
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'location' => 'required|string|max:255',
-        ]);
 
-        $warehouse->update($data);
-        session()->flash('swalt', [
-            'icon' => 'success',
-            'title' => 'Bien',
-            'text' => 'Almacen actualizado correctamente.',
-        ]);
-        return redirect()->route('admin.warehouses.index');
-    }
 
     /**
      * Remove the specified resource from storage.

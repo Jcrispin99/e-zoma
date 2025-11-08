@@ -1,4 +1,4 @@
-<x-admin-layout title="CAtegorias" :breadcrumbs="[
+<x-admin-layout title="Categorias" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),
@@ -10,12 +10,12 @@
         'href' => route('admin.categories.index'),
     ],
     [
-        'name' => 'Nuevo',
+        'name' => isset($category) ? 'Editar' : 'Nuevo',
     ],
 ]">
 
     <x-wire-card>
-        @livewire('admin.categories.category-form')
+        <livewire:admin.form.category-form :categoryId="isset($category) ? $category->id : null" />
     </x-wire-card>
 
 </x-admin-layout>

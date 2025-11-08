@@ -22,7 +22,7 @@ class WarehouseController extends Controller
      */
     public function create()
     {
-        return view('admin.warehouses.create');
+        return view('admin.warehouses.form');
     }
 
     /**
@@ -61,7 +61,7 @@ class WarehouseController extends Controller
      */
     public function edit(Warehouse $warehouse)
     {
-        return view('admin.warehouses.edit', compact('warehouse'));
+        return view('admin.warehouses.form', compact('warehouse'));
     }
 
     /**

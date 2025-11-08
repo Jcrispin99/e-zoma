@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Admin\Categories;
+namespace App\Livewire\Admin\Form;
 
 use Livewire\Component;
 use App\Models\Category;
@@ -95,6 +95,6 @@ class CategoryForm extends Component
 
     public function render()
     {
-        return view('livewire.admin.categories.form');
+        return view('livewire.admin.form.category-form');
     }
 }

@@ -23,9 +23,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
-        return view('admin.categories.create', [
-            'categories' => Category::all()
-        ]);
+        return view('admin.categories.form');
     }
 
     /**
@@ -65,9 +63,8 @@ class CategoryController extends Controller
      */
     public function edit(Category $category)
     {
-        return view('admin.categories.edit', [
+        return view('admin.categories.form', [
             'category' => $category,
-            'categories' => Category::whereNull('parent_id')->get()
         ]);
     }
 

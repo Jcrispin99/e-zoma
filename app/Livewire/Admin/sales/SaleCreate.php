@@ -375,8 +375,7 @@ class SaleCreate extends Component
                 'subtotal' => $base,
             ]);
 
-            //Kardex
-            Kardex::registerExit($sale, $variant, $this->warehouse_id, 'Venta');
+            // Movimiento de inventario ahora ocurre al contabilizar (SaleEdit::post)
         }
 
         if ($this->quote_id) {

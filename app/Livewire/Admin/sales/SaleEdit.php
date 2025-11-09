@@ -193,6 +193,57 @@ class SaleEdit extends Component
 
     public function save()
     {
+        // Evaluar permisos de edición según matriz de estados
+        $status = (string) ($this->sale->status ?? 'draft');
+        $sunat = (string) ($this->sale->sunat_status ?? 'pending');
+
+        // Bloque total: documento cancelado o baja SUNAT
+        if ($status === 'cancelled' || in_array($sunat, ['cancelled'], true)) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Edición no permitida',
+                'text' => 'El documento está anulado; no se puede editar.',
+            ]);
+            return;
+        }
+
+        // Bloque en estados SUNAT que impiden edición
+        $blockedSunatForEdit = ['queued', 'processing', 'accepted', 'observed', 'sent'];
+        $isBlockedEdit = ($status === 'posted' && in_array($sunat, $blockedSunatForEdit, true));
+        if ($isBlockedEdit) {
+            $this->dispatch('swal', [
+                'icon' => 'info',
+                'title' => 'Edición bloqueada',
+                'text' => 'No se puede editar en el estado SUNAT/contable actual.',
+            ]);
+            return;
+        }
+
+        // Edición limitada: posted + pending (o skipped)
+        $isLimitedEdit = ($status === 'posted' && in_array($sunat, ['pending', 'skipped'], true));
+        if ($isLimitedEdit) {
+            $this->validate([
+                'warehouse_id' => 'required|exists:warehouses,id',
+                'observation' => 'nullable|string|max:255',
+            ], [], [
+                'warehouse_id' => 'almacén',
+                'observation' => 'observación',
+            ]);
+
+            $this->sale->update([
+                'warehouse_id' => $this->warehouse_id,
+                'observation' => $this->observation,
+            ]);
+
+            $this->dispatch('swal', [
+                'icon' => 'success',
+                'title' => 'Edición limitada aplicada',
+                'text' => 'Se actualizaron observaciones y almacén. Los productos no pueden cambiarse.',
+            ]);
+            return;
+        }
+
+        // Edición completa: draft, o posted con error/rejected
         $this->validate(
             [
                 'date' => 'nullable|date',
@@ -270,7 +321,23 @@ class SaleEdit extends Component
      */
     public function reopen()
     {
-        if (! in_array($this->sale->status, ['posted', 'cancelled'])) {
+        // Solo permitir reapertura desde 'posted' y con estados SUNAT permitidos
+        if ($this->sale->status !== 'posted') {
+            $this->dispatch('swal', [
+                'icon' => 'info',
+                'title' => 'No permitido',
+                'text' => 'Solo ventas publicadas pueden reabrirse a borrador.',
+            ]);
+            return;
+        }
+
+        $blockedSunat = ['accepted', 'queued', 'processing', 'cancelled', 'sent', 'observed'];
+        if (in_array((string) $this->sale->sunat_status, $blockedSunat, true)) {
+            $this->dispatch('swal', [
+                'icon' => 'info',
+                'title' => 'Reapertura bloqueada',
+                'text' => 'No se puede reabrir en el estado SUNAT actual.',
+            ]);
             return;
         }
 
@@ -289,6 +356,24 @@ class SaleEdit extends Component
      */
     public function markPaid()
     {
+        // Permitir pago solo si está publicada
+        if ($this->sale->status !== 'posted') {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Acción no válida',
+                'text' => 'Solo se puede registrar pago para ventas publicadas.',
+            ]);
+            return;
+        }
+        if ($this->sale->payment_status === 'paid') {
+            $this->dispatch('swal', [
+                'icon' => 'info',
+                'title' => 'Ya está pagada',
+                'text' => 'La venta ya está marcada como pagada.',
+            ]);
+            return;
+        }
+
         $this->sale->update(['payment_status' => 'paid']);
         $this->payment_status = 'paid';
 
@@ -296,6 +381,29 @@ class SaleEdit extends Component
             'icon' => 'success',
             'title' => 'Pago registrado',
             'text' => 'La venta quedó como pagada.',
+        ]);
+    }
+
+    /**
+     * Marcar venta como no pagada.
+     */
+    public function markUnpaid()
+    {
+        if ($this->sale->status === 'cancelled') {
+            $this->dispatch('swal', [
+                'icon' => 'info',
+                'title' => 'Documento anulado',
+                'text' => 'No se puede cambiar el estado de pago.',
+            ]);
+            return;
+        }
+        $this->sale->update(['payment_status' => 'unpaid']);
+        $this->payment_status = 'unpaid';
+
+        $this->dispatch('swal', [
+            'icon' => 'success',
+            'title' => 'Pago desmarcado',
+            'text' => 'La venta quedó como no pagada.',
         ]);
     }
 
@@ -320,10 +428,14 @@ class SaleEdit extends Component
         $this->sale->update(['status' => 'posted']);
         $this->status = 'posted';
 
+        foreach ($this->variants as $variant) {
+            Kardex::registerExit($this->sale, $variant, $this->warehouse_id, 'Venta');
+        }
+
         $this->dispatch('swal', [
             'icon' => 'success',
             'title' => 'Venta contabilizada',
-            'text' => 'La venta fue publicada correctamente.',
+            'text' => 'La venta fue publicada y se registró la salida en Kardex.',
         ]);
     }
 
@@ -334,6 +446,34 @@ class SaleEdit extends Component
     {
         if ($this->sale->status === 'cancelled') {
             return;
+        }
+
+        // Bloquear si tiene pagos (parcial o completo)
+        if (in_array((string) $this->sale->payment_status, ['partial', 'paid'], true)) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'No permitido',
+                'text' => 'La venta tiene pagos registrados. Anule los pagos antes de cancelar.',
+            ]);
+            return;
+        }
+
+        // Bloquear según estado SUNAT (cuando está publicada)
+        $blockedSunat = ['accepted', 'queued', 'processing', 'cancelled', 'sent', 'observed'];
+        if ($this->sale->status === 'posted' && in_array((string) $this->sale->sunat_status, $blockedSunat, true)) {
+            $this->dispatch('swal', [
+                'icon' => 'error',
+                'title' => 'Cancelación bloqueada',
+                'text' => 'No se puede cancelar en el estado SUNAT actual.',
+            ]);
+            return;
+        }
+
+        // Revertir inventario si estaba publicada
+        if ($this->sale->status === 'posted') {
+            foreach ($this->variants as $variant) {
+                Kardex::registerEntry($this->sale, $variant, $this->warehouse_id, 'Anulación de venta');
+            }
         }
 
         $this->sale->update(['status' => 'cancelled']);
@@ -527,7 +667,7 @@ class SaleEdit extends Component
             // Movimiento de inventario para NC (devolución)
             if ($docType === '07') {
                 foreach ($this->variants as $variant) {
-                    \App\Facades\Kardex::registerEntry($newSale, $variant, $this->sale->warehouse_id, 'Devolución por Nota de Crédito');
+                    Kardex::registerEntry($newSale, $variant, $this->warehouse_id, 'Devolución por Nota de Crédito');
                 }
             }
 
@@ -652,7 +792,7 @@ class SaleEdit extends Component
             if ($type === 'credit') {
                 // Devolución: ENTRADA al inventario
                 foreach ($this->variants as $variant) {
-                    \App\Facades\Kardex::registerEntry($newSale, $variant, $this->sale->warehouse_id, 'Devolución por Nota de Crédito');
+                    Kardex::registerEntry($newSale, $variant, $this->warehouse_id, 'Devolución por Nota de Crédito');
                 }
             }
             // ND y NV: sin movimientos por defecto (ajusta valor / documento no fiscal)

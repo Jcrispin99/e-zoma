@@ -48,10 +48,32 @@
         }
     }
 }" x-on:keydown.window="handleScanner($event)">
+    @php
+    $status = (string) ($sale->status ?? 'draft');
+    $sunat = (string) ($sale->sunat_status ?? 'pending');
+    $payment = (string) ($sale->payment_status ?? 'unpaid');
+    $blockedSunatForEdit = ['queued','processing','accepted','observed','cancelled','sent'];
+    $isCancelledDoc = ($status === 'cancelled' || $sunat === 'cancelled');
+    $isBlockedEdit = ($status === 'posted' && in_array($sunat, $blockedSunatForEdit));
+    $isLimitedEdit = ($status === 'posted' && in_array($sunat, ['pending','skipped']));
+    $isFullEdit = (!$isCancelledDoc && !$isBlockedEdit && !$isLimitedEdit);
+    $canEdit = !$isCancelledDoc && ($isLimitedEdit || $isFullEdit);
+
+    $hasPayments = in_array($payment, ['partial','paid']);
+    $canCancel = ($status === 'draft') || ($status === 'posted' && in_array($sunat, ['pending','error','rejected']) &&
+    !$hasPayments);
+    $canReopen = ($status === 'posted' && ! in_array($sunat,
+    ['accepted','queued','processing','cancelled','sent','observed']));
+    $canRegisterPayment = ($status === 'posted' && $payment !== 'paid');
+    $canSendSunat = ($status === 'posted' && in_array($sunat, ['pending','error','rejected','observed']));
+    $canCreateNotes = ($status === 'posted' && in_array($sunat, ['accepted','observed']));
+    @endphp
+
     <x-wire-card class="mb-3">
         <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-2">
-                <x-wire-button label="Guardar" right-icon="check" positive wire:click="save" />
+                <x-wire-button :label="$isLimitedEdit ? 'Guardar (limitado)' : 'Guardar'" right-icon="check" positive
+                    wire:click="save" :disabled="!$canEdit" />
                 <x-wire-badge :label="str($sale->status)->upper()"
                     :color="$sale->status === 'draft' ? 'slate' : ($sale->status === 'posted' ? 'emerald' : 'rose')" />
                 @if($sale->payment_status)
@@ -61,12 +83,15 @@
                 @if($sale->sunat_status)
                 @php
                 $sunatColor = match($sale->sunat_status) {
-                'accepted' => 'emerald',
-                'sent' => 'sky',
-                'processing' => 'amber',
-                'queued' => 'slate',
                 'pending' => 'slate',
-                'error' => 'rose',
+                'queued' => 'blue',
+                'processing' => 'amber',
+                'accepted' => 'emerald',
+                'rejected' => 'rose',
+                'observed' => 'orange',
+                'error' => 'red',
+                'cancelled' => 'purple',
+                'sent' => 'sky',
                 default => 'gray',
                 };
                 @endphp
@@ -77,15 +102,24 @@
             <div class="flex flex-wrap items-center gap-2">
                 <x-wire-dropdown icon="bars-3" align="right">
                     @if($sale->status === 'draft')
-                    <x-wire-dropdown.item label="Contabilizar" wire:click="post" />
+                    <x-wire-dropdown.item label="Recibir" wire:click="post" />
                     <x-wire-dropdown.item label="Cancelar" wire:click="cancel" />
                     @elseif($sale->status === 'posted')
-                    @if($sale->payment_status !== 'paid')
+                    @if($canRegisterPayment)
                     <x-wire-dropdown.item label="Registrar pago" wire:click="markPaid" />
+                    @else
+                    <x-wire-dropdown.item label="Registrar pago" disabled />
                     @endif
+                    @if($canCancel)
                     <x-wire-dropdown.item label="Anular" wire:click="cancel" />
-                    @elseif($sale->status === 'cancelled')
+                    @else
+                    <x-wire-dropdown.item label="Anular" disabled />
+                    @endif
+                    @if($canReopen)
                     <x-wire-dropdown.item label="Reabrir" wire:click="reopen" />
+                    @endif
+                    @elseif($sale->status === 'cancelled')
+                    <x-wire-dropdown.item label="Cancelar" disabled />
                     @endif
 
                     @if($sale->quote_id)
@@ -97,16 +131,19 @@
                     <x-wire-dropdown.item label="Descargar PDF" :href="route('admin.sales.pdf', $sale)" />
                     <x-wire-dropdown.item label="Ver PDF (vista)" :href="route('admin.sales.pdf.view', $sale)" />
 
-                    @php $canSendSunat = !(data_get($sale->sunat_response,'accepted') === true ||
-                    in_array($sale->sunat_status, ['accepted','queued','processing'])); @endphp
                     @if($canSendSunat)
                     <x-wire-dropdown.item label="Enviar SUNAT" wire:click="sendSunat" spinner />
                     @else
                     <x-wire-dropdown.item label="Enviar SUNAT" disabled />
                     @endif
 
+                    @if($canCreateNotes)
                     <x-wire-dropdown.item label="Nota de Crédito" wire:click="sendStaticCreditNote" />
                     <x-wire-dropdown.item label="Nota de Débito" wire:click="sendStaticDebitNote" />
+                    @else
+                    <x-wire-dropdown.item label="Nota de Crédito" disabled />
+                    <x-wire-dropdown.item label="Nota de Débito" disabled />
+                    @endif
                     <x-wire-dropdown.item label="Nota de Venta" wire:click="openSalesNoteModal" />
 
                     <x-wire-dropdown.item label="Volver" :href="route('admin.sales.index')" />
@@ -168,12 +205,12 @@
             <div class="grid lg:grid-cols-4 gap-4">
                 <x-wire-input label="Serie" wire:model="serie" disabled />
                 <x-wire-input label="Correlativo" wire:model="correlative" disabled />
-                <x-wire-input label="Fecha" wire:model.live="date" type="date" />
+                <x-wire-input label="Fecha" wire:model.live="date" type="date" :disabled="$isLimitedEdit" />
 
                 <div class="col-span-2">
                     <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente"
                         :async-data="['api' => route('api.customers.index'), 'method' => 'POST']" option-label="name"
-                        option-value="id" class="flex-1" option-description="description" />
+                        option-value="id" class="flex-1" option-description="description" :disabled="$isLimitedEdit" />
                 </div>
                 <div class="col-span-2">
                     <x-wire-select label="Almacenes" wire:model="warehouse_id" placeholder="Seleccione un almacén"
@@ -184,10 +221,11 @@
 
             <div class="lg:flex lg:space-x-4">
                 <x-wire-select label="Producto" wire:model="variant_id" placeholder="Seleccione un producto"
-                    :async-data="['api' => route('api.product.index'), 'method' => 'POST']" option-label="name"
-                    option-value="id" class="flex-1" />
+                    :disabled="$isLimitedEdit" :async-data="['api' => route('api.product.index'), 'method' => 'POST']"
+                    option-label="name" option-value="id" class="flex-1" />
                 <div class="flex-shrink-0">
-                    <x-wire-button wire:click="addProduct" class="mt-4 w-full lg:mt-6.5" spinner>Agregar producto
+                    <x-wire-button wire:click="addProduct" class="mt-4 w-full lg:mt-6.5" spinner
+                        :disabled="$isLimitedEdit">Agregar producto
                     </x-wire-button>
                 </div>
             </div>
@@ -209,13 +247,14 @@
                             <tr class="border-b">
                                 <td class="px-4 py-1" x-text="variant.name" />
                                 <td class="px-4 py-1">
-                                    <x-wire-input type="number" x-model="variant.quantity" />
+                                    <x-wire-input type="number" x-model="variant.quantity" :disabled="$isLimitedEdit" />
                                 </td>
                                 <td class="px-4 py-1">
-                                    <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20" />
+                                    <x-wire-input type="number" x-model="variant.price" step="0.01" class="w-20"
+                                        :disabled="$isLimitedEdit" />
                                 </td>
                                 <td class="px-4 py-1">
-                                    <x-wire-native-select x-model="variant.tax_id">
+                                    <x-wire-native-select x-model="variant.tax_id" :disabled="$isLimitedEdit">
                                         <template x-for="tax in taxes" :key="tax.id">
                                             <option :value="tax.id"
                                                 x-text="`${tax.invoice_label ?? tax.name}${tax.is_price_inclusive ? ' (TTC)' : ''}`">
@@ -227,7 +266,8 @@
                                     x-text="(() => { const t = (taxes||[]).find(tt => String(tt.id)===String(variant.tax_id)); const r = t ? Number(t.rate_percent)||0 : 0; const inc = t ? Boolean(t.is_price_inclusive) : false; const line = (Number(variant.quantity)||0) * (Number(variant.price)||0); const base = (inc && r>0) ? (line/(1+(r/100))) : line; return base.toFixed(2); })()">
                                 </td>
                                 <td class="px-4 py-1">
-                                    <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red />
+                                    <x-wire-mini-button rounded x-on:click="removeVariant(index)" icon="trash" red
+                                        :disabled="$isLimitedEdit" />
                                 </td>
                             </tr>
                         </template>

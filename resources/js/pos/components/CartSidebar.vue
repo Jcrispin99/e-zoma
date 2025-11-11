@@ -436,20 +436,6 @@ function handleSpendPoints(val) {
 
     <!-- Keypad Section -->
     <div class="bg-white border-t border-gray-300">
-      <!-- Display del número actual -->
-      <div
-        v-if="currentNumber"
-        class="bg-gray-100 p-2 text-center border-b border-gray-300"
-        role="textbox"
-        aria-readonly="true"
-        aria-label="Número actual ingresado"
-      >
-        <span class="text-lg font-mono">{{ displayNumber || '0' }}</span>
-        <span v-if="selectedProduct" class="text-sm text-gray-600 ml-2">
-          ({{ selectedProduct.name }})
-        </span>
-      </div>
-
       <div class="flex">
         <!-- Left Side Buttons -->
         <div class="w-40 bg-purple-800 flex flex-col">

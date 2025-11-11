@@ -14,7 +14,8 @@ class SequenceSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1️⃣ Define los diarios (igual que antes)
+        $mainCompany = Company::whereNull('parent_id')->first() ?? Company::first();
+
         $journals = [
 
             ['name' => 'NOTA DE VENTA',   'type' => 'sale',           'code' => 'NV',   'document_type_code' => null, 'is_fiscal' => false],
@@ -30,25 +31,22 @@ class SequenceSeeder extends Seeder
             ['name' => 'Cuadre de Caja',          'type' => 'cash',           'code' => 'CAJA', 'document_type_code' => null, 'is_fiscal' => false],
         ];
 
-        // 2️⃣ Procesa cada diario (sin compañías)
         foreach ($journals as $journalData) {
-            // a) Crea la secuencia
             $sequence = Sequence::create([
                 'sequence_size' => 8,
                 'step'          => 1,
                 'next_number'   => 1,
             ]);
 
-            // b) Crea o actualiza el diario sin asociarlo a una compañía
             Journal::updateOrCreate(
-                ['code' => $journalData['code']], // búsqueda única por código
+                ['code' => $journalData['code']],
                 [
                     'name'                => $journalData['name'],
                     'type'                => $journalData['type'],
                     'document_type_code'  => $journalData['document_type_code'],
                     'is_fiscal'           => $journalData['is_fiscal'] ?? false,
                     'sequence_id'         => $sequence->id,
-                    // 'company_id' => null,   // opcional, no se envía
+                    'company_id'          => $mainCompany->id,
                 ]
             );
         }

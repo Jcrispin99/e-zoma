@@ -84,9 +84,11 @@ class GreenterInvoiceService
             $payload['numDocAfectado'] = $affectedNumber;
             $payload['numDocfectado'] = $affectedNumber;
             if ($docType === '07') {
-                $payload['codMotivo'] = '01';
-                $payload['desMotivo'] = 'ANULACION DE LA OPERACION';
+                [$code, $label] = $this->resolveCreditNoteReason($sale);
+                $payload['codMotivo'] = $code;
+                $payload['desMotivo'] = $label;
             } else {
+                // Nota de Débito: por defecto AUMENTO EN EL VALOR (02)
                 $payload['codMotivo'] = '02';
                 $payload['desMotivo'] = 'AUMENTO EN EL VALOR';
             }
@@ -180,14 +182,59 @@ class GreenterInvoiceService
         ];
 
         if ($docType === '07') {
-            $payload['codMotivo'] = '01';
-            $payload['desMotivo'] = 'ANULACION DE LA OPERACION';
+            [$code, $label] = $this->resolveCreditNoteReason($sale);
+            $payload['codMotivo'] = $code;
+            $payload['desMotivo'] = $label;
         } else {
             $payload['codMotivo'] = '02';
             $payload['desMotivo'] = 'AUMENTO EN EL VALOR';
         }
 
         return $payload;
+    }
+
+    /**
+     * Determinar motivo SUNAT para Nota de Crédito (07) según cantidades devueltas.
+     * - 06: DEVOLUCIÓN TOTAL (todas las líneas devueltas con mismas cantidades).
+     * - 07: DEVOLUCIÓN POR ÍTEM (devolución parcial o por línea).
+     * Fallback: 01 (ANULACION DE LA OPERACION) si no se puede determinar.
+     */
+    private function resolveCreditNoteReason(Sale $sale): array
+    {
+        try {
+            $sale->loadMissing(['originalSale.variants']);
+            $orig = $sale->originalSale;
+            if (!$orig) {
+                return ['01', 'ANULACION DE LA OPERACION'];
+            }
+            $origMap = [];
+            foreach ($orig->variants as $v) {
+                $origMap[(string) $v->id] = (int) ($v->pivot->quantity ?? 0);
+            }
+            $noteMap = [];
+            foreach ($sale->variants as $v) {
+                $noteMap[(string) $v->id] = (int) ($v->pivot->quantity ?? 0);
+            }
+
+            if (empty($origMap) || empty($noteMap)) {
+                return ['01', 'ANULACION DE LA OPERACION'];
+            }
+
+            $isFull = (count($origMap) === count($noteMap));
+            foreach ($origMap as $id => $qty) {
+                if (!isset($noteMap[$id]) || $noteMap[$id] !== $qty) {
+                    $isFull = false;
+                    break;
+                }
+            }
+
+            if ($isFull) {
+                return ['06', 'DEVOLUCION TOTAL'];
+            }
+            return ['07', 'DEVOLUCION POR ITEM'];
+        } catch (\Throwable $e) {
+            return ['01', 'ANULACION DE LA OPERACION'];
+        }
     }
 
     /**

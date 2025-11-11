@@ -52,21 +52,29 @@
     $status = (string) ($sale->status ?? 'draft');
     $sunat = (string) ($sale->sunat_status ?? 'pending');
     $payment = (string) ($sale->payment_status ?? 'unpaid');
+    $docCode = (string) (optional($sale->journal)->document_type_code ?? '');
+    $isFiscalJournal = (bool) (optional($sale->journal)->is_fiscal ?? false);
+    // Base SUNAT válida: factura (01) o boleta (03) y diario fiscal
+    $isSunatBaseDoc = $isFiscalJournal && in_array($docCode, ['01','03'], true);
     $blockedSunatForEdit = ['queued','processing','accepted','observed','cancelled','sent'];
     $isCancelledDoc = ($status === 'cancelled' || $sunat === 'cancelled');
+    $isBoleta = ($docCode === '03');
     $isBlockedEdit = ($status === 'posted' && in_array($sunat, $blockedSunatForEdit));
     $isLimitedEdit = ($status === 'posted' && in_array($sunat, ['pending','skipped']));
     $isFullEdit = (!$isCancelledDoc && !$isBlockedEdit && !$isLimitedEdit);
     $canEdit = !$isCancelledDoc && ($isLimitedEdit || $isFullEdit);
 
     $hasPayments = in_array($payment, ['partial','paid']);
-    $canCancel = ($status === 'draft') || ($status === 'posted' && in_array($sunat, ['pending','error','rejected']) &&
+    $canCancel = ($status === 'draft') || ($status === 'posted' && in_array($sunat,
+    ['pending','error','rejected','skipped']) &&
     !$hasPayments);
     $canReopen = ($status === 'posted' && ! in_array($sunat,
     ['accepted','queued','processing','cancelled','sent','observed']));
     $canRegisterPayment = ($status === 'posted' && $payment !== 'paid');
     $canSendSunat = ($status === 'posted' && in_array($sunat, ['pending','error','rejected','observed']));
     $canCreateNotes = ($status === 'posted' && in_array($sunat, ['accepted','observed']));
+    // Nota de Venta (no fiscal): document_type_code vacío y journal no fiscal
+    $isNonFiscalNv = (!$isFiscalJournal && ($docCode === '' || $docCode === null));
     @endphp
 
     <x-wire-card class="mb-3">
@@ -103,23 +111,21 @@
                 <x-wire-dropdown icon="bars-3" align="right">
                     @if($sale->status === 'draft')
                     <x-wire-dropdown.item label="Recibir" wire:click="post" />
+                    @if($isNonFiscalNv)
+                    <x-wire-dropdown.item label="Registrar pago" wire:click="markPaid" spinner />
+                    @endif
                     <x-wire-dropdown.item label="Cancelar" wire:click="cancel" />
                     @elseif($sale->status === 'posted')
                     @if($canRegisterPayment)
                     <x-wire-dropdown.item label="Registrar pago" wire:click="markPaid" />
-                    @else
-                    <x-wire-dropdown.item label="Registrar pago" disabled />
                     @endif
                     @if($canCancel)
                     <x-wire-dropdown.item label="Anular" wire:click="cancel" />
-                    @else
-                    <x-wire-dropdown.item label="Anular" disabled />
                     @endif
                     @if($canReopen)
                     <x-wire-dropdown.item label="Reabrir" wire:click="reopen" />
                     @endif
                     @elseif($sale->status === 'cancelled')
-                    <x-wire-dropdown.item label="Cancelar" disabled />
                     @endif
 
                     @if($sale->quote_id)
@@ -131,20 +137,18 @@
                     <x-wire-dropdown.item label="Descargar PDF" :href="route('admin.sales.pdf', $sale)" />
                     <x-wire-dropdown.item label="Ver PDF (vista)" :href="route('admin.sales.pdf.view', $sale)" />
 
-                    @if($canSendSunat)
+                    @if($hasSunatConnection && $canSendSunat && $isSunatBaseDoc)
                     <x-wire-dropdown.item label="Enviar SUNAT" wire:click="sendSunat" spinner />
-                    @else
-                    <x-wire-dropdown.item label="Enviar SUNAT" disabled />
                     @endif
 
-                    @if($canCreateNotes)
+                    @if($hasSunatConnection && $canCreateNotes && $isSunatBaseDoc && !($isBoleta && $hasReturnChildren))
                     <x-wire-dropdown.item label="Nota de Crédito" wire:click="sendStaticCreditNote" />
                     <x-wire-dropdown.item label="Nota de Débito" wire:click="sendStaticDebitNote" />
-                    @else
-                    <x-wire-dropdown.item label="Nota de Crédito" disabled />
-                    <x-wire-dropdown.item label="Nota de Débito" disabled />
                     @endif
-                    <x-wire-dropdown.item label="Nota de Venta" wire:click="openSalesNoteModal" />
+
+                    @if($sale->status === 'posted' && (!$hasSunatConnection || !$isSunatBaseDoc) && !$hasReturnChildren)
+                    <x-wire-dropdown.item label="Devolver productos" wire:click="startReturnDraft" spinner />
+                    @endif
 
                     <x-wire-dropdown.item label="Volver" :href="route('admin.sales.index')" />
                 </x-wire-dropdown>
@@ -162,8 +166,27 @@
     $docType = (string) (optional($sale->journal)->document_type_code ?? '');
     $isNote = in_array($docType, ['07','08'], true);
     $isCredit = $docType === '07';
-    $motivoCode = $isCredit ? '01' : ($docType === '08' ? '02' : null);
-    $motivoLabel = $isCredit ? 'ANULACION DE LA OPERACION' : ($docType === '08' ? 'AUMENTO EN EL VALOR' : null);
+    // Motivo SUNAT dinámico: NC 06 (total) vs 07 (por ítem); ND 02 por defecto
+    $motivoCode = null; $motivoLabel = null;
+    if ($isNote) {
+        if ($isCredit) {
+            // Comparar cantidades con la venta original para decidir 06 vs 07
+            $origSale = $sale->originalSale;
+            $origMap = []; $noteMap = [];
+            if ($origSale) {
+                foreach ($origSale->variants as $v) { $origMap[(string)$v->id] = (int)($v->pivot->quantity ?? 0); }
+                foreach ($sale->variants as $v) { $noteMap[(string)$v->id] = (int)($v->pivot->quantity ?? 0); }
+                $isFull = (count($origMap) > 0) && (count($origMap) === count($noteMap));
+                foreach ($origMap as $id => $qty) {
+                    if (!isset($noteMap[$id]) || $noteMap[$id] !== $qty) { $isFull = false; break; }
+                }
+                if ($isFull) { $motivoCode = '06'; $motivoLabel = 'DEVOLUCIÓN TOTAL'; }
+                else { $motivoCode = '07'; $motivoLabel = 'DEVOLUCIÓN POR ÍTEM'; }
+            } else { $motivoCode = '01'; $motivoLabel = 'ANULACION DE LA OPERACION'; }
+        } else {
+            $motivoCode = '02'; $motivoLabel = 'AUMENTO EN EL VALOR';
+        }
+    }
     // Documento afectado (tipo y número) desde los campos persistidos o la relación
     $affType = (string) ($sale->original_document_type_code ??
     (optional(optional($sale->originalSale)->journal)->document_type_code ?? ''));
@@ -307,34 +330,5 @@
                 Enviar
             </x-wire-button>
         </form>
-    </x-wire-modal-card>
-
-    <!-- Modal para crear Notas (Crédito/Débito/Venta) -->
-    <x-wire-modal-card wire:model="noteForm.open" width="xl">
-        <x-slot name="title">
-            <p class="text-xl text-center mb-2">Generar {{ str($noteForm['title'] ?? 'Nota')->title() }}</p>
-            <p class="text-lg text-center uppercase font-bold mb-2">{{ $sale->serie }}-{{ $sale->correlative }}</p>
-            <p class="text-sm text-center text-gray-600">Cliente: {{ optional($sale->customer)->document_number }} - {{
-                optional($sale->customer)->name }}</p>
-        </x-slot>
-
-        <div class="space-y-4">
-            <div class="grid lg:grid-cols-3 gap-4">
-                <x-wire-input label="Motivo" wire:model="noteForm.reason_label"
-                    placeholder="Ej: ANULACION DE LA OPERACION" />
-                <x-wire-input label="Código motivo (SUNAT)" wire:model="noteForm.reason_code" placeholder="01 / 02" />
-                <x-wire-input label="Observaciones" wire:model="noteForm.observation" placeholder="Opcional" />
-            </div>
-
-            <div class="text-sm text-gray-700">
-                <p>Modo: <strong>{{ $noteForm['mode'] ?? 'total' }}</strong>. Por ahora solo se admite anulación total
-                    para NC y ajuste total para ND.</p>
-            </div>
-
-            <div class="flex justify-end gap-2">
-                <x-wire-button light gray wire:click="closeNoteModal">Cancelar</x-wire-button>
-                <x-wire-button light emerald wire:click="confirmCreateNote" spinner>Confirmar</x-wire-button>
-            </div>
-        </div>
     </x-wire-modal-card>
 </div>

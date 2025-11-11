@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\SendSunatInvoice;
+use App\Models\SunatConnection;
 
 class Sale extends Model
 {
@@ -60,6 +61,12 @@ class Sale extends Model
         return $this->belongsTo(Sale::class, 'original_sale_id');
     }
 
+    // Documentos derivados (devoluciones/notas) que apuntan a esta venta
+    public function derivedSales()
+    {
+        return $this->hasMany(Sale::class, 'original_sale_id');
+    }
+
     public function reason()
     {
         return $this->belongsTo(Reason::class);
@@ -80,16 +87,51 @@ class Sale extends Model
     {
         static::created(function (Sale $sale) {
             try {
-                // Marcar como en cola para SUNAT apenas se crea
-                $sale->sunat_status = $sale->sunat_status ?: 'queued';
-                $sale->save();
-                Log::info('Dispatching SendSunatInvoice job', [
-                    'sale_id' => $sale->id,
-                    'pos_order_id' => $sale->pos_order_id,
-                    'journal_id' => $sale->journal_id,
-                ]);
-                // Ejecutar el job tras el commit de la transacción
-                SendSunatInvoice::dispatch($sale->id)->afterCommit();
+                // Solo auto‑enviar si:
+                // - La venta está publicada
+                // - El diario es fiscal y tiene código de documento SUNAT (01/03/07/08)
+                // - Existe conexión SUNAT con token no vacío
+                $isPosted = (string) $sale->status === 'posted';
+                $journal = $sale->journal; // relación puede ser null
+                $docType = (string) optional($journal)->document_type_code;
+                $isFiscal = (bool) optional($journal)->is_fiscal;
+                $isSunatDoc = $isFiscal && in_array($docType, ['01', '03', '07', '08'], true);
+                $hasToken = SunatConnection::query()
+                    ->where('company_id', (int) ($sale->company_id ?? 0))
+                    ->whereNotNull('token_ikoodev')
+                    ->where('token_ikoodev', '!=', '')
+                    ->exists();
+
+                if ($isPosted && $isSunatDoc && $hasToken) {
+                    // Marcar como en cola para SUNAT y despachar job
+                    $sale->sunat_status = $sale->sunat_status ?: 'queued';
+                    $sale->save();
+                    Log::info('Dispatching SendSunatInvoice job', [
+                        'sale_id' => $sale->id,
+                        'pos_order_id' => $sale->pos_order_id,
+                        'journal_id' => $sale->journal_id,
+                    ]);
+                    SendSunatInvoice::dispatch($sale->id)->afterCommit();
+                } elseif ($isPosted) {
+                    // No auto‑envío: marcar estado según caso
+                    if ($isSunatDoc && ! $hasToken) {
+                        // Fiscal sin token: pendiente para envío manual cuando haya conexión
+                        $sale->sunat_status = $sale->sunat_status ?: 'pending';
+                    } else {
+                        // No fiscal (Nota de Venta): marcado como omitido
+                        $sale->sunat_status = $sale->sunat_status ?: 'skipped';
+                    }
+                    $sale->save();
+                    Log::info('SUNAT auto-send skipped', [
+                        'sale_id' => $sale->id,
+                        'status' => $sale->status,
+                        'journal_id' => $sale->journal_id,
+                        'docType' => $docType,
+                        'isFiscal' => $isFiscal,
+                        'hasToken' => $hasToken,
+                        'sunat_status' => $sale->sunat_status,
+                    ]);
+                }
             } catch (\Throwable $e) {
                 Log::error('Failed to dispatch SendSunatInvoice job', [
                     'sale_id' => $sale->id,

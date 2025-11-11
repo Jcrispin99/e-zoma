@@ -17,6 +17,11 @@ class LoyaltyTransaction extends Model
         'occurred_at', 'expires_at'
     ];
 
+    protected $casts = [
+        'points' => 'float',
+        'available_points' => 'float',
+    ];
+
     public function account()
     {
         return $this->belongsTo(LoyaltyAccount::class, 'account_id');

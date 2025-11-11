@@ -142,8 +142,9 @@ export const useLoyaltyStore = defineStore('pos-loyalty', {
       if (!this.config.active_for_pos) return 0;
       const rate = Number(this.config.earn_per_sol || 0);
       if (!rate || netTotal <= 0) return 0;
-      // Enteros por simplicidad (puntos discretos)
-      return Math.max(0, Math.floor(Number(netTotal || 0) * rate));
+      // Puntos decimales (2 decimales) para acumular con precisión
+      const raw = Number(netTotal || 0) * rate;
+      return Math.max(0, Math.round(raw * 100) / 100);
     },
   },
 });

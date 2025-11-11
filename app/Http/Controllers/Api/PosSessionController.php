@@ -215,7 +215,7 @@ class PosSessionController extends Controller
             // Lealtad opcional
             'orders.*.loyalty.points_spent' => 'nullable|integer|min:0',
             'orders.*.loyalty.discount_amount' => 'nullable|numeric|min:0',
-            'orders.*.loyalty.points_earned' => 'nullable|integer|min:0',
+            'orders.*.loyalty.points_earned' => 'nullable|numeric|min:0',
         ]);
 
         $synced = [];
@@ -351,10 +351,10 @@ class PosSessionController extends Controller
                     }
 
                     // Earn
-                    $pointsEarned = (int) ($loy['points_earned'] ?? 0);
+                    $pointsEarned = round((float) ($loy['points_earned'] ?? 0), 2);
                     if ($pointsEarned > 0) {
-                        $account->points_balance += $pointsEarned;
-                        $account->points_lifetime += $pointsEarned;
+                        $account->points_balance = round((float) $account->points_balance + $pointsEarned, 2);
+                        $account->points_lifetime = round((float) $account->points_lifetime + $pointsEarned, 2);
                         $account->save();
                         LoyaltyTransaction::query()->create([
                             'account_id' => $account->id,

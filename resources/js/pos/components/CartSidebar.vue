@@ -3,11 +3,13 @@ import { computed, ref, shallowRef, onUnmounted, watch, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { setCache } from '../composables/useCache.js';
 import { useKeypad } from '../composables/useKeypad.js';
+import { useCart } from '../composables/useCart.js';
 import { formatCurrency } from '../utils/currency.js';
 import { POS_CONFIG } from '../constants/index.js';
 import { useSessionStore } from '../stores/useSessionStore.js';
 import { useLoyaltyStore } from '../stores/useLoyaltyStore.js';
 import CustomerSelectModal from './modals/CustomerSelectModal.vue';
+import SpendPointsModal from './modals/SpendPointsModal.vue';
 
 // Props del carrito
 const props = defineProps({
@@ -61,6 +63,13 @@ const selectedProduct = computed(() => {
 // Configuración de IGV desde sesión
 const sessionStore = useSessionStore();
 const loyaltyStore = useLoyaltyStore();
+// ID de cliente activo: seleccionado o por defecto
+const activeCustomerId = computed(
+  () =>
+    sessionStore.selectedCustomer?.id ||
+    sessionStore.defaultCustomer?.id ||
+    null
+);
 const taxRate = computed(() => {
   const apply = !!sessionStore.config?.apply_tax;
   const rate = Number(sessionStore.config?.tax_rate ?? 0);
@@ -130,7 +139,7 @@ onMounted(() => {
 
 // Al seleccionar cliente, cargar cuenta de puntos y resetear gasto
 watch(
-  () => sessionStore.selectedCustomer?.id,
+  activeCustomerId,
   (id) => {
     pointsToSpend.value = 0;
     if (id) loyaltyStore.fetchAccount(id);
@@ -248,11 +257,15 @@ function goToCheckout() {
 }
 
 const showCustomerModal = ref(false);
+const showSpendPointsModal = ref(false);
 const currentCustomerName = computed(
   () =>
     sessionStore.selectedCustomer?.name ||
     sessionStore.defaultCustomer?.name ||
     'VARIOS'
+);
+const currentCustomerShortName = computed(() =>
+  String(currentCustomerName.value || '').slice(0, 12)
 );
 function openCustomerModal() {
   showCustomerModal.value = true;
@@ -260,6 +273,14 @@ function openCustomerModal() {
 function handleCustomerSelected(c) {
   sessionStore.setSelectedCustomer(c);
   showCustomerModal.value = false;
+}
+
+// Aplica puntos seleccionados desde el modal con validación contra el saldo
+function handleSpendPoints(val) {
+  const max = Math.floor(loyaltyStore.account.points_balance || 0);
+  const pts = Math.max(0, Math.floor(val || 0));
+  pointsToSpend.value = Math.min(pts, max);
+  showSpendPointsModal.value = false;
 }
 </script>
 
@@ -350,68 +371,65 @@ function handleCustomerSelected(c) {
     </div>
 
     <!-- Total Section -->
-    <div class="bg-white p-4 border-t border-gray-300">
-      <div class="flex justify-end">
-        <div class="text-right text-sm text-gray-700 space-y-1">
-          <div class="flex justify-between">
-            <span>Subtotal</span>
-            <span>{{ formatCurrency(subtotal) }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>IGV</span>
-            <span>{{ formatCurrency(tax) }}</span>
-          </div>
-          <p class="text-lg font-bold text-gray-900">
-            Total: {{ formatCurrency(total) }}
-          </p>
-          <!-- Sección de puntos debajo del total -->
-          <div
-            v-if="loyaltyEnabled && loyaltyStore.account.customer_id"
-            class="mt-3 p-3 border rounded bg-purple-50"
-          >
-            <h4 class="text-sm font-semibold text-gray-700 mb-2">
-              Punto(s) de lealtad
-            </h4>
-            <div class="grid grid-cols-3 gap-2">
-              <div class="bg-white border rounded p-2 text-center">
-                <div class="text-xs text-gray-500">Saldo en puntos</div>
-                <div class="text-sm font-semibold">
-                  {{ loyaltyStore.account.points_balance }}
-                </div>
-              </div>
-              <div class="bg-white border rounded p-2 text-center">
-                <div class="text-xs text-gray-500">Puntos ganados</div>
-                <div class="text-sm font-semibold text-green-600">+{{ pointsEarned }}</div>
-              </div>
-              <div class="bg-white border rounded p-2 text-center">
-                <div class="text-xs text-gray-500">Nuevo total</div>
-                <div class="text-sm font-semibold">{{ formatCurrency(totalAfterDiscount) }}</div>
-              </div>
-            </div>
-            <div
-              v-if="loyaltyStore.canRedeem"
-              class="mt-2 flex items-center justify-between gap-2"
-            >
-              <label class="text-sm text-gray-700">Usar puntos</label>
-              <input
-                type="number"
-                min="0"
-                :max="loyaltyStore.account.points_balance"
-                step="1"
-                class="w-28 border rounded px-2 py-1 text-right"
-                v-model.number="pointsToSpend"
-              />
-            </div>
-            <div v-if="loyaltyStore.canRedeem" class="mt-2 flex justify-between text-sm">
-              <span class="text-gray-700">Descuento por puntos</span>
-              <span class="font-semibold">{{ formatCurrency(loyaltyDiscount) }}</span>
-            </div>
-            <div class="mt-2 text-xs text-gray-500">
-              Acumularás {{ pointsEarned }} puntos en esta compra.
-            </div>
-          </div
-          >
+    <div class="bg-white p-1 border-t border-gray-300">
+      <div class="space-y-1 text-sm text-gray-700">
+        <div class="flex justify-between">
+          <span>Subtotal</span>
+          <span>{{ formatCurrency(subtotal) }}</span>
+        </div>
+        <div class="flex justify-between">
+          <span>IGV</span>
+          <span>{{ formatCurrency(tax) }}</span>
+        </div>
+        <div
+          v-if="loyaltyDiscount > 0"
+          class="flex justify-between text-purple-600"
+        >
+          <span>Descuento por Puntos</span>
+          <span>-{{ formatCurrency(loyaltyDiscount) }}</span>
+        </div>
+        <div
+          class="flex justify-between text-sm font-bold text-gray-900 border-t pt-2"
+        >
+          <span>Total</span>
+          <span>{{ formatCurrency(totalAfterDiscount) }}</span>
+        </div>
+      </div>
 
+      <!-- Sección de puntos debajo del total -->
+      <div
+        v-if="loyaltyEnabled && loyaltyStore.account.customer_id"
+        class="mt-1 p-1 border rounded bg-purple-50"
+      >
+        <h4 class="text-sm font-semibold text-gray-700 mb-2">
+          Punto(s) de lealtad
+        </h4>
+        <div class="grid grid-cols-3 gap-2 mb-2">
+          <div class="bg-white border rounded p-2 text-center">
+            <div class="text-xs text-gray-500">Puntos Disponibles</div>
+            <div class="text-lg font-semibold">
+              {{ loyaltyStore.account.points_balance }}
+            </div>
+          </div>
+          <div class="bg-white border rounded p-2 text-center">
+            <div class="text-xs text-gray-500">Puntos a Ganar</div>
+            <div class="text-lg font-semibold text-green-600">
+              +{{ pointsEarned }}
+            </div>
+          </div>
+          <button
+            v-if="loyaltyStore.canRedeem"
+            @click="showSpendPointsModal = true"
+            class="bg-white border rounded p-2 text-center hover:bg-gray-50 flex flex-col justify-center items-center"
+          >
+            <div class="text-xs text-gray-500">Usar Puntos</div>
+            <div class="text-lg font-semibold text-purple-600">
+              {{ pointsToSpend }}
+            </div>
+          </button>
+        </div>
+        <div v-if="loyaltyDiscount > 0" class="mt-1 text-xs text-right">
+          Equivale a un descuento de {{ formatCurrency(loyaltyDiscount) }}.
         </div>
       </div>
     </div>
@@ -441,7 +459,7 @@ function handleCustomerSelected(c) {
             @click="openCustomerModal"
             aria-label="Seleccionar cliente"
           >
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-2 min-w-0">
               <div
                 class="w-6 h-6 bg-white rounded-full flex items-center justify-center"
               >
@@ -458,7 +476,9 @@ function handleCustomerSelected(c) {
                   />
                 </svg>
               </div>
-              <span class="text-sm font-medium">{{ currentCustomerName }}</span>
+              <span class="text-sm font-medium truncate">{{
+                currentCustomerShortName
+              }}</span>
             </div>
           </button>
 
@@ -492,6 +512,14 @@ function handleCustomerSelected(c) {
           :show="showCustomerModal"
           @close="showCustomerModal = false"
           @select="handleCustomerSelected"
+        />
+
+        <SpendPointsModal
+          :show="showSpendPointsModal"
+          :max-points="Math.floor(loyaltyStore.account.points_balance || 0)"
+          :initial-points="Math.floor(pointsToSpend || 0)"
+          @close="showSpendPointsModal = false"
+          @spend="handleSpendPoints"
         />
 
         <!-- Numeric Keypad -->

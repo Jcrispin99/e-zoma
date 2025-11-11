@@ -98,7 +98,7 @@ class LoyaltyPosController extends Controller
 
         return response()->json([
             'customer_id' => $customer->id,
-            'points_balance' => (int) ($account->points_balance ?? 0),
+            'points_balance' => round((float) ($account->points_balance ?? 0), 2),
             'status' => $account->status,
         ]);
     }

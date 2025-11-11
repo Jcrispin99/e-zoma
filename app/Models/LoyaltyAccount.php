@@ -13,6 +13,11 @@ class LoyaltyAccount extends Model
         'customer_id', 'points_balance', 'points_lifetime', 'status'
     ];
 
+    protected $casts = [
+        'points_balance' => 'float',
+        'points_lifetime' => 'float',
+    ];
+
     public function customer()
     {
         return $this->belongsTo(Customer::class);

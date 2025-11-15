@@ -277,6 +277,22 @@ class RolesSeeder extends Seeder
                 'read_permissions',
             ]);
 
+        Role::create(['name' => 'cajero'])
+            ->givePermissionTo([
+                'access_dashboard',
+                'read_posconfig',
+                'read_pos_sessions',
+                'read_categories',
+                'read_products',
+                'read_variants',
+                'read_warehouses',
+                'read_customers',
+                'create_customers',
+                'create_sales',
+                'read_sales',
+                'update_sales',
+            ]);
+
         $user = User::factory()->create([
             'name' => 'Jhamil Crispin',
             'email' => 'j99crispin@gmail.com',

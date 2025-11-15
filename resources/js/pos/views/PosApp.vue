@@ -74,6 +74,9 @@ const connectionStatus = computed(() =>
   sessionStore.online ? 'Conectado' : 'Desconectado'
 );
 
+const sellerName = computed(() => sessionStore.seller?.name || '—');
+const sellerRoleLabel = computed(() => 'Cajero');
+
 // Ocultar el carrito en la ruta de checkout y toda la UI en recibo
 const route = useRoute();
 const isCheckout = computed(() => route.name === 'pos-checkout');
@@ -166,18 +169,14 @@ async function finalizeScan() {
       if (!res.ok) return;
       const variants = await res.json();
       if (Array.isArray(variants) && variants.length > 0) {
-        const exact = variants.find(
-          (v) => String(v.sku || '').trim() === code
-        );
+        const exact = variants.find((v) => String(v.sku || '').trim() === code);
         addToCart(exact || variants[0]);
       }
     } else {
       try {
         const raw = localStorage.getItem('pos:products');
         const cached = raw ? JSON.parse(raw) : [];
-        const found = cached.find(
-          (p) => String(p.sku || '').trim() === code
-        );
+        const found = cached.find((p) => String(p.sku || '').trim() === code);
         if (found) addToCart(found);
       } catch (_) {}
     }
@@ -296,8 +295,8 @@ function handleGlobalKeydown(e) {
           <!-- User Profile -->
           <div class="flex items-center space-x-3">
             <div class="text-right">
-              <p class="text-sm font-medium text-gray-900">Usuario Admin</p>
-              <p class="text-xs text-gray-500">Administrador</p>
+              <p class="text-sm font-medium text-gray-900">{{ sellerName }}</p>
+              <p class="text-xs text-gray-500">{{ sellerRoleLabel }}</p>
             </div>
             <div
               class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"

@@ -212,7 +212,9 @@ export const useSessionStore = defineStore('pos-session', {
         await this.sync(pending);
         console.log('Sincronización de ventas pendientes completada.');
       } catch (e) {
-        console.error('Fallo al sincronizar ventas pendientes, se reencolarán.');
+        console.error(
+          'Fallo al sincronizar ventas pendientes, se reencolarán.'
+        );
         // Si falla, las devolvemos al inicio de la cola para reintentar
         this.pendingSyncs.unshift(...pending);
       }
@@ -229,12 +231,17 @@ export const useSessionStore = defineStore('pos-session', {
       );
 
       // Intentar sincronizar cuando la conexión se recupere
-      watch(() => this.online, (isOnline) => {
-        if (isOnline && this.pendingSyncs.length > 0) {
-          console.log('Conexión recuperada, intentando sincronizar ventas pendientes...');
-          this.syncPending();
+      watch(
+        () => this.online,
+        (isOnline) => {
+          if (isOnline && this.pendingSyncs.length > 0) {
+            console.log(
+              'Conexión recuperada, intentando sincronizar ventas pendientes...'
+            );
+            this.syncPending();
+          }
         }
-      });
-    }
+      );
+    },
   },
 });

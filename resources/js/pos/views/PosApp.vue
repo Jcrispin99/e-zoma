@@ -3,8 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import ProductList from '../components/ProductList.vue';
 import CartSidebar from '../components/CartSidebar.vue';
-import OpeningModal from '../components/modals/OpeningModal.vue';
-import ClosingModal from '../components/modals/ClosingModal.vue';
+import AmountModal from '../components/modals/AmountModal.vue';
 import { useCart } from '../composables/useCart.js';
 import { useSessionStore } from '../stores/useSessionStore.js';
 import { setCache } from '../composables/useCache.js';
@@ -73,9 +72,6 @@ onMounted(async () => {
 const connectionStatus = computed(() =>
   sessionStore.online ? 'Conectado' : 'Desconectado'
 );
-
-const sellerName = computed(() => sessionStore.seller?.name || '—');
-const sellerRoleLabel = computed(() => 'Cajero');
 
 // Ocultar el carrito en la ruta de checkout y toda la UI en recibo
 const route = useRoute();
@@ -207,43 +203,7 @@ function handleGlobalKeydown(e) {
 
 <template>
   <div class="h-screen flex flex-col bg-gray-50">
-    <!-- Modal Monto de Apertura -->
-    <div
-      v-if="showOpeningModal"
-      class="fixed inset-0 z-50 flex items-center justify-center"
-    >
-      <div class="absolute inset-0 bg-black/40"></div>
-      <div class="relative bg-white rounded-lg shadow-lg w-full max-w-md p-6">
-        <h2 class="text-lg font-semibold mb-2">Monto de apertura</h2>
-        <p class="text-sm text-gray-600 mb-4">
-          Ingresa el efectivo inicial en caja.
-        </p>
-        <input
-          v-model="openingBalanceInput"
-          type="number"
-          min="0"
-          step="0.01"
-          class="w-full border rounded px-3 py-2 mb-2"
-        />
-        <p v-if="openingError" class="text-sm text-red-600 mb-2">
-          {{ openingError }}
-        </p>
-        <div class="flex justify-end space-x-2">
-          <button
-            class="px-3 py-2 rounded bg-gray-200 text-gray-700"
-            @click="showOpeningModal = false"
-          >
-            Cancelar
-          </button>
-          <button
-            class="px-3 py-2 rounded bg-purple-600 text-white hover:bg-purple-700"
-            @click="confirmOpeningBalance"
-          >
-            Confirmar
-          </button>
-        </div>
-      </div>
-    </div>
+    
     <!-- Header -->
     <header
       v-if="!isReceipt"
@@ -295,8 +255,8 @@ function handleGlobalKeydown(e) {
           <!-- User Profile -->
           <div class="flex items-center space-x-3">
             <div class="text-right">
-              <p class="text-sm font-medium text-gray-900">{{ sellerName }}</p>
-              <p class="text-xs text-gray-500">{{ sellerRoleLabel }}</p>
+              <p class="text-sm font-medium text-gray-900">{{ sessionStore.seller?.name || '—' }}</p>
+              <p class="text-xs text-gray-500">{{ sessionStore.seller?.email || sessionStore.pos?.name || '' }}</p>
             </div>
             <div
               class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"
@@ -376,18 +336,24 @@ function handleGlobalKeydown(e) {
   </div>
 
   <!-- Modales -->
-  <OpeningModal
+  <AmountModal
     :show="showOpeningModal"
     :value="openingBalanceInput"
     :error="openingError"
+    title="Monto de apertura"
+    description="Ingresa el efectivo inicial en caja."
+    confirm-button-class="bg-purple-600 text-white hover:bg-purple-700"
     @update:value="(v) => (openingBalanceInput = v)"
     @close="showOpeningModal = false"
     @confirm="confirmOpeningBalance"
   />
-  <ClosingModal
+  <AmountModal
     :show="showClosingModal"
     :value="closingBalanceInput"
     :error="closingError"
+    title="Monto de cierre"
+    description="Ingresa el efectivo al cierre de caja."
+    confirm-button-class="bg-red-600 text-white hover:bg-red-700"
     @update:value="(v) => (closingBalanceInput = v)"
     @close="showClosingModal = false"
     @confirm="confirmClosingBalance"

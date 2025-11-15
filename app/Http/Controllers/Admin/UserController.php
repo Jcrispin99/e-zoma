@@ -37,11 +37,29 @@ class UserController extends Controller
     public function store(Request $request)
     {
         Gate::authorize('create_users', User::class);
+        $companies = $request->input('companies');
+        if (is_array($companies) && count($companies) === 1 && is_string($companies[0])) {
+            $decoded = json_decode($companies[0], true);
+            if (is_array($decoded)) {
+                $request->merge(['companies' => $decoded]);
+            } else {
+                $request->merge(['companies' => array_values(array_filter(array_map(fn($v) => is_numeric($v) ? (int) $v : null, explode(',', $companies[0]))))]);
+            }
+        }
+        $roles = $request->input('roles');
+        if (is_array($roles) && count($roles) === 1 && is_string($roles[0])) {
+            $decoded = json_decode($roles[0], true);
+            if (is_array($decoded)) {
+                $request->merge(['roles' => $decoded]);
+            } else {
+                $request->merge(['roles' => array_values(array_filter(array_map(fn($v) => is_numeric($v) ? (int) $v : null, explode(',', $roles[0]))))]);
+            }
+        }
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'companies' => 'nullable|array',
+            'companies' => 'required|array',
             'companies.*' => 'exists:companies,id',
             'roles' => 'nullable|array',
             'roles.*' => 'exists:roles,id',
@@ -49,7 +67,7 @@ class UserController extends Controller
 
         $data['password'] = bcrypt($data['password']);
 
-        $user = User::create($data);
+        $user = User::create(\Illuminate\Support\Arr::except($data, ['companies', 'roles']));
 
         // Asignar compañías al usuario
         if (isset($data['companies'])) {

@@ -55,7 +55,9 @@ class RoleForm extends Component
             $role = Role::create(['name' => $data['name'], 'guard_name' => 'web']);
         }
 
-        $role->syncPermissions($this->selectedPermissions);
+        $permissionIds = collect($this->selectedPermissions)->map(fn($id) => (int) $id)->all();
+        $permissions = Permission::query()->whereIn('id', $permissionIds)->get();
+        $role->syncPermissions($permissions);
 
         session()->flash('swalt', [
             'icon' => 'success',

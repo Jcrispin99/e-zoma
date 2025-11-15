@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
+use Illuminate\Support\Facades\Gate;
 
 
 class WarehouseController extends Controller
@@ -13,7 +14,7 @@ class WarehouseController extends Controller
      */
     public function index()
     {
-        //
+        Gate::authorize('read_warehouses', Warehouse::class);
         return view('admin.warehouses.index');
     }
 
@@ -22,6 +23,7 @@ class WarehouseController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_warehouses', Warehouse::class);
         return view('admin.warehouses.form');
     }
 
@@ -32,6 +34,7 @@ class WarehouseController extends Controller
      */
     public function edit(Warehouse $warehouse)
     {
+        Gate::authorize('update_warehouses', $warehouse);
         return view('admin.warehouses.form', compact('warehouse'));
     }
 
@@ -42,7 +45,7 @@ class WarehouseController extends Controller
      */
     public function destroy(Warehouse $warehouse)
     {
-        //
+        Gate::authorize('delete_warehouses', $warehouse);
         if ($warehouse->inventories()->exists()) {
             session()->flash('swalt', [
                 'icon' => 'error',

@@ -11,6 +11,7 @@ use App\Models\UbigeoProvince;
 use App\Models\UbigeoDistrict;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 
 class Companycontroller extends Controller
 {
@@ -19,6 +20,7 @@ class Companycontroller extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_companies', Company::class);
         return view('admin.companies.index', [
             'companies' => Company::all()
         ]);
@@ -29,6 +31,7 @@ class Companycontroller extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_companies', Company::class);
         $identities = Identity::select('id', 'name')->get();
         $parentCompanies = Company::query()
             ->where('is_active', true)
@@ -46,6 +49,7 @@ class Companycontroller extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('create_companies', Company::class);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'trade_name' => 'nullable|string|max:255',
@@ -99,6 +103,7 @@ class Companycontroller extends Controller
      */
     public function edit(Company $company)
     {
+        Gate::authorize('update_companies', $company);
         $identities = Identity::select('id', 'name')->get();
         $parentCompanies = Company::query()
             ->where('is_active', true)
@@ -145,6 +150,7 @@ class Companycontroller extends Controller
      */
     public function update(Request $request, Company $company)
     {
+        Gate::authorize('update_companies', $company);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'trade_name' => 'nullable|string|max:255',
@@ -204,6 +210,7 @@ class Companycontroller extends Controller
      */
     public function destroy(Company $company)
     {
+        Gate::authorize('delete_companies', $company);
         if ($company->children()->count() > 0) {
             session()->flash('swalt', [
                 'icon' => 'error',

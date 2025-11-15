@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PosConfig;
+use Illuminate\Support\Facades\Gate;
 
 class PosConfigController extends Controller
 {
@@ -12,6 +13,7 @@ class PosConfigController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_posconfig', PosConfig::class);
         return view('admin.posconfig.index');
     }
 
@@ -20,6 +22,7 @@ class PosConfigController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_posconfig', PosConfig::class);
         return view('admin.posconfig.form');
     }
 
@@ -28,6 +31,7 @@ class PosConfigController extends Controller
      */
     public function edit(PosConfig $posConfig)
     {
+        Gate::authorize('update_posconfig', $posConfig);
         return view('admin.posconfig.form', compact('posConfig'));
     }
 
@@ -36,6 +40,7 @@ class PosConfigController extends Controller
      */
     public function destroy(PosConfig $posConfig)
     {
+        Gate::authorize('delete_posconfig', $posConfig);
         $posConfig->delete();
 
         session()->flash('swalt', [

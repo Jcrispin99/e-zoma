@@ -241,13 +241,8 @@ $links = [
         'type' => 'link',
         'title' => 'Roles',
         'icon' => 'fa-solid fa-users-gear',
-
-    ],
-    [
-        'type' => 'link',
-        'title' => 'Permisos',
-        'icon' => 'fa-solid fa-shield',
-
+        'route' => 'admin.roles.index',
+        'active' => 'admin.roles.*',
     ],
     [
         'type' => 'link',

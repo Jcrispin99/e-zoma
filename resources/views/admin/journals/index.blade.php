@@ -11,9 +11,11 @@
     ],
 ]">
     <x-slot name="action">
+        @can('create_journals')
         <x-wire-button href="{{ route('admin.journals.create') }}" green>
             Nuevo
         </x-wire-button>
+        @endcan
     </x-slot>
     @livewire('admin.datatables.journal-table')
 

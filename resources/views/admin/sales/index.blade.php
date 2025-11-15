@@ -11,9 +11,11 @@
     ],
 ]">
     <x-slot name="action">
-        <x-wire-button href="{{ route('admin.sales.create') }}" green>
-            Nuevo
-        </x-wire-button>
+        @can('create_sales')
+            <x-wire-button href="{{ route('admin.sales.create') }}" green>
+                Nuevo
+            </x-wire-button>
+        @endcan
     </x-slot>
     @livewire('admin.datatables.sale-table')
 

@@ -11,9 +11,11 @@
     ],
 ]">
     <x-slot name="action">
+        @can('create_loyalty-programs')
         <x-wire-button href="{{ route('admin.loyalty-programs.create') }}" green>
             Nuevo
         </x-wire-button>
+        @endcan
     </x-slot>
     @livewire('admin.datatables.loyalty-program-table')
 

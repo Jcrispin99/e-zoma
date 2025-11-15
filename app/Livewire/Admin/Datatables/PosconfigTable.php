@@ -9,6 +9,7 @@ use App\Models\PosSession;
 use Illuminate\Database\Eloquent\Builder;
 use App\Livewire\Traits\CompanyFilterable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Carbon;
 
 class PosconfigTable extends DataTableComponent
@@ -69,6 +70,10 @@ class PosconfigTable extends DataTableComponent
 
         /** @var PosConfig $posConfig */
         $posConfig = PosConfig::query()->findOrFail($posConfigId);
+
+        if (! Gate::allows('read_pos_sessions', $posConfig)) {
+            return;
+        }
 
         // Si hay una sesión abierta para esta caja, continuar en esa
         $existing = PosSession::query()

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Quote;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Gate;
 
 class QuoteController extends Controller
 {
@@ -14,6 +15,7 @@ class QuoteController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_quotes', Quote::class);
         return view('admin.quotes.index');
     }
 
@@ -22,11 +24,13 @@ class QuoteController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_quotes', Quote::class);
         return view('admin.quotes.create');
     }
 
     public function edit(Quote $quote)
     {
+        Gate::authorize('update_quotes', $quote);
         return view('admin.quotes.edit', compact('quote'));
     }
 
@@ -35,6 +39,7 @@ class QuoteController extends Controller
      */
     public function pdf(Quote $quote)
     {
+        Gate::authorize('export_pdf_quotes', $quote);
         $pdf = Pdf::loadView('pdf.quote.show', [
             'quote' => $quote,
             'useLayout' => false,
@@ -48,6 +53,7 @@ class QuoteController extends Controller
      */
     public function pdfView(Quote $quote)
     {
+        Gate::authorize('export_pdf_quotes', $quote);
         return view('pdf.quote.show', [
             'quote' => $quote,
             'useLayout' => true,
@@ -60,6 +66,7 @@ class QuoteController extends Controller
      */
     public function publicPdfView(Quote $quote)
     {
+        Gate::authorize('export_pdf_quotes', $quote);
         return view('pdf.quote.show', [
             'quote' => $quote,
             'useLayout' => false,

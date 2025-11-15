@@ -1,8 +1,10 @@
 <div class="flex items-center space-x-2">
+    @can('update_categories', $category)
     <x-wire-button href="{{ route('admin.categories.edit', $category->id) }}" wire:navigate blue xs>
         Editar
     </x-wire-button>
-
+    @endcan
+    @can('delete_categories', $category)
     <form action="{{ route('admin.categories.destroy', $category->id) }}" method="post" class="delete-form">
         @csrf
         @method('delete')
@@ -10,4 +12,5 @@
             Eliminar
         </x-wire-button>
     </form>
+    @endcan
 </div>

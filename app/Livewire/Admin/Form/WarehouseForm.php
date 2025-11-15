@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Form;
 
 use Livewire\Component;
 use App\Models\Warehouse;
+use Illuminate\Support\Facades\Gate;
 
 class WarehouseForm extends Component
 {
@@ -17,6 +18,12 @@ class WarehouseForm extends Component
 
     public function mount(?int $warehouseId = null): void
     {
+        if ($warehouseId) {
+            $warehouse = Warehouse::findOrFail($warehouseId);
+            Gate::authorize('update_warehouses', $warehouse);
+        } else {
+            Gate::authorize('create_warehouses', Warehouse::class);
+        }
         $this->warehouseId = $warehouseId;
         $this->isEditing = (bool) $warehouseId;
 
@@ -40,6 +47,7 @@ class WarehouseForm extends Component
         $data = $this->validate();
 
         if ($this->isEditing) {
+            Gate::authorize('update_warehouses', Warehouse::findOrFail($this->warehouseId));
             $warehouse = Warehouse::findOrFail($this->warehouseId);
             $warehouse->update($data);
 
@@ -57,6 +65,7 @@ class WarehouseForm extends Component
             return;
         }
 
+        Gate::authorize('create_warehouses', Warehouse::class);
         $activeCompanyId = session('active_company_id');
         if (!$activeCompanyId) {
             session()->flash('swalt', [

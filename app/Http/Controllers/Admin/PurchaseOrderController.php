@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PurchaseOrder;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Gate;
 
 class PurchaseOrderController extends Controller
 {
@@ -14,6 +15,7 @@ class PurchaseOrderController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_purchase-orders', PurchaseOrder::class);
         return view('admin.purchases-orders.index');
     }
 
@@ -22,6 +24,7 @@ class PurchaseOrderController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_purchase-orders', PurchaseOrder::class);
         return view('admin.purchases-orders.create');
     }
 
@@ -30,6 +33,7 @@ class PurchaseOrderController extends Controller
      */
     public function edit(PurchaseOrder $purchaseOrder)
     {
+        Gate::authorize('update_purchase-orders', $purchaseOrder);
         return view('admin.purchases-orders.edit', compact('purchaseOrder'));
     }
 
@@ -38,6 +42,7 @@ class PurchaseOrderController extends Controller
      */
     public function pdf(PurchaseOrder $purchaseOrder)
     {
+        Gate::authorize('export_pdf_purchase-orders', $purchaseOrder);
         $pdf = Pdf::loadView('pdf.purchase-order.show', [
             'po' => $purchaseOrder,
             'useLayout' => false,
@@ -51,6 +56,7 @@ class PurchaseOrderController extends Controller
      */
     public function pdfView(PurchaseOrder $purchaseOrder)
     {
+        Gate::authorize('export_pdf_purchase-orders', $purchaseOrder);
         return view('pdf.purchase-order.show', [
             'po' => $purchaseOrder,
             'useLayout' => true,
@@ -63,6 +69,7 @@ class PurchaseOrderController extends Controller
      */
     public function publicPdfView(PurchaseOrder $purchaseOrder)
     {
+        Gate::authorize('export_pdf_purchase-orders', $purchaseOrder);
         // Vista pública mínima sin layout admin (URL firmada)
         return view('pdf.purchase-order.show', [
             'po' => $purchaseOrder,

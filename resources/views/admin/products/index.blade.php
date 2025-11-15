@@ -11,31 +11,35 @@
     ],
 ]">
     @push('css')
-        <style>
-            table th span,
-            table td {
-                font-size: 0.75rem !important;
-            }
+    <style>
+        table th span,
+        table td {
+            font-size: 0.75rem !important;
+        }
 
-            .image-product {
-                width: 5rem;
-                height: 2.5rem;
-                object-fit: cover;
-                object-position: center;
-            }
-        </style>
+        .image-product {
+            width: 5rem;
+            height: 2.5rem;
+            object-fit: cover;
+            object-position: center;
+        }
+    </style>
     @endpush
 
     <x-slot name="action">
+        {{-- @can('import_products')
         <x-wire-button href="{{ route('admin.products.import') }}" green>
             <i class="fas fa-file-import""></i>
-            Importar
-        </x-wire-button>
+                Importar
+            </x-wire-button>
+        @endcan --}}
 
-        <x-wire-button href="{{ route('admin.products.create') }}" blue>
-            <i class="fas fa-plus""></i>
-            Nuevo
-        </x-wire-button>
+        @can('create_products')
+            <x-wire-button href=" {{ route('admin.products.create') }}" blue>
+                <i class="fas fa-plus""></i>
+                Nuevo
+            </x-wire-button>
+        @endcan
     </x-slot>
     @livewire('admin.datatables.product-table')
 

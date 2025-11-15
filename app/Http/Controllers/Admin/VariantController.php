@@ -7,6 +7,7 @@ use App\Models\Variant;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 
 class VariantController extends Controller
 {
@@ -15,6 +16,7 @@ class VariantController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_variants', Variant::class);
         $variants = Variant::with('product')->get();
 
         return view('admin.variants.index', compact('variants'));
@@ -25,6 +27,7 @@ class VariantController extends Controller
      */
     public function edit(Variant $variant)
     {
+        Gate::authorize('update_variants', $variant);
         return view('admin.variants.form', compact('variant'));
     }
 
@@ -33,6 +36,7 @@ class VariantController extends Controller
      */
     public function update(Request $request, Variant $variant)
     {
+        Gate::authorize('update_variants', $variant);
         $request->validate([
             'barcode' => 'nullable',
             'price' => 'required',
@@ -58,6 +62,7 @@ class VariantController extends Controller
      */
     public function destroy(Variant $variant)
     {
+        Gate::authorize('delete_variants', $variant);
         if ($variant->inventories()->exists()) {
             session()->flash('swalt', [
                 'icon' => 'error',
@@ -91,6 +96,7 @@ class VariantController extends Controller
 
     public function dropzone(Request $request, Variant $variant)
     {
+        Gate::authorize('upload_variant_images', $variant);
         $image = $variant->images()->create([
             'path' => Storage::put('/images/variants', $request->file('file')),
             'size' => $request->file('file')->getSize(),
@@ -104,6 +110,7 @@ class VariantController extends Controller
 
     public function kardex(Variant $variant)
     {
+        Gate::authorize('read_variants_kardex', $variant);
         return view('admin.variants.kardex', compact('variant'));
     }
 }

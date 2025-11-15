@@ -11,9 +11,11 @@
     ],
 ]">
     <x-slot name="action">
+        @can('create_quotes')
         <x-wire-button href="{{ route('admin.quotes.create') }}" green>
             Nuevo
         </x-wire-button>
+        @endcan
     </x-slot>
     @livewire('admin.datatables.quote-table')
 

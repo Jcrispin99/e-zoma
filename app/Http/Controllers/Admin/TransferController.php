@@ -7,6 +7,7 @@ use App\Models\Quote;
 use App\Models\Transfer;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Gate;
 
 
 class TransferController extends Controller
@@ -16,6 +17,7 @@ class TransferController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_transfers', Transfer::class);
         return view('admin.transfers.index');
     }
 
@@ -24,6 +26,7 @@ class TransferController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_transfers', Transfer::class);
         return view('admin.transfers.create');
     }
 
@@ -32,6 +35,7 @@ class TransferController extends Controller
      */
     public function pdf(Transfer $transfer)
     {
+        Gate::authorize('export_pdf_transfers', $transfer);
         $pdf = Pdf::loadView('admin.transfers.pdf', [
             'model' => $transfer,
         ]);

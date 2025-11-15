@@ -4,6 +4,7 @@ namespace App\Livewire\Admin\Form;
 
 use App\Models\Attribute;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -22,6 +23,12 @@ class AttributeForm extends Component
 
     public function mount(?int $attributeId = null): void
     {
+        if ($attributeId) {
+            $attribute = Attribute::findOrFail($attributeId);
+            Gate::authorize('update_attributes', $attribute);
+        } else {
+            Gate::authorize('create_attributes', Attribute::class);
+        }
         $this->attributeId = $attributeId;
         $this->isEditing = filled($attributeId);
 

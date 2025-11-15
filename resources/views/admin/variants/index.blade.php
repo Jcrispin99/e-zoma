@@ -11,25 +11,27 @@
     ],
 ]">
     @push('css')
-        <style>
-            table th span,
-            table td {
-                font-size: 0.75rem !important;
-            }
+    <style>
+        table th span,
+        table td {
+            font-size: 0.75rem !important;
+        }
 
-            .image-product {
-                width: 2.5rem;
-                height: 2.5rem;
-                object-fit: cover;
-                object-position: center;
-            }
-        </style>
+        .image-product {
+            width: 2.5rem;
+            height: 2.5rem;
+            object-fit: cover;
+            object-position: center;
+        }
+    </style>
     @endpush
 
     <x-slot name="action">
+        @can('create_products')
         <x-wire-button href="{{ route('admin.products.create') }}" green>
             Nuevo
         </x-wire-button>
+        @endcan
     </x-slot>
     @livewire('admin.datatables.variant-table')
 

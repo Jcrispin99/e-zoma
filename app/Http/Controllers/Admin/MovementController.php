@@ -7,6 +7,7 @@ use App\Models\Movement;
 use App\Models\Quote;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Gate;
 
 
 class MovementController extends Controller
@@ -16,6 +17,7 @@ class MovementController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_movements', Movement::class);
         return view('admin.movements.index');
     }
 
@@ -24,6 +26,7 @@ class MovementController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_movements', Movement::class);
         return view('admin.movements.create');
     }
 
@@ -32,6 +35,7 @@ class MovementController extends Controller
      */
     public function pdf(Movement $movement)
     {
+        Gate::authorize('export_pdf_movements', $movement);
         $pdf = Pdf::loadView('admin.movements.pdf', [
             'model' => $movement,
         ]);

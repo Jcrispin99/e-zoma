@@ -7,12 +7,14 @@ use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 
 class ProductController extends Controller
 {
 
     public function index()
     {
+        Gate::authorize('read_products', Product::class);
         $products = Product::query()->paginate(10);
         return view('admin.products.index', compact('products'));
     }
@@ -22,6 +24,7 @@ class ProductController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_products', Product::class);
         $categories = Category::all();
         // Unificamos la vista a 'admin.products.form' para crear/editar
         return view('admin.products.form', compact('categories'));
@@ -32,6 +35,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('create_products', Product::class);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -55,6 +59,7 @@ class ProductController extends Controller
      */
     public function edit(Product $product)
     {
+        Gate::authorize('update_products', $product);
         $categories = Category::all();
         // Usamos la misma vista 'admin.products.form' para edición
         return view('admin.products.form', compact('product', 'categories'));
@@ -65,6 +70,7 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
+        Gate::authorize('update_products', $product);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -88,6 +94,7 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        Gate::authorize('delete_products', $product);
         if ($product->variants()->exists()) {
             session()->flash('swalt', [
                 'icon' => 'error',
@@ -111,6 +118,7 @@ class ProductController extends Controller
 
     public function dropzone(Request $request, Product $product)
     {
+        Gate::authorize('upload_product_images', $product);
         $image = $product->images()->create([
             'path' => Storage::put('/images/products', $request->file('file')),
             'size' => $request->file('file')->getSize(),
@@ -124,6 +132,7 @@ class ProductController extends Controller
 
     public function import()
     {
+        Gate::authorize('import_products', Product::class);
         return view('admin.products.import');
     }
 }

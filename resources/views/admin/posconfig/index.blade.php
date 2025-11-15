@@ -11,9 +11,11 @@
     ],
 ]">
     <x-slot name="action">
+        @can('create_posconfig')
         <x-wire-button href="{{ route('admin.posconfig.create') }}" green>
             Nuevo
         </x-wire-button>
+        @endcan
     </x-slot>
     @livewire('admin.datatables.posconfig-table')
 

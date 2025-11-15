@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Sale;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Gate;
 
 class SaleController extends Controller
 {
@@ -14,6 +15,7 @@ class SaleController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_sales', Sale::class);
         return view('admin.sales.index');
     }
 
@@ -22,11 +24,13 @@ class SaleController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_sales', Sale::class);
         return view('admin.sales.create');
     }
 
     public function edit(Sale $sale)
     {
+        Gate::authorize('update_sales', $sale);
         return view('admin.sales.edit', compact('sale'));
     }
 
@@ -35,6 +39,7 @@ class SaleController extends Controller
      */
     public function pdf(Sale $sale)
     {
+        Gate::authorize('export_pdf_sales', $sale);
         $pdf = Pdf::loadView('pdf.sale.show', [
             'sale' => $sale,
             'useLayout' => false,
@@ -48,6 +53,7 @@ class SaleController extends Controller
      */
     public function pdfView(Sale $sale)
     {
+        Gate::authorize('export_pdf_sales', $sale);
         return view('pdf.sale.show', [
             'sale' => $sale,
             'useLayout' => true,
@@ -60,6 +66,7 @@ class SaleController extends Controller
      */
     public function publicPdfView(Sale $sale)
     {
+        Gate::authorize('export_pdf_sales', $sale);
         return view('pdf.sale.show', [
             'sale' => $sale,
             'useLayout' => false,

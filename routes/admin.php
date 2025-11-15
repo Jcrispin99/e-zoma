@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\MovementController;
 use App\Http\Controllers\Admin\TransferController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\PosConfigController;
 use App\Http\Controllers\Admin\SequenceController;
@@ -32,23 +33,28 @@ Route::get('/', function () {
 
 // Reportes
 Route::get('reports/sales/top-products', function () {
+    \Illuminate\Support\Facades\Gate::authorize('read_reports');
     return view('admin.reports.sales-top-products');
 })->name('reports.sales.top-products');
 
 Route::get('reports/sales/payment-methods', function () {
+    \Illuminate\Support\Facades\Gate::authorize('read_reports');
     return view('admin.reports.sales-payment-methods');
 })->name('reports.sales.payment-methods');
 
 Route::get('reports/customers/frequent', function () {
+    \Illuminate\Support\Facades\Gate::authorize('read_reports');
     return view('admin.reports.customers-frequent');
 })->name('reports.customers.frequent');
 
 Route::get('reports/sunat/status', function () {
+    \Illuminate\Support\Facades\Gate::authorize('read_reports');
     return view('admin.reports.sunat-status');
 })->name('reports.sunat.status');
 
 // Usuario
 Route::resource('users', UserController::class)->except(['show']);
+Route::resource('roles', RoleController::class)->except(['show']);
 
 // inventario
 Route::resource('categories', CategoryController::class)->except(['show']);
@@ -98,6 +104,7 @@ Route::resource('posconfig', PosConfigController::class)->only(['index', 'create
 ]);
 
 Route::get('posconfig/{posConfig}/sessions', function (\App\Models\PosConfig $posConfig) {
+    \Illuminate\Support\Facades\Gate::authorize('read_pos_sessions', $posConfig);
     return view('admin.possessions.index', compact('posConfig'));
 })->name('posconfig.sessions');
 

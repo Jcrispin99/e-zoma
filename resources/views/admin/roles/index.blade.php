@@ -1,22 +1,22 @@
-<x-admin-layout title="Atributos" :breadcrumbs="[
+<x-admin-layout title="Roles" :breadcrumbs="[
     [
         'name' => 'Dashboard',
         'href' => route('admin.dashboard'),
         'icon' => 'fa-solid fa-gauge',
     ],
     [
-        'name' => 'Atributos',
+        'name' => 'Roles',
         'icon' => 'fa-regular fa-file-lines',
-        'href' => route('admin.attributes.index'),
+        'href' => route('admin.roles.index'),
     ],
 ]">
     <x-slot name="action">
-        @can('create_attributes')
-        <x-wire-button href="{{ route('admin.attributes.create') }}" green>
+        @can('create_roles')
+        <x-wire-button href="{{ route('admin.roles.create') }}" green>
             Nuevo
         </x-wire-button>
         @endcan
     </x-slot>
-    @livewire('admin.datatables.attribute-table')
+    @livewire('admin.datatables.role-table')
 
 </x-admin-layout>

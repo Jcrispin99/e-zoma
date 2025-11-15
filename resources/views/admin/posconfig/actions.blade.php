@@ -2,9 +2,11 @@
 
 
     <!-- Abrir/Continuar caja -->
+    @can('read_pos_sessions', $posconfig)
     <x-wire-button xs primary wire:click="openSession({{ $posconfig->id }})">
         {{ ($hasOpen ?? false) ? 'Continuar venta' : 'Abrir caja' }}
     </x-wire-button>
+    @endcan
 
     <x-dropdown align="right" width="48">
         <x-slot name="trigger">
@@ -19,15 +21,21 @@
         </x-slot>
 
         <x-slot name="content">
+            @can('update_posconfig', $posconfig)
             <x-dropdown-link :href="route('admin.posconfig.edit', $posconfig->id)">Editar</x-dropdown-link>
+            @endcan
+            @can('read_pos_sessions', $posconfig)
             <x-dropdown-link :href="route('admin.posconfig.sessions', $posconfig->id)">Sesiones</x-dropdown-link>
+            @endcan
 
-            <form action="{{ route('admin.posconfig.destroy', $posconfig->id) }}" method="post" x-data>
-                @csrf
-                @method('delete')
-                <x-dropdown-link href="{{ route('admin.posconfig.destroy', $posconfig->id) }}"
-                    @click.prevent="$root.submit()">Eliminar</x-dropdown-link>
-            </form>
+            @can('delete_posconfig', $posconfig)
+                <form action="{{ route('admin.posconfig.destroy', $posconfig->id) }}" method="post" x-data>
+                    @csrf
+                    @method('delete')
+                    <x-dropdown-link href="{{ route('admin.posconfig.destroy', $posconfig->id) }}"
+                        @click.prevent="$root.submit()">Eliminar</x-dropdown-link>
+                </form>
+            @endcan
         </x-slot>
     </x-dropdown>
 </div>

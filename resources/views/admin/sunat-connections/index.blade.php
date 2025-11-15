@@ -11,6 +11,7 @@
     ],
 ]">
     <x-wire-card>
+        @can($connection ? 'update_sunat-connections' : 'create_sunat-connections')
         <form action="{{ route('admin.sunat-connections.' . ($connection ? 'update' : 'store')) }}" method="POST" class="space-y-8">
             @csrf
             @if($connection)
@@ -35,5 +36,8 @@
                 </x-wire-button>
             </div>
         </form>
+        @else
+            <div class="p-4 text-sm text-gray-600 dark:text-gray-300">No tienes permisos para configurar las conexiones SUNAT.</div>
+        @endcan
     </x-wire-card>
 </x-admin-layout>

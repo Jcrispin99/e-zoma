@@ -13,11 +13,13 @@
         'name' => 'Usuarios',
     ],
 ]">
+    @can('create_users')
     <x-slot name="action">
         <x-wire-button href="{{ route('admin.users.create') }}" green>
             Nuevo
         </x-wire-button>
     </x-slot>
+    @endcan
    
     @livewire('admin.datatables.user-table')
 

@@ -113,11 +113,66 @@ class RolesSeeder extends Seeder
             'update_permissions',
             'delete_permissions',
 
+            //empresas
+            'create_companies',
+            'read_companies',
+            'update_companies',
+            'delete_companies',
 
+            //secuencias
+            'create_sequences',
+            'read_sequences',
+            'update_sequences',
+            'delete_sequences',
+
+            // Lealtad
+            'create_loyalty-programs',
+            'read_loyalty-programs',
+            'update_loyalty-programs',
+            'delete_loyalty-programs',
+
+            // reportes
+            'create_reports',
+            'read_reports',
+            'update_reports',
+            'delete_reports',
+
+            'access_dashboard',
+            'import_products',
+            'read_variants_kardex',
+            'upload_variant_images',
+            'upload_product_images',
+            'delete_images',
+            'export_pdf_purchase-orders',
+            'export_pdf_purchases',
+            'export_pdf_quotes',
+            'export_pdf_sales',
+            'export_pdf_movements',
+            'export_pdf_transfers',
+            'read_qr_labels',
+            'create_posconfig',
+            'read_posconfig',
+            'update_posconfig',
+            'delete_posconfig',
+            'read_pos_sessions',
+            'create_journals',
+            'read_journals',
+            'update_journals',
+            'delete_journals',
+            'create_transfers',
+            'read_transfers',
+            'update_transfers',
+            'delete_transfers',
+            'read_ubigeo',
+            'read_sunat-connections',
+            'create_sunat-connections',
+            'update_sunat-connections',
         ];
 
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+
         foreach ($permision as $permission) {
-            Permission::create([
+            Permission::firstOrCreate([
                 'name' => $permission,
                 'guard_name' => 'web',
             ]);
@@ -155,6 +210,54 @@ class RolesSeeder extends Seeder
             ]);
 
         Role::create(['name' => 'lector'])
+            ->givePermissionTo([
+                'read_categories',
+                'read_attributes',
+                'read_products',
+                'read_variants',
+                'read_warehouses',
+                'read_suppliers',
+                'read_purchase-orders',
+                'read_purchases',
+                'read_customers',
+                'read_quotes',
+                'read_sales',
+                'read_movements',
+                'read_transactions',
+                'read_users',
+                'read_roles',
+                'read_permissions',
+            ]);
+
+        Role::create(['name' => 'editor'])
+            ->givePermissionTo([
+                'create_categories',
+                'read_categories',
+                'update_categories',
+                'delete_categories',
+                'create_attributes',
+                'read_attributes',
+                'update_attributes',
+                'delete_attributes',
+                'create_products',
+                'read_products',
+                'update_products',
+                'delete_products',
+                'create_variants',
+                'read_variants',
+                'update_variants',
+                'delete_variants',
+                'create_warehouses',
+                'read_warehouses',
+                'update_warehouses',
+                'delete_warehouses',
+                'create_suppliers',
+                'read_suppliers',
+                'update_suppliers',
+                'delete_suppliers',
+            ]);
+
+        Role::create(['name' => 'viewer'])
             ->givePermissionTo([
                 'read_categories',
                 'read_attributes',

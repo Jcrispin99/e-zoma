@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attribute;
+use Illuminate\Support\Facades\Gate;
 
 class AttributeController extends Controller
 {
@@ -12,6 +13,7 @@ class AttributeController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_attributes', Attribute::class);
         return view('admin.attributes.index', [
             'attributes' => Attribute::all()
         ]);
@@ -22,6 +24,7 @@ class AttributeController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_attributes', Attribute::class);
         return view('admin.attributes.form');
     }
 
@@ -30,6 +33,7 @@ class AttributeController extends Controller
      */
     public function edit(Attribute $attribute)
     {
+        Gate::authorize('update_attributes', $attribute);
         return view('admin.attributes.form', [
             'attribute' => $attribute
         ]);
@@ -40,6 +44,7 @@ class AttributeController extends Controller
      */
     public function destroy(Attribute $attribute)
     {
+        Gate::authorize('delete_attributes', $attribute);
         if ($attribute->attributeValues()->exists()) {
             session()->flash('swalt', [
                 'icon' => 'error',

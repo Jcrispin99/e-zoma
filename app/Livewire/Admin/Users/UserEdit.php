@@ -5,6 +5,7 @@ namespace App\Livewire\Admin\Users;
 use App\Models\User;
 use App\Models\Company;
 use Livewire\Component;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 class UserEdit extends Component
 {
@@ -15,6 +16,8 @@ class UserEdit extends Component
     public $password_confirmation;
     public $selectedCompanies = [];
     public $allCompanies;
+    public $selectedRoles = [];
+    public $allRoles = [];
 
     public function mount(User $user)
     {
@@ -23,6 +26,8 @@ class UserEdit extends Component
         $this->email = $this->user->email;
         $this->allCompanies = Company::all();
         $this->selectedCompanies = $this->user->companies->pluck('id')->toArray();
+        $this->allRoles = SpatieRole::select('id', 'name')->get();
+        $this->selectedRoles = $this->user->roles->pluck('id')->toArray();
     }
 
     public function save()
@@ -44,6 +49,7 @@ class UserEdit extends Component
 
         $this->user->update($data);
         $this->user->companies()->sync($this->selectedCompanies);
+        $this->user->roles()->sync($this->selectedRoles);
 
         session()->flash('swalt', [
             'icon' => 'success',

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Company;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class UserController extends Controller
 {
@@ -14,6 +15,7 @@ class UserController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_users', User::class);
         return view('admin.users.index');
     }
 
@@ -22,6 +24,7 @@ class UserController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_users', User::class);
         $companies = Company::all();
         return view('admin.users.create', compact('companies'));
     }
@@ -31,6 +34,7 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('create_users', User::class);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -62,6 +66,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
+        Gate::authorize('read_users', $user);
         return view('admin.users.show', compact('user'));
     }
 
@@ -70,6 +75,7 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
+        Gate::authorize('update_users', $user);
         return view('admin.users.edit', compact('user'));
     }
 
@@ -78,6 +84,7 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
+        Gate::authorize('update_users', $user);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
@@ -111,7 +118,7 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        //
+        Gate::authorize('delete_users', $user);
         $user->delete();
 
         session()->flash('swalt', [

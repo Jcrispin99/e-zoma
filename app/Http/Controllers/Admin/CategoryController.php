@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use Illuminate\Support\Facades\Gate;
+
 
 
 class CategoryController extends Controller
@@ -13,6 +15,7 @@ class CategoryController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_categories', Category::class);
         return view('admin.categories.index', [
             'categories' => Category::all()
         ]);
@@ -23,6 +26,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_categories', Category::class);
         return view('admin.categories.form');
     }
 
@@ -33,6 +37,7 @@ class CategoryController extends Controller
      */
     public function edit(Category $category)
     {
+        Gate::authorize('update_categories', $category);
         return view('admin.categories.form', [
             'category' => $category,
         ]);
@@ -45,6 +50,8 @@ class CategoryController extends Controller
      */
     public function destroy(Category $category)
     {
+        Gate::authorize('delete_categories', $category);
+
         if ($category->products()->exists()) {
             session()->flash('swalt', [
                 'icon' => 'error',

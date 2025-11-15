@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Sequence;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class SequenceController extends Controller
 {
@@ -13,6 +14,7 @@ class SequenceController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_sequences', Sequence::class);
         return view('admin.sequences.index');
     }
 
@@ -21,6 +23,7 @@ class SequenceController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_sequences', Sequence::class);
         return view('admin.sequences.create');
     }
 
@@ -29,6 +32,7 @@ class SequenceController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('create_sequences', Sequence::class);
         $data = $request->validate([
             'sequence_size' => 'required|integer|min:1',
             'step' => 'required|integer|min:1',
@@ -51,6 +55,7 @@ class SequenceController extends Controller
      */
     public function edit(Sequence $sequence)
     {
+        Gate::authorize('update_sequences', $sequence);
         return view('admin.sequences.edit', compact('sequence'));
     }
 
@@ -59,6 +64,7 @@ class SequenceController extends Controller
      */
     public function update(Request $request, Sequence $sequence)
     {
+        Gate::authorize('update_sequences', $sequence);
         $data = $request->validate([
             'sequence_size' => 'required|integer|min:1',
             'step' => 'required|integer|min:1',
@@ -78,6 +84,7 @@ class SequenceController extends Controller
 
     public function destroy(Sequence $sequence)
     {
+        Gate::authorize('delete_sequences', $sequence);
         $sequence->delete();
 
         session()->flash('swalt', [

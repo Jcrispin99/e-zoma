@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Journal;
 use App\Models\Sequence;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class JournalController extends Controller
 {
@@ -15,6 +16,7 @@ class JournalController extends Controller
      */
     public function index()
     {
+        Gate::authorize('read_journals', Journal::class);
         return view('admin.journals.index');
     }
 
@@ -23,6 +25,7 @@ class JournalController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create_journals', Journal::class);
         $companies = Company::all();
         $sequences = Sequence::all();
         return view('admin.journals.create', compact('companies', 'sequences'));
@@ -33,6 +36,7 @@ class JournalController extends Controller
      */
     public function store(Request $request)
     {
+        Gate::authorize('create_journals', Journal::class);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:255',
@@ -80,6 +84,7 @@ class JournalController extends Controller
      */
     public function edit(Journal $journal)
     {
+        Gate::authorize('update_journals', $journal);
         $companies = Company::all();
         $sequences = Sequence::all();
         return view('admin.journals.edit', compact('journal', 'companies', 'sequences'));
@@ -90,6 +95,7 @@ class JournalController extends Controller
      */
     public function update(Request $request, Journal $journal)
     {
+        Gate::authorize('update_journals', $journal);
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:255',
@@ -140,6 +146,7 @@ class JournalController extends Controller
      */
     public function destroy(Journal $journal)
     {
+        Gate::authorize('delete_journals', $journal);
         $journal->delete();
 
         session()->flash('swalt', [

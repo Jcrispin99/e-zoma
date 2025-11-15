@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -26,7 +27,8 @@ class UserController extends Controller
     {
         Gate::authorize('create_users', User::class);
         $companies = Company::all();
-        return view('admin.users.create', compact('companies'));
+        $roles = Role::select('id', 'name')->get();
+        return view('admin.users.create', compact('companies', 'roles'));
     }
 
     /**
@@ -41,6 +43,8 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'companies' => 'nullable|array',
             'companies.*' => 'exists:companies,id',
+            'roles' => 'nullable|array',
+            'roles.*' => 'exists:roles,id',
         ]);
 
         $data['password'] = bcrypt($data['password']);
@@ -50,6 +54,11 @@ class UserController extends Controller
         // Asignar compañías al usuario
         if (isset($data['companies'])) {
             $user->companies()->sync($data['companies']);
+        }
+
+        // Asignar roles al usuario
+        if (isset($data['roles'])) {
+            $user->roles()->sync($data['roles']);
         }
 
         session()->flash('swalt', [

@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Services\Sidebar;
+use Illuminate\Support\Facades\Auth;
 
 class ItemHeader implements ItemInterface
 {
@@ -24,6 +25,18 @@ class ItemHeader implements ItemInterface
 
     public function authorize(): bool
     {
-        return true;
+        if (empty($this->can)) {
+            return true;
+        }
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+        foreach ($this->can as $perm) {
+            if ($user->can($perm)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

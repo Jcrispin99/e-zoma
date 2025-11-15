@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Services\Sidebar;
+use Illuminate\Support\Facades\Auth;
 
 class ItemLink implements ItemInterface
 {
@@ -35,6 +36,18 @@ class ItemLink implements ItemInterface
 
     public function authorize(): bool
     {
-        return true;
+        if (empty($this->can)) {
+            return true;
+        }
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+        foreach ($this->can as $perm) {
+            if ($user->can($perm)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

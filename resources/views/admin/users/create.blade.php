@@ -41,10 +41,26 @@
                 label="Compañías"
                 placeholder="Selecciona una o más compañías"
                 multiselect
+                name="companies[]"
                 :options="$companies"
                 option-label="trade_name"
                 option-value="id"
-                wire:model.defer="userCompanies"
+                :value="old('companies', [])"
+            />
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <div class="mb-4">
+            <x-wire-select
+                label="Roles"
+                placeholder="Selecciona uno o más roles"
+                multiselect
+                name="roles[]"
+                :options="$roles"
+                option-label="name"
+                option-value="id"
+                :value="old('roles', [])"
             />
         </div>
     </div>

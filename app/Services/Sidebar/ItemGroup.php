@@ -26,7 +26,13 @@ class ItemGroup implements ItemInterface
     public function render(): string
     {
         $open = $this->active ? 'true' : 'false';
-        $itemsHtml = collect($this->items)
+        $authorized = array_filter($this->items, function (ItemInterface $item) {
+            return $item->authorize();
+        });
+        if (empty($authorized)) {
+            return '';
+        }
+        $itemsHtml = collect($authorized)
             ->map(function (ItemInterface $item) {
                 return '<li class="pl-4">' . $item->render() . '</li>';
             })
@@ -64,6 +70,11 @@ class ItemGroup implements ItemInterface
 
     public function authorize(): bool
     {
-        return true;
+        foreach ($this->items as $item) {
+            if ($item->authorize()) {
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -5,9 +5,11 @@
     <div class="h-full px-3 pb-4 overflow-y-auto bg-white dark:bg-gray-800">
         <ul class="space-y-2 font-medium">
             @foreach ($itemsSidebar as $link)
+                @if ($link->authorize())
                 <li>
                     {!! $link->render() !!}
                 </li>
+                @endif
             @endforeach
         </ul>
     </div>

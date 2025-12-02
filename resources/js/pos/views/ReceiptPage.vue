@@ -41,8 +41,18 @@ onMounted(() => {
         :date="receipt.date"
         :customer="receipt.customer"
         :is-offline="receipt.isOffline"
-        :journal-name="sessionStore.sequences?.[receipt.type === 'invoice' ? 'invoice' : 'receipt']?.journal_name || null"
-        :serie-code="sessionStore.sequences?.[receipt.type === 'invoice' ? 'invoice' : 'receipt']?.serie_code || receipt.serie || ''"
+        :journal-name="
+          sessionStore.sequences?.[
+            receipt.type === 'invoice' ? 'invoice' : 'receipt'
+          ]?.journal_name || null
+        "
+        :serie-code="
+          sessionStore.sequences?.[
+            receipt.type === 'invoice' ? 'invoice' : 'receipt'
+          ]?.serie_code ||
+          receipt.serie ||
+          ''
+        "
         :pos-name="sessionStore.pos?.name || ''"
         :seller-name="sessionStore.seller?.name || ''"
         condition="Contado"
@@ -56,9 +66,9 @@ onMounted(() => {
         :total="Number(receipt.total || 0)"
         :loyalty="receipt.loyalty || null"
       />
-      <ReceiptPayments 
-        :payments="receipt.payments || []" 
-        :policies="sessionStore.company?.policies || ''" 
+      <ReceiptPayments
+        :payments="receipt.payments || []"
+        :policies="sessionStore.company?.policies || ''"
       />
 
       <!-- Acciones -->
@@ -89,6 +99,7 @@ onMounted(() => {
   #app > *:not(.receipt-print-root) {
     display: none !important;
   }
+
   .receipt-print-root {
     display: block !important;
   }
@@ -100,10 +111,12 @@ onMounted(() => {
   width: 80mm;
   margin: 0 auto;
 }
+
 @media print {
   .receipt {
     width: 80mm;
   }
+
   .print\:hidden {
     display: none !important;
   }

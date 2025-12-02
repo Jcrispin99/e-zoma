@@ -20,7 +20,6 @@ const props = defineProps({
           <span>IGV</span>
           <span>{{ Number(props.tax || 0).toFixed(2) }}</span>
         </div>
-        <!-- Descuento por puntos (si existe) -->
         <div
           v-if="props.loyalty && Number(props.loyalty.discount_amount || 0) > 0"
           class="flex justify-between text-red-600"
@@ -34,7 +33,6 @@ const props = defineProps({
           <span>Total</span>
           <span>{{ Number(props.total || 0).toFixed(2) }}</span>
         </div>
-        <!-- Puntos ganados (si existe) -->
         <div
           v-if="props.loyalty && Number(props.loyalty.points_earned || 0) > 0"
           class="flex justify-between text-gray-600"

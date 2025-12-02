@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Attribute;
+use App\Models\AttributeValue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class ProductController extends Controller
 {
@@ -19,6 +23,18 @@ class ProductController extends Controller
         return view('admin.products.index', compact('products'));
     }
 
+    public function inventoryDashboard()
+    {
+        return Inertia::render('inventory/Index');
+    }
+
+    public function indexWeb()
+    {
+        Gate::authorize('read_products', Product::class);
+        $products = Product::with(['variants', 'category'])->latest()->paginate(10);
+        return Inertia::render('inventory/products/Index', compact('products'));
+    }
+
     /**
      * Show the form for creating a new resource.
      */
@@ -28,6 +44,14 @@ class ProductController extends Controller
         $categories = Category::all();
         // Unificamos la vista a 'admin.products.form' para crear/editar
         return view('admin.products.form', compact('categories'));
+    }
+
+    public function createWeb()
+    {
+        Gate::authorize('create_products', Product::class);
+        $categories = Category::with('parent')->get();
+        $attributes = Attribute::with('attributeValues')->get();
+        return Inertia::render('inventory/products/CreateEdit', compact('categories', 'attributes'));
     }
 
     /**
@@ -52,6 +76,277 @@ class ProductController extends Controller
         ]);
 
         return redirect()->route('admin.products.edit', $product);
+    }
+
+    public function storeWeb(Request $request)
+    {
+        Gate::authorize('create_products', Product::class);
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric',
+            'category_id' => 'required|exists:categories,id',
+            'sku' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:2048',
+            'attributeLines' => 'nullable|array',
+            'generatedVariants' => 'nullable|array',
+            'additionalImages.*' => 'nullable|image|max:2048',
+        ], [], [
+            'category_id' => 'categoría',
+        ]);
+
+        DB::transaction(function () use ($request, $data) {
+            $product = Product::create($data);
+
+            if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('products', 'public');
+                $product->images()->create([
+                    'path' => $path,
+                ]);
+            }
+
+            if ($request->hasFile('additionalImages')) {
+                foreach ($request->file('additionalImages') as $imageFile) {
+                    $path = $imageFile->store('products', 'public');
+                    $product->images()->create([
+                        'path' => $path,
+                        'size' => $imageFile->getSize(),
+                    ]);
+                }
+            }
+
+            if (!empty($data['attributeLines'])) {
+                foreach ($data['attributeLines'] as $line) {
+                    if (empty($line['attribute_id']) || empty($line['values']))
+                        continue;
+
+                    $attribute = Attribute::find($line['attribute_id']);
+                    if (!$attribute)
+                        continue;
+
+                    foreach ($line['values'] as $valueName) {
+                        AttributeValue::firstOrCreate([
+                            'attribute_id' => $attribute->id,
+                            'value' => $valueName
+                        ]);
+                    }
+                }
+            }
+
+            if (!empty($data['generatedVariants'])) {
+                foreach ($data['generatedVariants'] as $variantData) {
+                    $variant = $product->variants()->create([
+                        'sku' => $variantData['sku'] ?? null,
+                        'barcode' => $variantData['barcode'] ?? null,
+                        'price' => $variantData['price'] ?? $product->price,
+                        'stock' => $variantData['stock'] ?? 0,
+                    ]);
+
+                    if (!empty($variantData['attributes'])) {
+                        foreach ($variantData['attributes'] as $attributeId => $valueName) {
+                            $attributeValue = AttributeValue::where('attribute_id', $attributeId)
+                                ->where('value', $valueName)
+                                ->first();
+
+                            if ($attributeValue) {
+                                $variant->attributeValues()->attach($attributeValue->id);
+                            }
+                        }
+                    }
+                }
+            } else {
+                $product->variants()->create([
+                    'sku' => $data['sku'] ?? null,
+                    'barcode' => $data['barcode'] ?? null,
+                    'price' => $data['price'],
+                    'stock' => 0,
+                ]);
+            }
+        });
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Producto ' . $data['name'] . ' ha sido creado',
+        ]);
+
+        return redirect()->route('inventory.products.index');
+    }
+
+    public function editWeb(Product $product)
+    {
+        Gate::authorize('update_products', $product);
+        $product->load('variants.attributeValues', 'images');
+        $categories = Category::with('parent')->get();
+        $attributes = Attribute::with('attributeValues')->get();
+        return Inertia::render('inventory/products/CreateEdit', compact('product', 'categories', 'attributes'));
+    }
+
+    public function updateWeb(Request $request, Product $product)
+    {
+        Gate::authorize('update_products', $product);
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'price' => 'required|numeric',
+            'category_id' => 'required|exists:categories,id',
+            'sku' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:255',
+            'image' => 'nullable|image|max:2048',
+            'attributeLines' => 'nullable|array',
+            'generatedVariants' => 'nullable|array',
+            'additionalImages.*' => 'nullable|image|max:2048',
+            'existingImageIds' => 'nullable|array',
+        ], [], [
+            'category_id' => 'categoría',
+        ]);
+
+        DB::transaction(function () use ($request, $product, $data) {
+            $product->update($data);
+
+            if ($request->hasFile('image')) {
+                $mainImage = $product->images()->first();
+                if ($mainImage) {
+                    Storage::disk('public')->delete($mainImage->path);
+                    $mainImage->delete();
+                }
+
+                $path = $request->file('image')->store('products', 'public');
+                $product->images()->create([
+                    'path' => $path,
+                ]);
+            }
+
+            if ($request->has('existingImageIds')) {
+                $existingIds = $request->input('existingImageIds', []);
+                $product->images()->whereNotIn('id', $existingIds)->each(function ($image) {
+                    Storage::disk('public')->delete($image->path);
+                    $image->delete();
+                });
+            }
+
+            if ($request->hasFile('additionalImages')) {
+                foreach ($request->file('additionalImages') as $imageFile) {
+                    $path = $imageFile->store('products', 'public');
+                    $product->images()->create([
+                        'path' => $path,
+                        'size' => $imageFile->getSize(),
+                    ]);
+                }
+            }
+
+            if (!empty($data['attributeLines'])) {
+                foreach ($data['attributeLines'] as $line) {
+                    if (empty($line['attribute_id']) || empty($line['values']))
+                        continue;
+
+                    $attribute = Attribute::find($line['attribute_id']);
+                    if (!$attribute)
+                        continue;
+
+                    foreach ($line['values'] as $valueName) {
+                        AttributeValue::firstOrCreate([
+                            'attribute_id' => $attribute->id,
+                            'value' => $valueName
+                        ]);
+                    }
+                }
+            }
+
+            $product->variants()->delete();
+
+            if (!empty($data['generatedVariants'])) {
+                foreach ($data['generatedVariants'] as $variantData) {
+                    $variant = $product->variants()->create([
+                        'sku' => $variantData['sku'] ?? null,
+                        'barcode' => $variantData['barcode'] ?? null,
+                        'price' => $variantData['price'] ?? $product->price,
+                        'stock' => $variantData['stock'] ?? 0,
+                    ]);
+
+                    if (!empty($variantData['attributes'])) {
+                        foreach ($variantData['attributes'] as $attributeId => $valueName) {
+                            $attributeValue = AttributeValue::where('attribute_id', $attributeId)
+                                ->where('value', $valueName)
+                                ->first();
+
+                            if ($attributeValue) {
+                                $variant->attributeValues()->attach($attributeValue->id);
+                            }
+                        }
+                    }
+                }
+            } else {
+                $product->variants()->create([
+                    'sku' => $data['sku'] ?? null,
+                    'barcode' => $data['barcode'] ?? null,
+                    'price' => $data['price'],
+                    'stock' => 0,
+                ]);
+            }
+        });
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Producto ' . $data['name'] . ' ha sido actualizado',
+        ]);
+
+        return redirect()->route('inventory.products.edit', $product);
+    }
+
+    public function destroyWeb(Product $product)
+    {
+        Gate::authorize('delete_products', $product);
+
+        $product->variants()->delete();
+        $product->delete();
+
+        session()->flash('swalt', [
+            'icon' => 'success',
+            'title' => '¡Bien hecho!',
+            'text' => 'Producto ' . $product->name . ' ha sido eliminado correctamente',
+        ]);
+
+        return redirect()->route('inventory.products.index');
+    }
+
+    public function massDestroyWeb(Request $request)
+    {
+        Gate::authorize('delete_products', Product::class);
+        $ids = $request->input('ids');
+
+        if (empty($ids)) {
+            return redirect()->back();
+        }
+
+        $count = 0;
+
+        foreach ($ids as $id) {
+            $product = Product::find($id);
+            if ($product) {
+                $product->variants()->delete();
+                $product->delete();
+                $count++;
+            }
+        }
+
+        if ($count > 0) {
+            session()->flash('swalt', [
+                'icon' => 'success',
+                'title' => '¡Bien hecho!',
+                'text' => $count . ' productos han sido eliminado correctamente',
+            ]);
+        } else {
+            session()->flash('swalt', [
+                'icon' => 'error',
+                'title' => '¡Atención!',
+                'text' => 'No se eliminaron productos.',
+            ]);
+        }
+
+        return redirect()->route('inventory.products.index');
     }
 
     /**
@@ -134,5 +429,10 @@ class ProductController extends Controller
     {
         Gate::authorize('import_products', Product::class);
         return view('admin.products.import');
+    }
+
+    public function getCategoriesApi()
+    {
+        return Category::with('parent')->get();
     }
 }

@@ -19,6 +19,8 @@ class Product extends Model
 
     ];
 
+    protected $appends = ['image', 'sku', 'barcode'];
+
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -27,7 +29,21 @@ class Product extends Model
     public function image(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->images()->count() ? Storage::url($this->images()->first()->path) : asset('storage/images/images.png'),
+            get: fn() => $this->images()->count() ? Storage::url($this->images()->first()->path) : null,
+        );
+    }
+
+    public function sku(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->variants->first()?->sku,
+        );
+    }
+
+    public function barcode(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->variants->first()?->barcode,
         );
     }
 

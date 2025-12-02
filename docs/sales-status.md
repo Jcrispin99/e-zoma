@@ -4,49 +4,50 @@
 
 ### 1. Estado Principal (`status`)
 
-| Estado     | Descripción                               | Color Badge |
-|------------|-------------------------------------------|-------------|
-| `draft`    | Documento en borrador, editable           | Slate       |
-| `posted`   | Documento contabilizado, genera movimientos | Emerald     |
-| `cancelled`| Documento anulado, inmutable              | Rose        |
+| Estado      | Descripción                                 | Color Badge |
+| ----------- | ------------------------------------------- | ----------- |
+| `draft`     | Documento en borrador, editable             | Slate       |
+| `posted`    | Documento contabilizado, genera movimientos | Emerald     |
+| `cancelled` | Documento anulado, inmutable                | Rose        |
 
 ### 2. Estado de Pago (`payment_status`)
 
-| Estado    | Descripción            | % Pagado | Color Badge |
-|-----------|------------------------|----------|-------------|
-| `unpaid`  | Sin pagos registrados  | 0%       | Slate       |
-| `partial` | Pago parcial           | 1-99%    | Amber       |
-| `paid`    | Pago completo          | 100%     | Emerald     |
+| Estado    | Descripción           | % Pagado | Color Badge |
+| --------- | --------------------- | -------- | ----------- |
+| `unpaid`  | Sin pagos registrados | 0%       | Slate       |
+| `partial` | Pago parcial          | 1-99%    | Amber       |
+| `paid`    | Pago completo         | 100%     | Emerald     |
 
 ### 3. Estado SUNAT (`sunat_status`)
 
-| Estado       | Descripción                       | Color Badge |
-|--------------|-----------------------------------|-------------|
-| `pending`    | Pendiente de envío a SUNAT        | Slate       |
-| `queued`     | En cola para envío automático     | Blue        |
-| `processing` | Enviando a SUNAT (en proceso)     | Amber       |
-| `accepted`   | Aceptado por SUNAT                | Emerald     |
-| `rejected`   | Rechazado por SUNAT               | Rose        |
-| `observed`   | Aceptado con observaciones        | Orange      |
-| `error`      | Error técnico al enviar           | Red         |
-| `cancelled`  | Dado de baja en SUNAT             | Purple      |
+| Estado       | Descripción                   | Color Badge |
+| ------------ | ----------------------------- | ----------- |
+| `pending`    | Pendiente de envío a SUNAT    | Slate       |
+| `queued`     | En cola para envío automático | Blue        |
+| `processing` | Enviando a SUNAT (en proceso) | Amber       |
+| `accepted`   | Aceptado por SUNAT            | Emerald     |
+| `rejected`   | Rechazado por SUNAT           | Rose        |
+| `observed`   | Aceptado con observaciones    | Orange      |
+| `error`      | Error técnico al enviar       | Red         |
+| `cancelled`  | Dado de baja en SUNAT         | Purple      |
 
 ## Matriz de Permisos
 
-| `status`   | `sunat_status` | Editar                  | Anular            | Enviar SUNAT | Registrar Pago | Crear NC/ND |
-|------------|-----------------|-------------------------|-------------------|--------------|----------------|-------------|
-| `draft`    | `pending`       | Sí                      | Sí                | No           | No             | No          |
-| `posted`   | `pending`       | Limitado (no fiscal)    | Sí                | Sí           | Sí             | No          |
-| `posted`   | `queued`        | No                      | No                | No           | Sí (cautela)   | No          |
-| `posted`   | `processing`    | No                      | No                | No           | Sí (cautela)   | No          |
-| `posted`   | `accepted`      | No                      | No (vía NC + baja)| No           | Sí             | Sí          |
-| `posted`   | `rejected`      | Sí                      | Sí                | Sí           | Sí             | No          |
-| `posted`   | `observed`      | No                      | No                | Sí           | Sí             | Sí          |
-| `posted`   | `error`         | Sí                      | Sí                | Sí           | Sí             | No          |
-| `posted`   | `cancelled`     | No                      | No                | No           | No             | No          |
-| `cancelled`| `*`             | No                      | No                | No           | No             | No          |
+| `status`    | `sunat_status` | Editar               | Anular             | Enviar SUNAT | Registrar Pago | Crear NC/ND |
+| ----------- | -------------- | -------------------- | ------------------ | ------------ | -------------- | ----------- |
+| `draft`     | `pending`      | Sí                   | Sí                 | No           | No             | No          |
+| `posted`    | `pending`      | Limitado (no fiscal) | Sí                 | Sí           | Sí             | No          |
+| `posted`    | `queued`       | No                   | No                 | No           | Sí (cautela)   | No          |
+| `posted`    | `processing`   | No                   | No                 | No           | Sí (cautela)   | No          |
+| `posted`    | `accepted`     | No                   | No (vía NC + baja) | No           | Sí             | Sí          |
+| `posted`    | `rejected`     | Sí                   | Sí                 | Sí           | Sí             | No          |
+| `posted`    | `observed`     | No                   | No                 | Sí           | Sí             | Sí          |
+| `posted`    | `error`        | Sí                   | Sí                 | Sí           | Sí             | No          |
+| `posted`    | `cancelled`    | No                   | No                 | No           | No             | No          |
+| `cancelled` | `*`            | No                   | No                 | No           | No             | No          |
 
 Notas:
+
 - Limitado: solo campos no fiscales (observación, almacén). No se pueden modificar productos, cantidades ni precios.
 - "No (vía NC + baja)": la anulación de una factura aceptada por SUNAT se realiza mediante Nota de Crédito (07) y comunicación de baja.
 

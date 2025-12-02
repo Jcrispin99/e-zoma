@@ -18,7 +18,6 @@ use App\Http\Controllers\Api\LoyaltyPosController;
 use App\Http\Controllers\Api\UbigeoController;
 use Illuminate\Support\Facades\Route;
 
-
 Route::apiResource('categories', CategoryController::class);
 
 Route::post('/suppliers', [SupplierController::class, 'index'])->name('api.suppliers.index');

@@ -14,10 +14,9 @@ const searchInput = ref(null);
 const activeCategory = ref(null);
 
 watch(searchTerm, (newTerm) => {
-  // Usamos un debounce manual con setTimeout
   setTimeout(() => {
     fetchProducts(newTerm, activeCategory.value);
-  }, 300); // Espera 300ms después de que el usuario deja de escribir
+  }, 300);
 });
 
 const addProductToCart = (product) => {
@@ -44,9 +43,7 @@ onMounted(() => {
 
 <template>
   <div class="h-full flex flex-col bg-gray-50">
-    <!-- Search and Categories Bar -->
     <div class="bg-white border-b border-gray-200 flex items-center px-4 py-2">
-      <!-- Category Tabs (Scrollable) -->
       <div class="flex-1 min-w-0 pl-4">
         <div class="flex space-x-1 overflow-x-auto">
           <button
@@ -65,7 +62,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Search Bar -->
       <div class="w-72 flex-shrink-0">
         <div class="relative">
           <div
@@ -96,20 +92,16 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Products Grid -->
     <div class="flex-1 overflow-y-auto">
       <div class="p-4">
-        <!-- Loading state -->
         <div v-if="isLoading" class="text-center py-10">
           <p class="text-gray-500">Cargando productos...</p>
         </div>
 
-        <!-- Error state -->
         <div v-else-if="error" class="text-center py-10">
           <p class="text-red-500">{{ error }}</p>
         </div>
 
-        <!-- Products Grid -->
         <div
           v-else-if="products.length > 0"
           class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
@@ -136,7 +128,6 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Empty State -->
         <div v-else class="text-center py-10">
           <svg
             class="mx-auto h-12 w-12 text-gray-400"
@@ -173,7 +164,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* Ocultar scrollbar en las categorías */
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

@@ -26,7 +26,6 @@ const paidTotal = computed(() =>
       <span>Total pagado</span>
       <span>{{ paidTotal.toFixed(2) }}</span>
     </div>
-    <!-- Políticas debajo de Total pagado -->
     <div
       v-if="props.policies"
       class="mt-2 text-xs text-gray-700 whitespace-pre-line"

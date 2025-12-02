@@ -8,7 +8,6 @@ import { useCart } from '../composables/useCart.js';
 import { useSessionStore } from '../stores/useSessionStore.js';
 import { setCache } from '../composables/useCache.js';
 
-// Usar el composable del carrito
 const {
   cartItems,
   error: cartError,
@@ -21,14 +20,11 @@ const {
   clearCart,
 } = useCart();
 
-// Store de sesión
 const sessionStore = useSessionStore();
-// Util para origen backend (Blade inyecta meta)
 const backendOrigin =
   document.querySelector('meta[name="backend-origin"]')?.content ||
   window.location.origin;
 
-// Handlers de conexión para todo el ciclo de vida del componente
 const handleOnline = () => {
   sessionStore.setOnline(true);
   sessionStore.syncPending();
@@ -37,20 +33,17 @@ const handleOffline = () => {
   sessionStore.setOnline(false);
 };
 onMounted(async () => {
-  // Activar los listeners para la sincronización offline
   sessionStore.setupSyncListeners();
   window.addEventListener('online', handleOnline);
   window.addEventListener('offline', handleOffline);
   window.addEventListener('keydown', handleGlobalKeydown);
 
   sessionStore.initFromUrl();
-  // Prefetch de cookie CSRF para asegurar estado stateful
   try {
     await fetch(new URL('/sanctum/csrf-cookie', backendOrigin), {
       credentials: 'include',
     });
   } catch (e) {
-    // No bloquear el flujo si falla; el bootstrap manejará el estado
     console.warn('No se pudo obtener CSRF cookie al inicio:', e);
   }
   sessionStore.bootstrap().then(() => {
@@ -61,39 +54,32 @@ onMounted(async () => {
     ) {
       showOpeningModal.value = true;
     }
-    // Intentar sincronizar pendientes si ya estamos online
     if (sessionStore.online) {
       sessionStore.syncPending();
     }
   });
 });
 
-// Estado de conexión del sistema
 const connectionStatus = computed(() =>
   sessionStore.online ? 'Conectado' : 'Desconectado'
 );
 
-// Ocultar el carrito en la ruta de checkout y toda la UI en recibo
 const route = useRoute();
 const isCheckout = computed(() => route.name === 'pos-checkout');
 const isReceipt = computed(() => route.name === 'pos-receipt');
 
-// Limpiar errores cuando el componente se desmonte
 onUnmounted(() => {
   clearError();
-  // Remover listeners de conexión
   window.removeEventListener('online', handleOnline);
   window.removeEventListener('offline', handleOffline);
   window.removeEventListener('keydown', handleGlobalKeydown);
 });
 
-// Limpieza de carrito al completar venta
 function handleClearCart() {
   clearCart();
   setCache('pos:checkout', { items: [], subtotal: 0, tax: 0, total: 0 });
 }
 
-// Modal de apertura
 const showOpeningModal = ref(false);
 const openingBalanceInput = ref('0');
 const openingError = ref(null);
@@ -112,7 +98,7 @@ async function confirmOpeningBalance() {
     openingError.value = 'No se pudo guardar el monto';
   }
 }
-// Modal de cierre
+
 const showClosingModal = ref(false);
 const closingBalanceInput = ref('0');
 const closingError = ref(null);
@@ -133,7 +119,6 @@ async function confirmClosingBalance() {
   }
 }
 
-// Scanner
 const scannerBuffer = ref('');
 let scannerTimer = null;
 function isEditableActive() {
@@ -203,15 +188,12 @@ function handleGlobalKeydown(e) {
 
 <template>
   <div class="h-screen flex flex-col bg-gray-50">
-    
-    <!-- Header -->
     <header
       v-if="!isReceipt"
       class="bg-white border-b border-gray-200 px-6 py-4"
     >
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-4">
-          <!-- Logo/Title -->
           <div class="flex items-center space-x-3">
             <div
               class="w-8 h-8 bg-purple-600 rounded-lg flex items-center justify-center"
@@ -232,7 +214,6 @@ function handleGlobalKeydown(e) {
             </div>
           </div>
 
-          <!-- Connection Status -->
           <div class="flex items-center space-x-2">
             <div
               class="w-2 h-2 rounded-full"
@@ -243,20 +224,21 @@ function handleGlobalKeydown(e) {
           </div>
         </div>
 
-        <!-- User Profile and Settings -->
         <div class="flex items-center space-x-4">
-          <!-- Cerrar sesión POS -->
           <button
             class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 text-sm"
             @click="showClosingModal = true"
           >
             Cerrar sesión
           </button>
-          <!-- User Profile -->
           <div class="flex items-center space-x-3">
             <div class="text-right">
-              <p class="text-sm font-medium text-gray-900">{{ sessionStore.seller?.name || '—' }}</p>
-              <p class="text-xs text-gray-500">{{ sessionStore.seller?.email || sessionStore.pos?.name || '' }}</p>
+              <p class="text-sm font-medium text-gray-900">
+                {{ sessionStore.seller?.name || '—' }}
+              </p>
+              <p class="text-xs text-gray-500">
+                {{ sessionStore.seller?.email || sessionStore.pos?.name || '' }}
+              </p>
             </div>
             <div
               class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center"
@@ -278,7 +260,6 @@ function handleGlobalKeydown(e) {
           <div class="w-px h-6 bg-gray-300"></div>
 
           <div class="flex items-center space-x-2">
-            <!-- Configuración -->
             <button
               class="text-gray-400 hover:text-gray-600 transition-colors p-2 hover:bg-gray-100 rounded-lg"
             >
@@ -307,12 +288,10 @@ function handleGlobalKeydown(e) {
       </div>
     </header>
 
-    <!-- Main Content -->
     <div v-if="isReceipt" class="flex-1 overflow-auto">
       <router-view />
     </div>
     <div v-else class="flex flex-1 overflow-hidden">
-      <!-- Cart Sidebar - Derecha -->
       <div
         v-if="!isCheckout"
         class="w-[488px] border-l border-gray-200 bg-white flex-shrink-0"
@@ -328,14 +307,12 @@ function handleGlobalKeydown(e) {
         />
       </div>
 
-      <!-- Products Section - Izquierda -->
       <div class="flex-1 overflow-hidden">
         <router-view @add-to-cart="addToCart" @clear-cart="handleClearCart" />
       </div>
     </div>
   </div>
 
-  <!-- Modales -->
   <AmountModal
     :show="showOpeningModal"
     :value="openingBalanceInput"

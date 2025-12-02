@@ -33,7 +33,12 @@ export const useLoyaltyStore = defineStore('pos-loyalty', {
       return Number(state.account.points_balance || 0) > 0;
     },
     canRedeem(state) {
-      return !!state.config.active_for_pos && !!state.config.can_redeem && Number(state.account.points_balance || 0) > 0 && Number(state.config.soles_per_point || 0) > 0;
+      return (
+        !!state.config.active_for_pos &&
+        !!state.config.can_redeem &&
+        Number(state.account.points_balance || 0) > 0 &&
+        Number(state.config.soles_per_point || 0) > 0
+      );
     },
   },
   actions: {
@@ -82,7 +87,11 @@ export const useLoyaltyStore = defineStore('pos-loyalty', {
     },
     async fetchAccount(customerId) {
       if (!customerId) {
-        this.account = { customer_id: null, points_balance: 0, status: 'inactive' };
+        this.account = {
+          customer_id: null,
+          points_balance: 0,
+          status: 'inactive',
+        };
         return;
       }
       this.loading = true;

@@ -1,4 +1,4 @@
-import { POS_CONFIG } from "../constants/index.js";
+import { POS_CONFIG } from '../constants/index.js';
 
 /**
  * Formatea un valor numérico como moneda
@@ -8,27 +8,27 @@ import { POS_CONFIG } from "../constants/index.js";
  * @returns {string} Valor formateado como moneda
  */
 export function formatCurrency(
-    value,
-    currency = POS_CONFIG.CURRENCY,
-    locale = POS_CONFIG.LOCALE
+  value,
+  currency = POS_CONFIG.CURRENCY,
+  locale = POS_CONFIG.LOCALE
 ) {
-    const numericValue = Number(value);
+  const numericValue = Number(value);
 
-    if (isNaN(numericValue)) {
-        return formatCurrency(0, currency, locale);
-    }
+  if (isNaN(numericValue)) {
+    return formatCurrency(0, currency, locale);
+  }
 
-    try {
-        return new Intl.NumberFormat(locale, {
-            style: "currency",
-            currency: currency,
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(numericValue);
-    } catch (error) {
-        console.error("Error formatting currency:", error);
-        return `${currency} ${numericValue.toFixed(2)}`;
-    }
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(numericValue);
+  } catch (error) {
+    console.error('Error formatting currency:', error);
+    return `${currency} ${numericValue.toFixed(2)}`;
+  }
 }
 
 /**
@@ -37,15 +37,15 @@ export function formatCurrency(
  * @returns {number} Valor numérico
  */
 export function parseCurrency(currencyString) {
-    if (typeof currencyString !== "string") {
-        return 0;
-    }
+  if (typeof currencyString !== 'string') {
+    return 0;
+  }
 
-    // Remover símbolos de moneda y espacios
-    const cleanString = currencyString.replace(/[^\d.,]/g, "");
-    const number = parseFloat(cleanString.replace(",", "."));
+  // Remover símbolos de moneda y espacios
+  const cleanString = currencyString.replace(/[^\d.,]/g, '');
+  const number = parseFloat(cleanString.replace(',', '.'));
 
-    return isNaN(number) ? 0 : number;
+  return isNaN(number) ? 0 : number;
 }
 
 /**
@@ -54,6 +54,6 @@ export function parseCurrency(currencyString) {
  * @returns {boolean} True si es un precio válido
  */
 export function isValidPrice(value) {
-    const num = typeof value === "string" ? parseFloat(value) : value;
-    return typeof num === "number" && !isNaN(num) && num >= 0;
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return typeof num === 'number' && !isNaN(num) && num >= 0;
 }

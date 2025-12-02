@@ -3,11 +3,24 @@ import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 
 export default defineConfig({
-    plugins: [
-        laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/js/pos/main.js'],
-            refresh: true,
-        }),
-        vue(),
-    ],
+  plugins: [
+    laravel({
+      input: [
+        'resources/css/app.css',
+        'resources/js/app.js',
+        'resources/js/pos/main.js',
+        'resources/js/inertia.ts',
+      ],
+      refresh: true,
+    }),
+    vue(),
+  ],
+  server: {
+    host: 'e-zoma.test',
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      host: 'e-zoma.test',
+    },
+  },
 });

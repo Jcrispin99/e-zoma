@@ -76,7 +76,6 @@ const customerDocLabel = computed(() => {
 
 <template>
   <div class="px-6 py-4 border-b space-y-3">
-    <!-- Encabezado centrado -->
     <div class="text-center space-y-1">
       <img
         :src="logoSrc"
@@ -90,7 +89,6 @@ const customerDocLabel = computed(() => {
       <div v-if="props.company?.address" class="text-xs text-gray-500">
         {{ props.company.address }}
       </div>
-      <!-- Ciudad - Departamento - Distrito en líneas separadas -->
       <div class="text-xs text-gray-500">
         <div v-if="props.company?.city">
           {{ props.company.city }} - {{ props.company.department }} -
@@ -98,7 +96,6 @@ const customerDocLabel = computed(() => {
         </div>
       </div>
 
-      <!-- Salto de línea antes del journal -->
       <div class="text-sm font-medium mt-2">
         <template v-if="journalName">
           {{ journalName }}
@@ -108,14 +105,12 @@ const customerDocLabel = computed(() => {
         </template>
       </div>
 
-      <!-- Serie - Correlativo actual -->
       <div class="text-xl font-bold">
         {{ props.serie || '—' }}
         <span class="text-gray-400 mx-1">-</span>
         {{ props.correlative || (props.isOffline ? 'Provisional' : '—') }}
       </div>
 
-      <!-- Slogan de la empresa -->
       <div v-if="props.company?.slogan" class="text-xs text-gray-700 italic">
         {{ props.company.slogan }}
       </div>
@@ -123,7 +118,6 @@ const customerDocLabel = computed(() => {
       <div class="text-xs text-gray-600">Sesión POS #{{ props.sessionId }}</div>
     </div>
 
-    <!-- Datos de la transacción -->
     <div class="text-sm space-y-1 mt-2">
       <div class="flex justify-between">
         <span class="font-semibold text-gray-800">Fecha de emisión:</span>
@@ -143,10 +137,8 @@ const customerDocLabel = computed(() => {
         <span class="text-gray-700">{{ condition || 'Contado' }}</span>
       </div>
     </div>
-    <!-- Línea divisoria -->
     <div class="border-t border-gray-200 my-2"></div>
 
-    <!-- Información del cliente -->
     <div class="text-sm space-y-1">
       <div class="flex justify-between">
         <span class="font-semibold text-gray-800">Cliente:</span>

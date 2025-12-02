@@ -11,7 +11,6 @@ import { useLoyaltyStore } from '../stores/useLoyaltyStore.js';
 import CustomerSelectModal from './modals/CustomerSelectModal.vue';
 import SpendPointsModal from './modals/SpendPointsModal.vue';
 
-// Props del carrito
 const props = defineProps({
   cartItems: {
     type: Array,
@@ -32,13 +31,10 @@ const props = defineProps({
   },
 });
 
-// Emits para comunicar cambios al componente padre
 const emit = defineEmits(['update-quantity', 'remove-item', 'clear-error']);
 
-// Estado del producto seleccionado (usando shallowRef para mejor performance)
 const selectedProductIndex = shallowRef(0);
 
-// Usar el composable del teclado
 const {
   currentNumber,
   displayNumber,
@@ -49,7 +45,6 @@ const {
   cleanup: cleanupKeypad,
 } = useKeypad();
 
-// Producto seleccionado actualmente
 const selectedProduct = computed(() => {
   if (
     props.cartItems.length === 0 ||
@@ -60,10 +55,8 @@ const selectedProduct = computed(() => {
   return props.cartItems[selectedProductIndex.value];
 });
 
-// Configuración de IGV desde sesión
 const sessionStore = useSessionStore();
 const loyaltyStore = useLoyaltyStore();
-// ID de cliente activo: seleccionado o por defecto
 const activeCustomerId = computed(
   () =>
     sessionStore.selectedCustomer?.id ||
@@ -79,7 +72,6 @@ const pricesIncludeTax = computed(
   () => !!sessionStore.config?.prices_include_tax
 );
 
-// Suma de ítems (bruto si precios incluyen IGV)
 const itemsSum = computed(() => {
   return props.cartItems.reduce(
     (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
@@ -87,7 +79,6 @@ const itemsSum = computed(() => {
   );
 });
 
-// Subtotal base imponible
 const subtotal = computed(() => {
   const rate = taxRate.value;
   if (rate <= 0) return itemsSum.value;
@@ -99,7 +90,6 @@ const subtotal = computed(() => {
   return itemsSum.value;
 });
 
-// IGV
 const tax = computed(() => {
   const rate = taxRate.value;
   if (rate <= 0) return 0;
@@ -110,7 +100,6 @@ const tax = computed(() => {
   return subtotal.value * rate;
 });
 
-// Total
 const total = computed(() => {
   const rate = taxRate.value;
   if (rate <= 0) return itemsSum.value;
@@ -120,7 +109,6 @@ const total = computed(() => {
   return subtotal.value + tax.value;
 });
 
-// Lógica de lealtad: descuento y puntos
 const pointsToSpend = ref(0);
 const loyaltyDiscount = computed(() =>
   loyaltyStore.calculateDiscount(pointsToSpend.value, total.value)
@@ -137,7 +125,6 @@ onMounted(() => {
   loyaltyStore.fetchConfig();
 });
 
-// Al seleccionar cliente, cargar cuenta de puntos y resetear gasto
 watch(
   activeCustomerId,
   (id) => {
@@ -147,15 +134,13 @@ watch(
   { immediate: true }
 );
 
-// Función para seleccionar un producto
 const selectProduct = (index) => {
   if (index >= 0 && index < props.cartItems.length) {
     selectedProductIndex.value = index;
-    clearKeypad(); // Limpiar el teclado al cambiar de producto
+    clearKeypad();
   }
 };
 
-// Función para manejar clicks en el teclado numérico con validación
 const handleNumberClick = (number) => {
   if (!selectedProduct.value) {
     console.warn('No product selected');
@@ -169,7 +154,6 @@ const handleNumberClick = (number) => {
   });
 };
 
-// Función para manejar el botón C (reset/eliminar) con mejor lógica
 const handleClearAction = () => {
   if (!selectedProduct.value) {
     console.warn('No product selected for clear action');
@@ -178,10 +162,8 @@ const handleClearAction = () => {
 
   try {
     if (selectedProduct.value.quantity > 0) {
-      // Primer click: resetear cantidad a 0
       emit('update-quantity', selectedProduct.value.id, 0);
     } else {
-      // Segundo click o si ya está en 0: eliminar del carrito
       emit('remove-item', selectedProduct.value.id);
     }
     clearKeypad();
@@ -190,14 +172,12 @@ const handleClearAction = () => {
   }
 };
 
-// Limpiar error cuando se hace click en cualquier parte
 const handleClearError = () => {
   if (props.error) {
     emit('clear-error');
   }
 };
 
-// Resetear selección cuando el carrito cambia
 watch(
   () => props.cartItems.length,
   (newLength) => {
@@ -207,7 +187,6 @@ watch(
   }
 );
 
-// Seleccionar automáticamente el producto que fue modificado/agregado
 watch(
   () => props.lastModifiedProductId,
   (newProductId) => {
@@ -217,18 +196,16 @@ watch(
       );
       if (productIndex !== -1) {
         selectedProductIndex.value = productIndex;
-        clearKeypad(); // Limpiar el teclado para el nuevo producto seleccionado
+        clearKeypad();
       }
     }
   }
 );
 
-// Cleanup al desmontar
 onUnmounted(() => {
   cleanupKeypad();
 });
 
-// Navegar al checkout guardando resumen en cache
 const router = useRouter();
 const route = useRoute();
 function goToCheckout() {
@@ -238,7 +215,6 @@ function goToCheckout() {
       subtotal: subtotal.value,
       tax: tax.value,
       total: totalAfterDiscount.value,
-      // Metadatos de lealtad para el backend y recibo
       loyalty: loyaltyEnabled.value
         ? {
             points_spent: Math.min(
@@ -275,7 +251,6 @@ function handleCustomerSelected(c) {
   showCustomerModal.value = false;
 }
 
-// Aplica puntos seleccionados desde el modal con validación contra el saldo
 function handleSpendPoints(val) {
   const max = Math.floor(loyaltyStore.account.points_balance || 0);
   const pts = Math.max(0, Math.floor(val || 0));
@@ -286,9 +261,7 @@ function handleSpendPoints(val) {
 
 <template>
   <div class="h-full flex flex-col bg-gray-100">
-    <!-- Lista de productos del carrito -->
     <div class="flex-1 bg-white overflow-y-auto" @click="handleClearError">
-      <!-- Error display -->
       <div
         v-if="error"
         class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg mx-4 mt-4"
@@ -305,7 +278,6 @@ function handleSpendPoints(val) {
         </div>
       </div>
 
-      <!-- Loading state -->
       <div v-if="loading" class="text-center text-gray-500 py-4">
         <div
           class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2"
@@ -313,7 +285,6 @@ function handleSpendPoints(val) {
         Procesando...
       </div>
 
-      <!-- Empty cart -->
       <div
         v-else-if="cartItems.length === 0"
         class="flex flex-col justify-center items-center h-32"
@@ -323,7 +294,6 @@ function handleSpendPoints(val) {
         <p class="text-gray-400 text-xs mt-1">Agrega productos para comenzar</p>
       </div>
 
-      <!-- Cart items -->
       <div v-else class="divide-y divide-gray-200">
         <div
           v-for="(item, index) in cartItems"
@@ -347,18 +317,15 @@ function handleSpendPoints(val) {
         >
           <div class="flex justify-between items-start">
             <div class="flex-1">
-              <!-- Nombre del producto - Detalles -->
               <h3 class="font-semibold text-gray-900 text-sm mb-1">
                 {{ item.name }} -
                 {{ item.details || 'Sin detalles' }}
               </h3>
-              <!-- Cantidad y precio unitario -->
               <p class="text-xs text-gray-600">
                 {{ item.quantity || 0 }}.00 Unidades x S/
                 {{ (item.price || 0).toFixed(2) }} / Unidades
               </p>
             </div>
-            <!-- Precio total -->
             <div class="text-right ml-4">
               <p class="font-semibold text-gray-900">
                 S/
@@ -370,7 +337,6 @@ function handleSpendPoints(val) {
       </div>
     </div>
 
-    <!-- Total Section -->
     <div class="bg-white p-1 border-t border-gray-300">
       <div class="space-y-1 text-sm text-gray-700">
         <div class="flex justify-between">
@@ -396,7 +362,6 @@ function handleSpendPoints(val) {
         </div>
       </div>
 
-      <!-- Sección de puntos debajo del total -->
       <div
         v-if="loyaltyEnabled && loyaltyStore.account.customer_id"
         class="mt-1 p-1 border rounded bg-purple-50"
@@ -434,12 +399,9 @@ function handleSpendPoints(val) {
       </div>
     </div>
 
-    <!-- Keypad Section -->
     <div class="bg-white border-t border-gray-300">
       <div class="flex">
-        <!-- Left Side Buttons -->
         <div class="w-40 bg-purple-800 flex flex-col">
-          <!-- Selecionar cliente -->
           <button
             class="h-16 w-full flex items-center justify-center text-white bg-gray-800 border-b border-gray-600"
             @click="openCustomerModal"
@@ -468,7 +430,6 @@ function handleSpendPoints(val) {
             </div>
           </button>
 
-          <!-- Pago Button -->
           <button
             class="flex-1 flex items-center justify-center text-white bg-purple-800"
             @click="goToCheckout"
@@ -508,14 +469,12 @@ function handleSpendPoints(val) {
           @spend="handleSpendPoints"
         />
 
-        <!-- Numeric Keypad -->
         <div class="flex-1">
           <div
             class="grid grid-cols-4 h-full"
             role="grid"
             aria-label="Teclado numérico"
           >
-            <!-- Row 1: 1, 2, 3, Cant. -->
             <button
               @click="handleNumberClick(1)"
               :disabled="loading || !selectedProduct"
@@ -552,7 +511,6 @@ function handleSpendPoints(val) {
               % de<br />desc.
             </button>
 
-            <!-- Row 2: 4, 5, 6, % de desc. -->
             <button
               @click="handleNumberClick(4)"
               :disabled="loading || !selectedProduct"
@@ -589,7 +547,6 @@ function handleSpendPoints(val) {
               % de<br />desc.
             </button>
 
-            <!-- Row 3: 7, 8, 9, Precio -->
             <button
               @click="handleNumberClick(7)"
               :disabled="loading || !selectedProduct"
@@ -626,7 +583,6 @@ function handleSpendPoints(val) {
               Precio
             </button>
 
-            <!-- Row 4: +/-, 0, ., Clear -->
             <button
               class="h-16 border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-center font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled

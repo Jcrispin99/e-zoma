@@ -895,7 +895,7 @@ class SaleEdit extends Component
                 ];
             }
             $newSale->variants()->sync($syncData);
-            
+
             // Registrar referencia del nuevo documento en observaciones de la venta original
             try {
                 $ref = trim((string) $newSale->serie . '-' . (string) $newSale->correlative);
@@ -912,7 +912,7 @@ class SaleEdit extends Component
             } catch (\Throwable $e) {
                 // Silencioso
             }
-            
+
             // No mover inventario ni enviar automáticamente.
             // El movimiento se realizará al contabilizar (post), y el envío será manual.
             $this->dispatch('swal', [

@@ -9,9 +9,11 @@ import {
     Settings,
     Trash2,
     Search,
+    QrCode,
 } from 'lucide-vue-next';
 import Button from '@/components/ui/Button.vue';
 import { router } from '@inertiajs/vue3';
+import { watch } from 'vue';
 
 interface PaginationData {
     from: number;
@@ -34,7 +36,7 @@ interface Props {
     selectionMessage?: string;
 }
 
-withDefaults(defineProps<Props>(), {
+const props = withDefaults(defineProps<Props>(), {
     newLabel: 'Nuevo',
     selectedCount: 0,
     totalCount: 0,
@@ -48,12 +50,17 @@ const emit = defineEmits<{
     (e: 'select-all-total'): void;
     (e: 'clear-selection'): void;
     (e: 'delete-selected'): void;
+    (e: 'generate-qr'): void;
 }>();
 
 import { ref, onMounted, onUnmounted } from 'vue';
 
 const showActionsDropdown = ref(false);
 const actionsDropdownRef = ref<HTMLElement | null>(null);
+
+watch(() => [props.selectedCount, props.isAllSelected], () => {
+    showActionsDropdown.value = false;
+});
 
 const handleClickOutside = (event: MouseEvent) => {
     if (
@@ -141,6 +148,11 @@ onUnmounted(() => {
 
                 <div v-if="showActionsDropdown"
                     class="absolute top-full right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
+                    <button @click="emit('generate-qr'); showActionsDropdown = false"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                        <QrCode class="w-4 h-4" />
+                        Generar QR
+                    </button>
                     <button @click="emit('delete-selected'); showActionsDropdown = false"
                         class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                         <Trash2 class="w-4 h-4" />
@@ -157,14 +169,14 @@ onUnmounted(() => {
                 </span>
                 <div class="flex items-center bg-white rounded-lg border border-gray-200 p-1">
                     <button :disabled="!pagination.prev_page_url"
-                        @click="pagination.prev_page_url && router.visit(pagination.prev_page_url)"
+                        @click="pagination.prev_page_url && router.visit(pagination.prev_page_url, { preserveState: true })"
                         class="p-1.5 rounded-md transition-colors disabled:opacity-50"
                         :class="!pagination.prev_page_url ? 'text-gray-300' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'">
                         <ChevronLeft class="w-5 h-5" />
                     </button>
                     <div class="w-[1px] h-4 bg-gray-200 mx-0.5"></div>
                     <button :disabled="!pagination.next_page_url"
-                        @click="pagination.next_page_url && router.visit(pagination.next_page_url)"
+                        @click="pagination.next_page_url && router.visit(pagination.next_page_url, { preserveState: true })"
                         class="p-1.5 rounded-md transition-colors disabled:opacity-50"
                         :class="!pagination.next_page_url ? 'text-gray-300' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'">
                         <ChevronRight class="w-5 h-5" />

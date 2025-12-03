@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Image;
+use App\Models\QrStyle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
@@ -479,6 +480,67 @@ class ProductController extends Controller
         }
 
         return redirect()->route('inventory.products.index');
+    }
+
+    public function qrWeb(Product $product)
+    {
+        Gate::authorize('read_products', Product::class);
+        $product->load(['variants.attributeValues', 'variants.product']);
+        $styles = QrStyle::all();
+        $variants = $product->variants;
+        return Inertia::render('inventory/products/Qr', compact('product', 'variants', 'styles'));
+    }
+
+    public function massQrWeb(Request $request)
+    {
+        Gate::authorize('read_products', Product::class);
+
+        if ($request->isMethod('post')) {
+            session([
+                'mass_qr_ids_products' => $request->input('ids'),
+                'mass_qr_select_all_products' => $request->input('select_all'),
+                'mass_qr_search_products' => $request->input('search')
+            ]);
+            return redirect()->route('inventory.products.mass_qr');
+        }
+
+        $ids = session('mass_qr_ids_products');
+        $selectAll = session('mass_qr_select_all_products');
+        $search = session('mass_qr_search_products');
+
+        $query = Product::with(['variants.attributeValues', 'variants.product']);
+
+        if ($selectAll) {
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhereHas('variants', function ($variantQuery) use ($search) {
+                            $variantQuery->where('sku', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('variants', function ($variantQuery) use ($search) {
+                            $variantQuery->where('barcode', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('category', function ($categoryQuery) use ($search) {
+                            $categoryQuery->where('name', 'like', "%{$search}%");
+                        });
+                });
+            }
+        } else {
+            if (empty($ids)) {
+                return redirect()->route('inventory.products.index');
+            }
+            $query->whereIn('id', $ids);
+        }
+
+        $products = $query->get();
+        $variants = $products->pluck('variants')->flatten();
+        $styles = QrStyle::all();
+
+        return Inertia::render('inventory/BulkQr', [
+            'variants' => $variants,
+            'styles' => $styles,
+            'context' => 'products'
+        ]);
     }
 
     /**

@@ -15,6 +15,7 @@ interface Props {
   selectable?: boolean;
   modelValue?: any[];
   globalSelect?: boolean;
+  rowKey?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<Props>(), {
   selectable: false,
   modelValue: () => [],
   globalSelect: false,
+  rowKey: 'id',
 });
 
 const emit = defineEmits<{
@@ -35,7 +37,7 @@ const allSelected = computed({
     if (props.globalSelect) return true;
     return (
       props.items.length > 0 &&
-      props.items.every((item) => props.modelValue.includes(item))
+      props.items.every((item) => selectedIds.value.has(item[props.rowKey]))
     );
   },
   set: (checked) => {
@@ -48,34 +50,38 @@ const allSelected = computed({
     if (checked) {
       const newSelection = [...props.modelValue];
       props.items.forEach((item) => {
-        if (!newSelection.includes(item)) {
+        if (!selectedIds.value.has(item[props.rowKey])) {
           newSelection.push(item);
         }
       });
       emit('update:modelValue', newSelection);
     } else {
       const newSelection = props.modelValue.filter(
-        (selectedItem) => !props.items.includes(selectedItem)
+        (selectedItem) => !props.items.some((item) => item[props.rowKey] === selectedItem[props.rowKey])
       );
       emit('update:modelValue', newSelection);
     }
   },
 });
 
+const selectedIds = computed(() => {
+  return new Set(props.modelValue.map((item) => item[props.rowKey]));
+});
+
 const isSelected = (item: any) => {
-  return props.globalSelect || props.modelValue.includes(item);
+  return props.globalSelect || selectedIds.value.has(item[props.rowKey]);
 };
 
 const toggleSelection = (item: any) => {
   if (props.globalSelect) {
     emit('header-select', false);
-    const newSelection = props.items.filter((i) => i !== item);
+    const newSelection = props.items.filter((i) => i[props.rowKey] !== item[props.rowKey]);
     emit('update:modelValue', newSelection);
     return;
   }
 
   const selected = [...props.modelValue];
-  const index = selected.indexOf(item);
+  const index = selected.findIndex((s) => s[props.rowKey] === item[props.rowKey]);
 
   if (index === -1) {
     selected.push(item);
@@ -99,55 +105,28 @@ const handleRowClick = (item: any) => {
           <th v-if="selectable" scope="col" class="px-6 py-3 text-left w-10">
             <Checkbox v-model="allSelected" />
           </th>
-          <th
-            v-for="header in headers"
-            :key="header.key"
-            scope="col"
-            :class="[
-              'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
-              header.class,
-            ]"
-          >
+          <th v-for="header in headers" :key="header.key" scope="col" :class="[
+            'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+            header.class,
+          ]">
             {{ header.label }}
           </th>
         </tr>
       </thead>
       <tbody class="divide-y">
-        <tr
-          v-for="(item, index) in items"
-          :key="index"
-          class="hover:bg-gray-100 transition-colors cursor-pointer"
-          @click="handleRowClick(item)"
-        >
-          <td
-            v-if="selectable"
-            class="px-6 py-4 whitespace-nowrap w-10"
-            @click.stop
-          >
-            <Checkbox
-              :checked="isSelected(item)"
-              @change="toggleSelection(item)"
-            />
+        <tr v-for="(item, index) in items" :key="index" class="hover:bg-gray-100 transition-colors cursor-pointer"
+          @click="handleRowClick(item)">
+          <td v-if="selectable" class="px-6 py-4 whitespace-nowrap w-10" @click.stop>
+            <Checkbox :checked="isSelected(item)" @change="toggleSelection(item)" />
           </td>
-          <td
-            v-for="header in headers"
-            :key="header.key"
-            class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-          >
-            <slot
-              :name="`cell-${header.key}`"
-              :item="item"
-              :value="item[header.key]"
-            >
+          <td v-for="header in headers" :key="header.key" class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            <slot :name="`cell-${header.key}`" :item="item" :value="item[header.key]">
               {{ item[header.key] }}
             </slot>
           </td>
         </tr>
         <tr v-if="items.length === 0">
-          <td
-            :colspan="headers.length + (selectable ? 1 : 0)"
-            class="px-6 py-8 text-center text-gray-500 text-sm"
-          >
+          <td :colspan="headers.length + (selectable ? 1 : 0)" class="px-6 py-8 text-center text-gray-500 text-sm">
             {{ emptyMessage }}
           </td>
         </tr>

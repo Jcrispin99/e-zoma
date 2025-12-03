@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Variant;
 use App\Models\Product;
 use App\Models\Image;
+use App\Models\QrStyle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
@@ -30,7 +31,7 @@ class VariantController extends Controller
             });
         }
 
-        $variants = $query->latest()->paginate(80);
+        $variants = $query->latest()->orderBy('id', 'desc')->paginate(80);
         $variants->getCollection()->each->append('image');
 
         return Inertia::render('inventory/variants/Index', compact('variants'));
@@ -250,6 +251,14 @@ class VariantController extends Controller
         return view('admin.variants.kardex', compact('variant'));
     }
 
+    public function qrWeb(Variant $variant)
+    {
+        Gate::authorize('read_products', Product::class);
+        $variant->load(['product', 'attributeValues']);
+        $styles = QrStyle::all();
+        return Inertia::render('inventory/variants/Qr', compact('variant', 'styles'));
+    }
+
     public function massDestroy(Request $request)
     {
         Gate::authorize('delete_variants');
@@ -260,12 +269,15 @@ class VariantController extends Controller
         ]);
 
         $ids = $request->input('ids');
+
+        $variants = Variant::whereIn('id', $ids)
+            ->with(['images', 'inventories', 'variantables', 'posOrderLines'])
+            ->get();
+
         $count = 0;
 
-        foreach ($ids as $id) {
-            $variant = Variant::find($id);
-
-            if ($variant->inventories()->exists() || $variant->variantables()->exists() || $variant->posOrderLines()->exists()) {
+        foreach ($variants as $variant) {
+            if ($variant->inventories->isNotEmpty() || $variant->variantables->isNotEmpty() || $variant->posOrderLines->isNotEmpty()) {
                 continue;
             }
 
@@ -283,5 +295,51 @@ class VariantController extends Controller
         }
 
         return redirect()->back()->with('success', "$count variantes eliminadas correctamente.");
+    }
+
+    public function massQrWeb(Request $request)
+    {
+        Gate::authorize('read_products', Product::class);
+
+        if ($request->isMethod('post')) {
+            session([
+                'mass_qr_ids_variants' => $request->input('ids'),
+                'mass_qr_select_all_variants' => $request->input('select_all'),
+                'mass_qr_search_variants' => $request->input('search')
+            ]);
+            return redirect()->route('inventory.variants.mass_qr');
+        }
+
+        $ids = session('mass_qr_ids_variants');
+        $selectAll = session('mass_qr_select_all_variants');
+        $search = session('mass_qr_search_variants');
+
+        $query = Variant::with(['product', 'attributeValues']);
+
+        if ($selectAll) {
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('sku', 'like', "%{$search}%")
+                        ->orWhere('barcode', 'like', "%{$search}%")
+                        ->orWhereHas('product', function ($productQuery) use ($search) {
+                            $productQuery->where('name', 'like', "%{$search}%");
+                        });
+                });
+            }
+        } else {
+            if (empty($ids)) {
+                return redirect()->route('inventory.variants.index');
+            }
+            $query->whereIn('id', $ids);
+        }
+
+        $variants = $query->get();
+        $styles = QrStyle::all();
+
+        return Inertia::render('inventory/BulkQr', [
+            'variants' => $variants,
+            'styles' => $styles,
+            'context' => 'variants'
+        ]);
     }
 }

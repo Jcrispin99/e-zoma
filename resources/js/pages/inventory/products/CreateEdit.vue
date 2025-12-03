@@ -4,11 +4,12 @@ import inventarioIcon from '@/assets/images/iconos-modulos/inventario-koodi.png'
 import Form from '@/components/ui/Form.vue';
 import Input from '@/components/ui/Input.vue';
 import Label from '@/components/ui/Label.vue';
-import { CloudUpload } from 'lucide-vue-next';
+import Button from '@/components/ui/Button.vue';
+import { CloudUpload, QrCode } from 'lucide-vue-next';
 import GeneralInfoForm from '@/components/inventory/GeneralInfoForm.vue';
 import ProductImageGallery from '@/components/inventory/ProductImageGallery.vue';
 import ProductAttributesForm from '@/components/inventory/ProductAttributesForm.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
 import type { Product, Category, Attribute, AdditionalImage, AttributeLine, FormVariant } from '@/types/product';
@@ -153,6 +154,14 @@ const isDirty = computed(() => {
     <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
         <Form title="Productos" :subtitle="isEditing ? 'Editar' : 'Nuevo'" :tabs="tabs" :loading="form.processing"
             @submit="handleSubmit" @cancel="handleCancel" :disabled="!isDirty">
+
+            <template #header-actions>
+                <Button v-if="isEditing" @click="router.visit(`/finanzas/inventario/productos/${product?.id}/qr`)"
+                    variant="secondary" title="Generar QR">
+                    <QrCode class="w-4 h-4 mr-2" />
+                    Generar QR
+                </Button>
+            </template>
 
             <template #top-left>
                 <Label class="text-sm font-bold text-gray-700 mb-1 block">Nombre del producto <span

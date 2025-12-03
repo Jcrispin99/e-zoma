@@ -55,7 +55,11 @@ const initializeForm = () => {
         values: Array.from(valuesSet)
     }));
 
-    generatedVariants.value = props.product.variants.map((v) => {
+    const sortedVariants = [...props.product.variants].sort((a, b) => {
+        return (Number(b.is_principal || 0)) - (Number(a.is_principal || 0));
+    });
+
+    generatedVariants.value = sortedVariants.map((v) => {
         const attributesMap: Record<string, string> = {};
         if (v.attribute_values) {
             v.attribute_values.forEach((av) => {
@@ -210,14 +214,13 @@ const handlePrincipalChange = (field: 'sku' | 'barcode' | 'price', value: string
     emit('update:generatedVariants', generatedVariants.value);
 };
 
-const isDirty = computed(() => {
-    return JSON.stringify(attributeLines.value) !== JSON.stringify(initialAttributeLines.value) ||
+const checkDirty = () => {
+    const isDirty = JSON.stringify(attributeLines.value) !== JSON.stringify(initialAttributeLines.value) ||
         JSON.stringify(generatedVariants.value) !== JSON.stringify(initialGeneratedVariants.value);
-});
+    emit('dirty', isDirty);
+};
 
-watch(isDirty, (newValue) => {
-    emit('dirty', newValue);
-});
+watch([attributeLines, generatedVariants], checkDirty, { deep: true });
 
 const reset = () => {
     attributeLines.value = JSON.parse(JSON.stringify(initialAttributeLines.value));

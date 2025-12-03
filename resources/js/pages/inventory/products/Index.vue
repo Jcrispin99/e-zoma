@@ -141,6 +141,15 @@ const confirmDelete = () => {
         }
     );
 };
+
+const handleGenerateQr = () => {
+    const ids = selectedProducts.value.map(p => p.id);
+    router.post('/finanzas/inventario/productos/qr-masivo', {
+        ids: ids,
+        select_all: selectAllAcrossPages.value,
+        search: searchTerm.value
+    });
+};
 </script>
 
 <template>
@@ -150,7 +159,7 @@ const confirmDelete = () => {
                 v-model:search-term="searchTerm" v-model:view-mode="viewMode" :pagination="products"
                 :selected-count="selectedProducts.length" :total-count="totalItems" :is-all-selected="isAllSelected"
                 :selection-message="selectionMessage" @select-all-total="selectAllTotal"
-                @clear-selection="clearSelection" @delete-selected="deleteSelected" />
+                @clear-selection="clearSelection" @delete-selected="deleteSelected" @generate-qr="handleGenerateQr" />
 
             <div v-if="viewMode === 'list'" class="bg-white rounded-lg overflow-hidden">
                 <div class="bg-gray-300 h-[0.5px]"></div>

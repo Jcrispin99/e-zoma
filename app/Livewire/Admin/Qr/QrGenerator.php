@@ -71,6 +71,10 @@ class QrGenerator extends Component
             $purchase = Purchase::with(['variants.attributeValues', 'variants.product'])->findOrFail($id);
             return $purchase->variants;
         }
+        if ($type === 'variant') {
+            $variant = Variant::with(['attributeValues', 'product'])->findOrFail($id);
+            return collect([$variant]);
+        }
         abort(404);
     }
 
@@ -103,14 +107,16 @@ class QrGenerator extends Component
 
     public function inc(int $index): void
     {
-        if (!isset($this->modalLabels[$index])) return;
+        if (!isset($this->modalLabels[$index]))
+            return;
         $current = (int) ($this->modalLabels[$index]['qty'] ?? 0);
         $this->modalLabels[$index]['qty'] = max(0, $current + 1);
     }
 
     public function dec(int $index): void
     {
-        if (!isset($this->modalLabels[$index])) return;
+        if (!isset($this->modalLabels[$index]))
+            return;
         $current = (int) ($this->modalLabels[$index]['qty'] ?? 0);
         $this->modalLabels[$index]['qty'] = max(0, $current - 1);
     }

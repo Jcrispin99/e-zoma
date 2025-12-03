@@ -5,7 +5,6 @@ import Table from '@/components/ui/Table.vue';
 import CardData from '@/components/ui/CardData.vue';
 import DataToolbar from '@/components/ui/DataToolbar.vue';
 import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
-import { Image as ImageIcon } from 'lucide-vue-next';
 import { ref, computed, onMounted, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useNotification } from '@/hooks/useNotification';
@@ -140,6 +139,15 @@ const confirmDelete = () => {
         }
     );
 };
+
+const handleGenerateQr = () => {
+    const ids = selectedVariants.value.map(v => v.id);
+    router.post('/finanzas/inventario/variantes/qr-masivo', {
+        ids: ids,
+        select_all: selectAllAcrossPages.value,
+        search: searchTerm.value
+    });
+};
 </script>
 
 <template>
@@ -149,13 +157,13 @@ const confirmDelete = () => {
                 v-model:search-term="searchTerm" v-model:view-mode="viewMode" :pagination="variants"
                 :selected-count="selectedVariants.length" :total-count="totalItems" :is-all-selected="isAllSelected"
                 :selection-message="selectionMessage" @select-all-total="selectAllTotal"
-                @clear-selection="clearSelection" @delete-selected="deleteSelected" />
+                @clear-selection="clearSelection" @delete-selected="deleteSelected" @generate-qr="handleGenerateQr" />
 
             <div v-if="viewMode === 'list'" class="bg-white rounded-lg overflow-hidden">
                 <div class="bg-gray-300 h-[0.5px]"></div>
 
                 <Table :headers="headers" :items="variants.data" selectable v-model="selectedVariants"
-                    :global-select="isAllSelected" @row-click="handleRowClick"
+                    :global-select="isAllSelected" row-key="id" @row-click="handleRowClick"
                     @header-select="selectAllAcrossPages = $event">
 
 

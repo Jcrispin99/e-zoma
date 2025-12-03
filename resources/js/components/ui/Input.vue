@@ -41,6 +41,14 @@ onMounted(initializeSearchQuery);
 const filteredOptions = computed(() => {
     if (!props.options) return [];
     if (!searchQuery.value) return props.options;
+
+    if (props.modelValue !== undefined && props.modelValue !== null) {
+        const selectedOption = props.options.find(opt => opt.value === props.modelValue);
+        if (selectedOption && searchQuery.value === selectedOption.label) {
+            return props.options;
+        }
+    }
+
     const query = searchQuery.value.toLowerCase();
     return props.options.filter((opt) => opt.label.toLowerCase().includes(query));
 });

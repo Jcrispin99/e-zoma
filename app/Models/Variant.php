@@ -25,6 +25,8 @@ class Variant extends Model
         'price' => 'decimal:2'
     ];
 
+    protected $appends = [];
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
@@ -33,7 +35,17 @@ class Variant extends Model
     public function image(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->images()->count() ? Storage::url($this->images()->first()->path) : asset('storage/images/images.png'),
+            get: function () {
+                if ($this->images->isNotEmpty()) {
+                    return Storage::url($this->images->first()->path);
+                }
+
+                if ($this->product && $this->product->images->isNotEmpty()) {
+                    return Storage::url($this->product->images->first()->path);
+                }
+
+                return asset('storage/images/images.png');
+            }
         );
     }
 

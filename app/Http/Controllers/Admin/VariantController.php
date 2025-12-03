@@ -8,9 +8,104 @@ use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class VariantController extends Controller
 {
+    public function indexWeb(Request $request)
+    {
+        Gate::authorize('read_products', Product::class);
+
+        $query = Variant::with(['product.images', 'images', 'attributeValues']);
+
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('sku', 'like', "%{$search}%")
+                    ->orWhere('barcode', 'like', "%{$search}%")
+                    ->orWhereHas('product', function ($productQuery) use ($search) {
+                        $productQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $variants = $query->latest()->paginate(80);
+
+        return Inertia::render('inventory/variants/Index', compact('variants'));
+    }
+
+    public function editWeb(Variant $variant)
+    {
+        Gate::authorize('update_variants', $variant);
+        $variant->load(['product.images', 'images', 'attributeValues']);
+        return Inertia::render('inventory/variants/Edit', compact('variant'));
+    }
+
+    public function updateWeb(Request $request, Variant $variant)
+    {
+        Gate::authorize('update_variants', $variant);
+
+        $validated = $request->validate([
+            'sku' => 'nullable|string|max:255',
+            'barcode' => 'nullable|string|max:255',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'image' => 'nullable|image|max:10240',
+            'additionalImages' => 'nullable|array',
+            'additionalImages.*' => 'image|max:10240',
+            'existingImageIds' => 'nullable|array',
+            'existingImageIds.*' => 'exists:images,id',
+        ]);
+
+        if (empty($validated['barcode'])) {
+            $validated['barcode'] = Variant::generateUniqueBarcode();
+        }
+
+        $variant->update([
+            'sku' => $validated['sku'],
+            'barcode' => $validated['barcode'],
+            'price' => $validated['price'],
+            'stock' => $validated['stock'],
+        ]);
+
+        if ($request->hasFile('additionalImages')) {
+            foreach ($request->file('additionalImages') as $file) {
+                $path = $file->store('images/variants', 'public');
+                $variant->images()->create([
+                    'path' => $path,
+                    'size' => $file->getSize(),
+                ]);
+            }
+        }
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('images/variants', 'public');
+            $variant->images()->create([
+                'path' => $path,
+                'size' => $request->file('image')->getSize(),
+            ]);
+        }
+
+        if ($request->has('existingImageIds')) {
+            $existingIds = $request->input('existingImageIds');
+            $imagesToDelete = $variant->images()->whereNotIn('id', $existingIds)->get();
+
+            foreach ($imagesToDelete as $image) {
+                Storage::disk('public')->delete($image->path);
+                $image->delete();
+            }
+        } else {
+            if ($request->exists('existingImageIds')) {
+                $imagesToDelete = $variant->images()->get();
+                foreach ($imagesToDelete as $image) {
+                    Storage::disk('public')->delete($image->path);
+                    $image->delete();
+                }
+            }
+        }
+
+        return redirect()->route('inventory.variants.index')->with('success', 'Variante actualizada correctamente');
+    }
     /**
      * Display a listing of the resource.
      */
@@ -112,5 +207,40 @@ class VariantController extends Controller
     {
         Gate::authorize('read_variants_kardex', $variant);
         return view('admin.variants.kardex', compact('variant'));
+    }
+
+    public function massDestroy(Request $request)
+    {
+        Gate::authorize('delete_variants');
+
+        $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:variants,id',
+        ]);
+
+        $ids = $request->input('ids');
+        $count = 0;
+
+        foreach ($ids as $id) {
+            $variant = Variant::find($id);
+
+            if ($variant->inventories()->exists() || $variant->variantables()->exists() || $variant->posOrderLines()->exists()) {
+                continue;
+            }
+
+            foreach ($variant->images as $image) {
+                Storage::disk('public')->delete($image->path);
+                $image->delete();
+            }
+
+            $variant->delete();
+            $count++;
+        }
+
+        if ($count < count($ids)) {
+            return redirect()->back()->with('error', 'Algunas variantes no pudieron ser eliminadas porque tienen registros relacionados.');
+        }
+
+        return redirect()->back()->with('success', "$count variantes eliminadas correctamente.");
     }
 }

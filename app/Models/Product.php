@@ -29,7 +29,7 @@ class Product extends Model
     public function image(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->images()->count() ? Storage::url($this->images()->first()->path) : null,
+            get: fn() => $this->images->isNotEmpty() ? Storage::url($this->images->first()->path) : null,
         );
     }
 
@@ -49,7 +49,7 @@ class Product extends Model
 
     public function variants()
     {
-        return $this->hasMany(Variant::class);
+        return $this->hasMany(Variant::class)->orderBy('is_principal', 'desc');
     }
 
     public function images()

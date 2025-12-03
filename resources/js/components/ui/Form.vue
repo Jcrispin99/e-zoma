@@ -10,6 +10,7 @@ const props = defineProps<{
     loading?: boolean;
     activeTab?: string;
     disabled?: boolean;
+    backRoute?: string;
 }>();
 
 const emit = defineEmits(['submit', 'cancel', 'update:activeTab']);
@@ -17,6 +18,8 @@ const emit = defineEmits(['submit', 'cancel', 'update:activeTab']);
 const currentTab = ref(
     props.activeTab || (props.tabs && props.tabs[0]?.id) || ''
 );
+
+const defaultBackRoute = '/finanzas/inventario/productos';
 
 watch(
     () => props.activeTab,
@@ -39,8 +42,9 @@ import { router } from '@inertiajs/vue3';
             <div class="flex items-center justify-between w-full">
                 <div class="flex flex-col gap-1 mb-2">
                     <h1 class="text-sm font-medium text-teal-600">
-                        <span @click="router.visit('/finanzas/inventario/productos')"
-                            class="cursor-pointer hover:underline">{{ title }}</span> <span v-if="subtitle">/ {{subtitle }}
+                        <span @click="router.visit(backRoute || defaultBackRoute)"
+                            class="cursor-pointer hover:underline">{{ title }}</span> <span v-if="subtitle">/ {{ subtitle
+                            }}
                         </span>
                     </h1>
                     <div class="flex items-center gap-2">

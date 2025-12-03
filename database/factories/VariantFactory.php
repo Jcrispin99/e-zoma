@@ -22,6 +22,18 @@ class VariantFactory extends Factory
             'sku' => $this->faker->unique()->regexify('[A-Z0-9]{8}'),
             'barcode' => $this->faker->unique()->ean13(),
             'price' => $this->faker->randomFloat(2, 10, 1000),
+            'stock' => $this->faker->numberBetween(0, 100),
+            'is_principal' => false,
         ];
+    }
+
+    /**
+     * Indicate that this variant should be principal.
+     */
+    public function principal(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'is_principal' => true,
+        ]);
     }
 }

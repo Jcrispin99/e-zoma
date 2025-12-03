@@ -1,44 +1,13 @@
 <script setup lang="ts">
-import ModuleLayout, {
-  NavigationItem,
-} from '@/components/layouts/ModuleLayout.vue';
+import ModuleLayout from '@/components/layouts/ModuleLayout.vue';
 import inventarioIcon from '@/assets/images/iconos-modulos/inventario-koodi.png';
+import { inventoryNavigation } from '@/config/inventoryNavigation';
 
-const navigationItems: NavigationItem[] = [
-  { label: 'Información general', href: '/finanzas/inventario' },
-  {
-    label: 'Productos',
-    items: [
-      { label: 'Productos', href: '/finanzas/inventario/productos' },
-      { label: 'Variantes', href: '#' },
-    ],
-  },
-  { label: 'Reportes', href: '#' },
-  {
-    label: 'Configuración',
-    sections: [
-      {
-        title: 'Gestión del almacén',
-        items: [{ label: 'Almacenes', href: '#' }],
-      },
-      {
-        title: 'Productos',
-        items: [
-          { label: 'Categorías', href: '#' },
-          { label: 'Atributos', href: '#' },
-        ],
-      },
-    ],
-  },
-];
+const navigationItems = inventoryNavigation;
 </script>
 
 <template>
-  <ModuleLayout
-    title="Inventario"
-    :icon="inventarioIcon"
-    :navigation-items="navigationItems"
-  >
+  <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
     <div class="py-12">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">

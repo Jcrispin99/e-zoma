@@ -1,16 +1,16 @@
+import { toast } from 'vue-sonner';
 import { ref, computed, type Ref, type ComputedRef } from 'vue';
-import { useAppStore } from '../stores/app';
-import type { AppNotificationType } from '../types';
 
 interface NotificationOptions {
   duration?: number;
   closable?: boolean;
+  description?: string;
 }
 
 interface UseNotificationReturn {
   notify: (
     message: string,
-    type?: AppNotificationType,
+    type?: 'success' | 'error' | 'warning' | 'info',
     options?: NotificationOptions
   ) => void;
   success: (message: string, options?: NotificationOptions) => void;
@@ -20,19 +20,32 @@ interface UseNotificationReturn {
 }
 
 export function useNotification(): UseNotificationReturn {
-  const appStore = useAppStore();
-
   const notify = (
     message: string,
-    type: AppNotificationType = 'info',
+    type: 'success' | 'error' | 'warning' | 'info' = 'info',
     options: NotificationOptions = {}
   ) => {
-    appStore.addNotification({
-      message,
-      type,
-      duration: options.duration ?? 5000,
-      closable: options.closable ?? true,
-    });
+    const toastOptions = {
+      duration: options.duration,
+      description: options.description,
+    };
+
+    switch (type) {
+      case 'success':
+        toast.success(message, toastOptions);
+        break;
+      case 'error':
+        toast.error(message, toastOptions);
+        break;
+      case 'warning':
+        toast.warning(message, toastOptions);
+        break;
+      case 'info':
+        toast.info(message, toastOptions);
+        break;
+      default:
+        toast(message, toastOptions);
+    }
   };
 
   const success = (message: string, options?: NotificationOptions) => {

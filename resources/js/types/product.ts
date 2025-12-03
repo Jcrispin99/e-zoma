@@ -44,6 +44,7 @@ export interface Variant {
   barcode: string;
   price: number;
   stock: number;
+  is_principal?: boolean;
   attribute_values?: AttributeValue[];
   attributes?: Record<string, string>;
   name?: string;
@@ -69,21 +70,22 @@ export interface Product {
 
 export interface ProductsData {
   data: Product[];
-  links: any;
-  meta: {
-    current_page: number;
-    from: number;
-    last_page: number;
-    links: Array<{
-      url: string | null;
-      label: string;
-      active: boolean;
-    }>;
-    path: string;
-    per_page: number;
-    to: number;
-    total: number;
-  };
+  current_page: number;
+  first_page_url: string;
+  from: number;
+  last_page: number;
+  last_page_url: string;
+  links: Array<{
+    url: string | null;
+    label: string;
+    active: boolean;
+  }>;
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number;
+  total: number;
 }
 
 export interface AttributeLine {

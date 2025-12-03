@@ -28,10 +28,30 @@ class ProductController extends Controller
         return Inertia::render('inventory/Index');
     }
 
-    public function indexWeb()
+    public function indexWeb(Request $request)
     {
         Gate::authorize('read_products', Product::class);
-        $products = Product::with(['variants', 'category'])->latest()->paginate(10);
+
+        $query = Product::with(['variants.images', 'images', 'category']);
+
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('variants', function ($variantQuery) use ($search) {
+                        $variantQuery->where('sku', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('variants', function ($variantQuery) use ($search) {
+                        $variantQuery->where('barcode', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('category', function ($categoryQuery) use ($search) {
+                        $categoryQuery->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $products = $query->latest()->paginate(80);
+
         return Inertia::render('inventory/products/Index', compact('products'));
     }
 
@@ -88,10 +108,10 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'sku' => 'nullable|string|max:255',
             'barcode' => 'nullable|string|max:255',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|max:10240',
             'attributeLines' => 'nullable|array',
             'generatedVariants' => 'nullable|array',
-            'additionalImages.*' => 'nullable|image|max:2048',
+            'additionalImages.*' => 'nullable|image|max:10240',
         ], [], [
             'category_id' => 'categoría',
         ]);
@@ -135,12 +155,13 @@ class ProductController extends Controller
             }
 
             if (!empty($data['generatedVariants'])) {
-                foreach ($data['generatedVariants'] as $variantData) {
+                foreach ($data['generatedVariants'] as $index => $variantData) {
                     $variant = $product->variants()->create([
                         'sku' => $variantData['sku'] ?? null,
                         'barcode' => $variantData['barcode'] ?? null,
                         'price' => $variantData['price'] ?? $product->price,
                         'stock' => $variantData['stock'] ?? 0,
+                        'is_principal' => $index === 0,
                     ]);
 
                     if (!empty($variantData['attributes'])) {
@@ -161,6 +182,7 @@ class ProductController extends Controller
                     'barcode' => $data['barcode'] ?? null,
                     'price' => $data['price'],
                     'stock' => 0,
+                    'is_principal' => true,
                 ]);
             }
         });
@@ -177,7 +199,29 @@ class ProductController extends Controller
     public function editWeb(Product $product)
     {
         Gate::authorize('update_products', $product);
-        $product->load('variants.attributeValues', 'images');
+
+        $product->load([
+            'variants' => function ($query) {
+                $query->orderBy('is_principal', 'desc');
+            },
+            'variants.attributeValues',
+            'images'
+        ]);
+
+        if ($product->variants->isNotEmpty()) {
+            $hasPrincipal = $product->variants->where('is_principal', true)->isNotEmpty();
+            if (!$hasPrincipal) {
+                $firstVariant = $product->variants->first();
+                $firstVariant->update(['is_principal' => true]);
+                $product->load([
+                    'variants' => function ($query) {
+                        $query->orderBy('is_principal', 'desc');
+                    },
+                    'variants.attributeValues'
+                ]);
+            }
+        }
+
         $categories = Category::with('parent')->get();
         $attributes = Attribute::with('attributeValues')->get();
         return Inertia::render('inventory/products/CreateEdit', compact('product', 'categories', 'attributes'));
@@ -193,10 +237,10 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'sku' => 'nullable|string|max:255',
             'barcode' => 'nullable|string|max:255',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|image|max:10240',
             'attributeLines' => 'nullable|array',
             'generatedVariants' => 'nullable|array',
-            'additionalImages.*' => 'nullable|image|max:2048',
+            'additionalImages.*' => 'nullable|image|max:10240',
             'existingImageIds' => 'nullable|array',
         ], [], [
             'category_id' => 'categoría',
@@ -254,36 +298,94 @@ class ProductController extends Controller
                 }
             }
 
-            $product->variants()->delete();
-
             if (!empty($data['generatedVariants'])) {
+                $existingVariants = $product->variants()->with('attributeValues')->get();
+                $processedVariantIds = [];
+                $isFirstVariant = true;
+
                 foreach ($data['generatedVariants'] as $variantData) {
-                    $variant = $product->variants()->create([
-                        'sku' => $variantData['sku'] ?? null,
-                        'barcode' => $variantData['barcode'] ?? null,
-                        'price' => $variantData['price'] ?? $product->price,
-                        'stock' => $variantData['stock'] ?? 0,
-                    ]);
-
+                    $attributeKey = '';
                     if (!empty($variantData['attributes'])) {
-                        foreach ($variantData['attributes'] as $attributeId => $valueName) {
-                            $attributeValue = AttributeValue::where('attribute_id', $attributeId)
-                                ->where('value', $valueName)
-                                ->first();
+                        ksort($variantData['attributes']);
+                        $attributeKey = json_encode($variantData['attributes']);
+                    }
 
-                            if ($attributeValue) {
-                                $variant->attributeValues()->attach($attributeValue->id);
+                    $existingVariant = null;
+                    foreach ($existingVariants as $ev) {
+                        $evAttributes = [];
+                        if ($ev->attributeValues) {
+                            foreach ($ev->attributeValues as $av) {
+                                $evAttributes[$av->attribute_id] = $av->value;
                             }
+                            ksort($evAttributes);
+                        }
+                        $evKey = json_encode($evAttributes);
+
+                        if ($evKey === $attributeKey) {
+                            $existingVariant = $ev;
+                            break;
                         }
                     }
+
+                    if ($existingVariant) {
+                        $existingVariant->update([
+                            'sku' => $variantData['sku'] ?? null,
+                            'barcode' => $variantData['barcode'] ?? null,
+                            'price' => $variantData['price'] ?? $product->price,
+                        ]);
+                        $processedVariantIds[] = $existingVariant->id;
+                    } else {
+                        $hasPrincipalExisting = $existingVariants->where('is_principal', true)->isNotEmpty();
+                        $shouldBePrincipal = $isFirstVariant && !$hasPrincipalExisting;
+
+                        $variant = $product->variants()->create([
+                            'sku' => $variantData['sku'] ?? null,
+                            'barcode' => $variantData['barcode'] ?? null,
+                            'price' => $variantData['price'] ?? $product->price,
+                            'stock' => $variantData['stock'] ?? 0,
+                            'is_principal' => $shouldBePrincipal,
+                        ]);
+
+                        if ($shouldBePrincipal) {
+                            $isFirstVariant = false;
+                        }
+
+                        if (!empty($variantData['attributes'])) {
+                            foreach ($variantData['attributes'] as $attributeId => $valueName) {
+                                $attributeValue = AttributeValue::where('attribute_id', $attributeId)
+                                    ->where('value', $valueName)
+                                    ->first();
+
+                                if ($attributeValue) {
+                                    $variant->attributeValues()->attach($attributeValue->id);
+                                }
+                            }
+                        }
+
+                        $processedVariantIds[] = $variant->id;
+                    }
                 }
+
+                $product->variants()->whereNotIn('id', $processedVariantIds)->delete();
+
             } else {
-                $product->variants()->create([
-                    'sku' => $data['sku'] ?? null,
-                    'barcode' => $data['barcode'] ?? null,
-                    'price' => $data['price'],
-                    'stock' => 0,
-                ]);
+                $existingVariant = $product->variants()->first();
+                if ($existingVariant) {
+                    $existingVariant->update([
+                        'sku' => $data['sku'] ?? null,
+                        'barcode' => $data['barcode'] ?? null,
+                        'price' => $data['price'],
+                        'is_principal' => true,
+                    ]);
+                } else {
+                    $product->variants()->create([
+                        'sku' => $data['sku'] ?? null,
+                        'barcode' => $data['barcode'] ?? null,
+                        'price' => $data['price'],
+                        'stock' => 0,
+                        'is_principal' => true,
+                    ]);
+                }
             }
         });
 

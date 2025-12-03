@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             WarehouseSeeder::class,
             ReasonSeeder::class,
             AttributeSeeder::class,
+            ProductSeeder::class,
             RolesSeeder::class,
             SequenceSeeder::class,
             TaxSeeder::class,

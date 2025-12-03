@@ -5,36 +5,29 @@ import Form from '@/components/ui/Form.vue';
 import Input from '@/components/ui/Input.vue';
 import Label from '@/components/ui/Label.vue';
 import { CloudUpload } from 'lucide-vue-next';
-import GeneralInfoForm from '@/components/inventory/GeneralInfoForm.vue';
 import ProductImageGallery from '@/components/inventory/ProductImageGallery.vue';
-import ProductAttributesForm from '@/components/inventory/ProductAttributesForm.vue';
 import { useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
-import type { Product, Category, Attribute, AdditionalImage, AttributeLine, FormVariant } from '@/types/product';
+import type { AdditionalImage } from '@/types/product';
 import { inventoryNavigation } from '@/config/inventoryNavigation';
 
 const props = defineProps<{
-    product?: Product;
-    categories: Category[];
-    attributes: Attribute[];
+    variant: any;
 }>();
 
 const { notify } = useNotification();
-const isEditing = computed(() => !!props.product);
 
 const form = useForm({
-    name: props.product?.name || '',
-    description: props.product?.description || '',
-    price: props.product?.price || '',
-    category_id: props.product?.category_id || '',
-    sku: props.product?.sku || '',
-    barcode: props.product?.barcode || '',
+    sku: props.variant.sku || '',
+    barcode: props.variant.barcode || '',
+    price: props.variant.price || '',
+    stock: props.variant.stock || 0,
     image: null as File | null,
-    image_url: props.product?.image || null,
+    _method: 'PUT',
 });
 
-const imagePreview = ref<string | null>(props.product?.image || null);
+const imagePreview = ref<string | null>(props.variant.image || null);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const handleImageClick = () => {
@@ -52,14 +45,9 @@ const handleImageChange = (event: Event) => {
 const additionalImages = ref<AdditionalImage[]>([]);
 const initialAdditionalImages = ref<AdditionalImage[]>([]);
 
-const attributeLines = ref<AttributeLine[]>([]);
-const generatedVariants = ref<FormVariant[]>([]);
-
-const attributesFormRef = ref<InstanceType<typeof ProductAttributesForm> | null>(null);
-
-watch(() => props.product, (product) => {
-    if (product?.images && product.images.length > 0) {
-        additionalImages.value = product.images.map((img: any) => ({
+watch(() => props.variant, (variant) => {
+    if (variant?.images && variant.images.length > 0) {
+        additionalImages.value = variant.images.map((img: any) => ({
             id: img.id,
             url: `/storage/${img.path}`,
         }));
@@ -69,7 +57,6 @@ watch(() => props.product, (product) => {
 
 const tabs = [
     { id: 'general', label: 'Información General' },
-    { id: 'attributes', label: 'Atributos y Variantes' },
     { id: 'images', label: 'Imágenes' },
 ];
 
@@ -79,61 +66,29 @@ const handleSubmit = () => {
             .filter(img => img.file)
             .map(img => img.file);
 
-        const transformed: any = {
-            name: data.name,
-            description: data.description || '',
-            price: data.price,
-            category_id: data.category_id,
-            sku: data.sku || '',
-            barcode: data.barcode || '',
-            image: data.image,
-            attributeLines: attributeLines.value,
-            generatedVariants: generatedVariants.value,
+        return {
+            ...data,
             additionalImages: newImages,
             existingImageIds: additionalImages.value
                 .filter(img => img.id)
                 .map(img => img.id),
         };
-
-        if (isEditing.value) {
-            transformed._method = 'PUT';
-        }
-
-        return transformed;
     });
 
-    const options = {
+    form.post(`/finanzas/inventario/variantes/${props.variant.id}`, {
         forceFormData: true,
         onSuccess: () => {
-            notify(
-                isEditing.value
-                    ? 'Producto actualizado correctamente'
-                    : 'Producto creado correctamente',
-                'success'
-            );
+            notify('Variante actualizada correctamente', 'success');
         },
-        onError: (errors: any) => {
-            console.error('Validation errors:', errors);
-            if (Object.keys(errors).length > 0) {
-                const errorMessages = Object.values(errors).flat().join('\n');
-                notify(`Errores de validación:\n${errorMessages}`, 'error');
-            } else {
-                notify('Completa los campos obligatorios', 'error');
-            }
+        onError: () => {
+            notify('Error al actualizar la variante', 'error');
         },
-    };
-
-    const url = isEditing.value
-        ? `/finanzas/inventario/productos/${props.product?.id}`
-        : '/finanzas/inventario/productos';
-
-    form.post(url, options);
+    });
 };
 
 const handleCancel = () => {
     form.reset();
     additionalImages.value = JSON.parse(JSON.stringify(initialAdditionalImages.value));
-    attributesFormRef.value?.reset();
     notify('Cambios descartados', 'info');
 };
 
@@ -145,18 +100,22 @@ const isDirty = computed(() => {
         additionalImages.value.some(img => img.file !== undefined);
     return formChanged || imagesChanged;
 });
+
+const variantName = computed(() => {
+    const attributes = props.variant.attribute_values?.map((av: any) => av.value).join(', ') || 'Sin atributos';
+    return `${props.variant.product?.name} - ${attributes}`;
+});
 </script>
 
 <template>
     <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
-        <Form title="Productos" :subtitle="isEditing ? 'Editar' : 'Nuevo'" :tabs="tabs" :loading="form.processing"
-            @submit="handleSubmit" @cancel="handleCancel" :disabled="!isDirty">
+        <Form title="Variantes" subtitle="Editar" :tabs="tabs" :loading="form.processing" @submit="handleSubmit"
+            @cancel="handleCancel" :disabled="!isDirty" back-route="/finanzas/inventario/variantes">
 
             <template #top-left>
-                <Label class="text-sm font-bold text-gray-700 mb-1 block">Nombre del producto <span
-                        class="text-red-500">*</span></Label>
-                <Input v-model="form.name" placeholder="Por ejemplo, hamburguesa de queso"
-                    inputClass="text-3xl font-medium" :error="form.errors.name" />
+                <Label class="text-sm font-bold text-gray-700 mb-1 block">Nombre del producto</Label>
+                <Input :model-value="variantName" readonly disabled
+                    inputClass="text-3xl font-medium bg-gray-100 text-gray-500" />
             </template>
 
             <template #top-right>
@@ -172,13 +131,34 @@ const isDirty = computed(() => {
             </template>
 
             <template #general>
-                <GeneralInfoForm :form="form" :categories="categories" />
-            </template>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="space-y-6">
+                        <div class="grid gap-4 grid-cols-[140px_1fr] items-center">
+                            <Label class="text-sm font-semibold text-gray-900">Precio de venta <span
+                                    class="text-red-500">*</span></Label>
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-400 font-medium pb-1">S/</span>
+                                <Input v-model="form.price" type="number" step="0.01" :error="form.errors.price" />
+                            </div>
+                        </div>
+                        <div class="grid gap-4 grid-cols-[140px_1fr] items-center">
+                            <Label class="text-sm font-semibold text-gray-900">Stock <span
+                                    class="text-red-500">*</span></Label>
+                            <Input v-model="form.stock" type="number" :error="form.errors.stock" />
+                        </div>
+                    </div>
 
-            <template #attributes>
-                <ProductAttributesForm ref="attributesFormRef" :attributes="attributes" :product="product"
-                    :form-name="form.name" :form-sku="form.sku" :form-price="form.price" :form-barcode="form.barcode"
-                    v-model:attributeLines="attributeLines" v-model:generatedVariants="generatedVariants" />
+                    <div class="space-y-6">
+                        <div class="grid gap-4 grid-cols-[140px_1fr] items-center">
+                            <Label class="text-sm font-semibold text-gray-900">Referencia interna</Label>
+                            <Input v-model="form.sku" placeholder="SKU-001" :error="form.errors.sku" />
+                        </div>
+                        <div class="grid gap-4 grid-cols-[140px_1fr] items-center">
+                            <Label class="text-sm font-semibold text-gray-900">Código de barras</Label>
+                            <Input v-model="form.barcode" placeholder="EAN-13" :error="form.errors.barcode" />
+                        </div>
+                    </div>
+                </div>
             </template>
 
             <template #images>

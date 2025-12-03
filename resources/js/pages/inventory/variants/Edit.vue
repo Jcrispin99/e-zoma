@@ -42,12 +42,24 @@ const handleImageChange = (event: Event) => {
     }
 };
 
+watch(() => props.variant.image, (newImage) => {
+    if (!form.image) { // Only update if user hasn't selected a new file locally
+        imagePreview.value = newImage || null;
+    }
+});
+
 const additionalImages = ref<AdditionalImage[]>([]);
 const initialAdditionalImages = ref<AdditionalImage[]>([]);
 
 watch(() => props.variant, (variant) => {
+    let imagesToUse = [];
+
     if (variant?.images && variant.images.length > 0) {
-        additionalImages.value = variant.images.map((img: any) => ({
+        imagesToUse = variant.images;
+    }
+
+    if (imagesToUse.length > 0) {
+        additionalImages.value = imagesToUse.map((img: any) => ({
             id: img.id,
             url: `/storage/${img.path}`,
         }));

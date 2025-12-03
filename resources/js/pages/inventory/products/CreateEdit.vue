@@ -139,11 +139,13 @@ const handleCancel = () => {
 
 const navigationItems = inventoryNavigation;
 
+const attributesDirty = ref(false);
+
 const isDirty = computed(() => {
     const formChanged = form.isDirty;
     const imagesChanged = additionalImages.value.length !== initialAdditionalImages.value.length ||
         additionalImages.value.some(img => img.file !== undefined);
-    return formChanged || imagesChanged;
+    return formChanged || imagesChanged || attributesDirty.value;
 });
 </script>
 
@@ -178,7 +180,9 @@ const isDirty = computed(() => {
             <template #attributes>
                 <ProductAttributesForm ref="attributesFormRef" :attributes="attributes" :product="product"
                     :form-name="form.name" :form-sku="form.sku" :form-price="form.price" :form-barcode="form.barcode"
-                    v-model:attributeLines="attributeLines" v-model:generatedVariants="generatedVariants" />
+                    v-model:attributeLines="attributeLines" v-model:generatedVariants="generatedVariants"
+                    @dirty="attributesDirty = $event" @update:formSku="form.sku = $event"
+                    @update:formBarcode="form.barcode = $event" @update:formPrice="form.price = $event" />
             </template>
 
             <template #images>

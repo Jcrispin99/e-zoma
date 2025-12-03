@@ -126,9 +126,10 @@ const rightColumnFields = computed<Field[]>(() => [
                     field.gridCols,
                     field.itemsCenter ? 'items-center' : 'items-start',
                 ]">
-                    <Label class="text-sm font-semibold text-gray-900" :class="field.labelClass">{{ field.label
-                        }}
-                        <span v-if="field.required" class="text-red-500">*</span></Label>
+                    <Label class="text-sm font-semibold text-gray-900" :class="field.labelClass">
+                        {{ field.label }}
+                        <span v-if="field.required" class="text-red-500">*</span>
+                    </Label>
                     <component :is="field.component" v-bind="field.props" @update:modelValue="
                         (form as any)[field.id] = $event
                         " @search-more="showCategoryModal = true" />
@@ -142,12 +143,12 @@ const rightColumnFields = computed<Field[]>(() => [
                     field.itemsCenter ? 'items-center' : 'items-start',
                 ]">
                     <Label class="text-sm font-semibold text-gray-900" :class="field.labelClass">{{ field.label
-                        }}
+                    }}
                         <span v-if="field.required" class="text-red-500">*</span></Label>
                     <div v-if="field.prefix" class="flex items-center gap-2">
                         <span class="text-gray-400 font-medium pb-1">{{
                             field.prefix
-                            }}</span>
+                        }}</span>
                         <component :is="field.component" v-bind="field.props" @update:modelValue="
                             (form as any)[field.id] = $event
                             " />

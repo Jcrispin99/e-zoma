@@ -19,7 +19,7 @@ class Product extends Model
 
     ];
 
-    protected $appends = ['image', 'sku', 'barcode'];
+    protected $appends = [];
 
     public function category()
     {
@@ -29,7 +29,7 @@ class Product extends Model
     public function image(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->images->isNotEmpty() ? Storage::url($this->images->first()->path) : null,
+            get: fn() => $this->mainImage ? Storage::url($this->mainImage->path) : null,
         );
     }
 
@@ -55,5 +55,10 @@ class Product extends Model
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable');
+    }
+
+    public function mainImage()
+    {
+        return $this->morphOne(Image::class, 'imageable')->oldestOfMany();
     }
 }

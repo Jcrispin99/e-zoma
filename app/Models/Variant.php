@@ -19,6 +19,7 @@ class Variant extends Model
         'price',
         'barcode',
         'stock',
+        'is_principal',
     ];
 
     protected $casts = [
@@ -36,15 +37,11 @@ class Variant extends Model
     {
         return Attribute::make(
             get: function () {
-                if ($this->images->isNotEmpty()) {
-                    return Storage::url($this->images->first()->path);
+                if ($this->mainImage) {
+                    return Storage::url($this->mainImage->path);
                 }
 
-                if ($this->product && $this->product->images->isNotEmpty()) {
-                    return Storage::url($this->product->images->first()->path);
-                }
-
-                return asset('storage/images/images.png');
+                return null;
             }
         );
     }
@@ -67,6 +64,11 @@ class Variant extends Model
     public function images()
     {
         return $this->morphMany(Image::class, 'imageable');
+    }
+
+    public function mainImage()
+    {
+        return $this->morphOne(Image::class, 'imageable')->oldestOfMany();
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
+use App\Models\Image;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
@@ -32,7 +33,7 @@ class ProductController extends Controller
     {
         Gate::authorize('read_products', Product::class);
 
-        $query = Product::with(['variants.images', 'images', 'category']);
+        $query = Product::with(['variants.mainImage', 'mainImage', 'category']);
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -51,6 +52,7 @@ class ProductController extends Controller
         }
 
         $products = $query->latest()->paginate(80);
+        $products->getCollection()->each->append(['image', 'sku', 'barcode']);
 
         return Inertia::render('inventory/products/Index', compact('products'));
     }
@@ -120,7 +122,7 @@ class ProductController extends Controller
             $product = Product::create($data);
 
             if ($request->hasFile('image')) {
-                $path = $request->file('image')->store('products', 'public');
+                $path = $request->file('image')->store('images/products', 'public');
                 $product->images()->create([
                     'path' => $path,
                 ]);
@@ -128,7 +130,7 @@ class ProductController extends Controller
 
             if ($request->hasFile('additionalImages')) {
                 foreach ($request->file('additionalImages') as $imageFile) {
-                    $path = $imageFile->store('products', 'public');
+                    $path = $imageFile->store('images/products', 'public');
                     $product->images()->create([
                         'path' => $path,
                         'size' => $imageFile->getSize(),
@@ -224,6 +226,7 @@ class ProductController extends Controller
 
         $categories = Category::with('parent')->get();
         $attributes = Attribute::with('attributeValues')->get();
+        $product->append(['image', 'sku', 'barcode']);
         return Inertia::render('inventory/products/CreateEdit', compact('product', 'categories', 'attributes'));
     }
 
@@ -249,30 +252,48 @@ class ProductController extends Controller
         DB::transaction(function () use ($request, $product, $data) {
             $product->update($data);
 
+            $mainImageId = null;
+
             if ($request->hasFile('image')) {
+                $path = $request->file('image')->store('images/products', 'public');
                 $mainImage = $product->images()->first();
+
                 if ($mainImage) {
                     Storage::disk('public')->delete($mainImage->path);
-                    $mainImage->delete();
+                    $mainImage->update([
+                        'path' => $path,
+                    ]);
+                    $mainImageId = $mainImage->id;
+                } else {
+                    $newImage = $product->images()->create([
+                        'path' => $path,
+                    ]);
+                    $mainImageId = $newImage->id;
                 }
-
-                $path = $request->file('image')->store('products', 'public');
-                $product->images()->create([
-                    'path' => $path,
-                ]);
+            } else {
+                $mainImage = $product->images()->first();
+                if ($mainImage) {
+                    $mainImageId = $mainImage->id;
+                }
             }
 
             if ($request->has('existingImageIds')) {
                 $existingIds = $request->input('existingImageIds', []);
-                $product->images()->whereNotIn('id', $existingIds)->each(function ($image) {
-                    Storage::disk('public')->delete($image->path);
-                    $image->delete();
-                });
+                $product->images()
+                    ->whereNotIn('id', $existingIds)
+                    ->when($mainImageId, function ($query) use ($mainImageId) {
+                        return $query->where('id', '!=', $mainImageId);
+                    })
+                    ->each(function ($image) {
+                        /** @var Image $image */
+                        Storage::disk('public')->delete($image->path);
+                        $image->delete();
+                    });
             }
 
             if ($request->hasFile('additionalImages')) {
                 foreach ($request->file('additionalImages') as $imageFile) {
-                    $path = $imageFile->store('products', 'public');
+                    $path = $imageFile->store('images/products', 'public');
                     $product->images()->create([
                         'path' => $path,
                         'size' => $imageFile->getSize(),
@@ -333,6 +354,12 @@ class ProductController extends Controller
                             'barcode' => $variantData['barcode'] ?? null,
                             'price' => $variantData['price'] ?? $product->price,
                         ]);
+
+                        if ($existingVariant->is_principal) {
+                            $product->update([
+                                'price' => $variantData['price'] ?? $product->price,
+                            ]);
+                        }
                         $processedVariantIds[] = $existingVariant->id;
                     } else {
                         $hasPrincipalExisting = $existingVariants->where('is_principal', true)->isNotEmpty();
@@ -347,6 +374,9 @@ class ProductController extends Controller
                         ]);
 
                         if ($shouldBePrincipal) {
+                            $product->update([
+                                'price' => $variantData['price'] ?? $product->price,
+                            ]);
                             $isFirstVariant = false;
                         }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Variant;
 use App\Models\Product;
+use App\Models\Image;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
@@ -16,7 +17,7 @@ class VariantController extends Controller
     {
         Gate::authorize('read_products', Product::class);
 
-        $query = Variant::with(['product.images', 'images', 'attributeValues']);
+        $query = Variant::with(['product.mainImage', 'mainImage', 'attributeValues']);
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;
@@ -30,6 +31,7 @@ class VariantController extends Controller
         }
 
         $variants = $query->latest()->paginate(80);
+        $variants->getCollection()->each->append('image');
 
         return Inertia::render('inventory/variants/Index', compact('variants'));
     }
@@ -38,6 +40,7 @@ class VariantController extends Controller
     {
         Gate::authorize('update_variants', $variant);
         $variant->load(['product.images', 'images', 'attributeValues']);
+        $variant->append('image');
         return Inertia::render('inventory/variants/Edit', compact('variant'));
     }
 
@@ -68,6 +71,70 @@ class VariantController extends Controller
             'stock' => $validated['stock'],
         ]);
 
+        if ($variant->is_principal) {
+            $variant->product()->update([
+                'price' => $validated['price'],
+            ]);
+        }
+
+        $mainImageId = null;
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('images/variants', 'public');
+            $size = $request->file('image')->getSize();
+
+            $mainImage = $variant->images()->oldest()->first();
+
+            if ($mainImage) {
+                Storage::disk('public')->delete($mainImage->path);
+                $mainImage->update([
+                    'path' => $path,
+                    'size' => $size,
+                ]);
+                $mainImageId = $mainImage->id;
+            } else {
+                $newImage = $variant->images()->create([
+                    'path' => $path,
+                    'size' => $size,
+                ]);
+                $mainImageId = $newImage->id;
+            }
+        } else {
+            $mainImage = $variant->images()->oldest()->first();
+            if ($mainImage) {
+                $mainImageId = $mainImage->id;
+            }
+        }
+
+        if ($request->has('existingImageIds')) {
+            $existingIds = $request->input('existingImageIds');
+            $imagesToDelete = $variant->images()
+                ->whereNotIn('id', $existingIds)
+                ->when($mainImageId, function ($query) use ($mainImageId) {
+                    return $query->where('id', '!=', $mainImageId);
+                })
+                ->get();
+
+            /** @var Image $image */
+            foreach ($imagesToDelete as $image) {
+                Storage::disk('public')->delete($image->path);
+                $image->delete();
+            }
+        } else {
+            if ($request->exists('existingImageIds')) {
+                $imagesToDelete = $variant->images()
+                    ->when($mainImageId, function ($query) use ($mainImageId) {
+                        return $query->where('id', '!=', $mainImageId);
+                    })
+                    ->get();
+                /** @var Image $image */
+                foreach ($imagesToDelete as $image) {
+                    Storage::disk('public')->delete($image->path);
+                    $image->delete();
+                }
+            }
+        }
+
         if ($request->hasFile('additionalImages')) {
             foreach ($request->file('additionalImages') as $file) {
                 $path = $file->store('images/variants', 'public');
@@ -78,33 +145,7 @@ class VariantController extends Controller
             }
         }
 
-        if ($request->hasFile('image')) {
-            $path = $request->file('image')->store('images/variants', 'public');
-            $variant->images()->create([
-                'path' => $path,
-                'size' => $request->file('image')->getSize(),
-            ]);
-        }
-
-        if ($request->has('existingImageIds')) {
-            $existingIds = $request->input('existingImageIds');
-            $imagesToDelete = $variant->images()->whereNotIn('id', $existingIds)->get();
-
-            foreach ($imagesToDelete as $image) {
-                Storage::disk('public')->delete($image->path);
-                $image->delete();
-            }
-        } else {
-            if ($request->exists('existingImageIds')) {
-                $imagesToDelete = $variant->images()->get();
-                foreach ($imagesToDelete as $image) {
-                    Storage::disk('public')->delete($image->path);
-                    $image->delete();
-                }
-            }
-        }
-
-        return redirect()->route('inventory.variants.index')->with('success', 'Variante actualizada correctamente');
+        return redirect()->route('inventory.variants.edit', $variant)->with('success', 'Variante actualizada correctamente');
     }
     /**
      * Display a listing of the resource.

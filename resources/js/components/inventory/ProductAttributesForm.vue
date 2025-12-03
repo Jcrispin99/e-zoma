@@ -15,7 +15,7 @@ const props = defineProps<{
     formBarcode: string;
 }>();
 
-const emit = defineEmits(['update:attributeLines', 'update:generatedVariants']);
+const emit = defineEmits(['update:attributeLines', 'update:generatedVariants', 'dirty', 'update:formSku', 'update:formBarcode', 'update:formPrice']);
 
 const attributeLines = ref<AttributeLine[]>([]);
 const generatedVariants = ref<FormVariant[]>([]);
@@ -181,24 +181,42 @@ const generateVariants = () => {
     emit('update:generatedVariants', generatedVariants.value);
 };
 
-watch(() => [props.formSku, props.formBarcode], ([newSku, newBarcode]) => {
+watch(() => [props.formSku, props.formBarcode, props.formPrice], ([newSku, newBarcode, newPrice]) => {
     if (generatedVariants.value.length > 0) {
-        if (generatedVariants.value[0].sku !== newSku) {
-            generatedVariants.value[0].sku = newSku;
+        let changed = false;
+        if (generatedVariants.value[0].sku !== String(newSku || '')) {
+            generatedVariants.value[0].sku = String(newSku || '');
+            changed = true;
         }
-        if (generatedVariants.value[0].barcode !== newBarcode) {
-            generatedVariants.value[0].barcode = newBarcode;
+        if (generatedVariants.value[0].barcode !== String(newBarcode || '')) {
+            generatedVariants.value[0].barcode = String(newBarcode || '');
+            changed = true;
         }
-        emit('update:generatedVariants', generatedVariants.value);
+        if (generatedVariants.value[0].price != newPrice) {
+            generatedVariants.value[0].price = newPrice;
+            changed = true;
+        }
+        if (changed) {
+            emit('update:generatedVariants', generatedVariants.value);
+        }
     }
+}, { immediate: true });
+
+const handlePrincipalChange = (field: 'sku' | 'barcode' | 'price', value: string | number) => {
+    if (field === 'sku') emit('update:formSku', value);
+    if (field === 'barcode') emit('update:formBarcode', value);
+    if (field === 'price') emit('update:formPrice', value);
+
+    emit('update:generatedVariants', generatedVariants.value);
+};
+
+const isDirty = computed(() => {
+    return JSON.stringify(attributeLines.value) !== JSON.stringify(initialAttributeLines.value) ||
+        JSON.stringify(generatedVariants.value) !== JSON.stringify(initialGeneratedVariants.value);
 });
 
-watch(() => [generatedVariants.value[0]?.sku, generatedVariants.value[0]?.barcode], ([newSku, newBarcode]) => {
-    // This might cause loops if not careful, but the original component had this.
-    // We will leave this sync to the parent if possible, or emit specific events.
-    // For now, let's just rely on the parent passing updated props.
-    // Actually, if the user edits the variant table, we need to update the generatedVariants.
-    // The inputs in the loop below use v-model on generatedVariants.
+watch(isDirty, (newValue) => {
+    emit('dirty', newValue);
 });
 
 const reset = () => {
@@ -259,15 +277,18 @@ defineExpose({ reset });
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                         <div>
                             <Label class="text-xs text-gray-500 mb-1 block">Referencia interna</Label>
-                            <Input v-model="variant.sku" class="h-8 text-sm" />
+                            <Input v-model="variant.sku" class="h-8 text-sm"
+                                @update:modelValue="index === 0 ? handlePrincipalChange('sku', $event) : null" />
                         </div>
                         <div>
                             <Label class="text-xs text-gray-500 mb-1 block">Precio</Label>
-                            <Input v-model="variant.price" type="number" class="h-8 text-sm" />
+                            <Input v-model="variant.price" type="number" class="h-8 text-sm"
+                                @update:modelValue="index === 0 ? handlePrincipalChange('price', $event) : null" />
                         </div>
                         <div>
                             <Label class="text-xs text-gray-500 mb-1 block">Código de Barras</Label>
-                            <Input v-model="variant.barcode" class="h-8 text-sm" />
+                            <Input v-model="variant.barcode" class="h-8 text-sm"
+                                @update:modelValue="index === 0 ? handlePrincipalChange('barcode', $event) : null" />
                         </div>
                         <div>
                             <Label class="text-xs text-gray-500 mb-1 block">Stock</Label>

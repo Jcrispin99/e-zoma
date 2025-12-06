@@ -81,14 +81,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="flex flex-wrap justify-between items-center gap-4 px-4 sm:px-7 mt-2">
-        <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-start">
+    <div class="flex flex-col sm:flex-row sm:flex-wrap justify-between items-center gap-3 px-4 sm:px-7 mt-2">
+        <div class="flex items-center justify-between w-full sm:w-auto gap-4">
             <div class="flex items-center gap-4">
                 <Button @click="router.visit(newRoute)" class="-mr-2">
                     <Plus class="w-4 h-4 mr-2" />
                     {{ newLabel }}
                 </Button>
-                <h1 class="text-sm font-medium text-teal-600">
+                <h1 class="text-sm font-medium text-teal-600 truncate max-w-[150px] sm:max-w-none">
                     {{ title }}
                 </h1>
             </div>
@@ -123,31 +123,31 @@ onUnmounted(() => {
         </div>
 
         <div v-if="(selectedCount > 0 || isAllSelected) && viewMode === 'list'"
-            class="w-full sm:w-auto flex flex-wrap items-center gap-2 order-last sm:order-none">
+            class="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 order-last sm:order-none">
             <div
-                class="flex-1 sm:flex-none flex items-center gap-4 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 justify-between sm:justify-start">
-                <span class="text-teal-500 font-medium text-sm sm:text-base">{{ selectionMessage }}</span>
+                class="flex-1 flex items-center gap-2 sm:gap-4 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 justify-between">
+                <span class="text-teal-500 font-medium text-sm whitespace-nowrap">{{ selectionMessage }}</span>
 
                 <div class="flex items-center gap-2">
                     <button v-if="!isAllSelected && totalCount > selectedCount" @click="emit('select-all-total')"
-                        class="text-blue-500 bg-blue-200 py-1 px-2 rounded hover:text-blue-600 font-medium flex items-center text-xs sm:text-sm whitespace-nowrap">
-                        Todos los {{ totalCount }}
+                        class="text-blue-500 bg-blue-200 py-1 px-2 rounded hover:text-blue-600 font-medium flex items-center text-xs whitespace-nowrap">
+                        Todos ({{ totalCount }})
                     </button>
 
-                    <button @click="emit('clear-selection')" class="text-gray-400 hover:text-gray-600">
+                    <button @click="emit('clear-selection')" class="text-gray-400 hover:text-gray-600 p-1">
                         <X class="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
             <div class="relative" ref="actionsDropdownRef">
-                <Button variant="secondary" size="sm" @click="showActionsDropdown = !showActionsDropdown">
+                <Button variant="secondary" size="sm" @click="showActionsDropdown = !showActionsDropdown" class="w-full sm:w-auto justify-center">
                     <Settings class="w-4 h-4 mr-2" />
                     Acciones
                 </Button>
 
                 <div v-if="showActionsDropdown"
-                    class="absolute top-full right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
+                    class="absolute top-full right-0 sm:right-0 left-0 sm:left-auto mt-1 w-full sm:w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
                     <button @click="emit('generate-qr'); showActionsDropdown = false"
                         class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                         <QrCode class="w-4 h-4" />
@@ -162,7 +162,7 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+        <div class="flex items-center justify-center sm:justify-end gap-4 w-full sm:w-auto">
             <div class="flex items-center gap-3" v-if="pagination && pagination.total > 0">
                 <span class="text-sm text-gray-600 font-medium">
                     {{ pagination.from }}-{{ pagination.to }} / {{ pagination.total }}

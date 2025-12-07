@@ -111,7 +111,7 @@ const goToPage = (page: number) => {
                     <div class="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-4">
                         <div class="relative flex-1">
                             <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input v-model="searchQuery" type="text" placeholder="Buscar..."
+                            <input v-model="searchQuery" type="text" placeholder="Buscar"
                                 class="w-full pl-10 pr-4 py-1.5 text-sm border border-gray-300 rounded focus:ring-[0.5px] focus:ring-gray-500 focus:border-gray-500" />
                         </div>
 

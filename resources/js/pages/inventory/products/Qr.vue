@@ -7,11 +7,13 @@ import QrGenerator from '@/components/inventory/QrGenerator.vue';
 import Form from '@/components/ui/Form.vue';
 import Button from '@/components/ui/Button.vue';
 import { Printer } from 'lucide-vue-next';
+import type { Product, Variant } from '@/types/product';
+import type { QrStyle } from '@/types/qr';
 
 const props = defineProps<{
-    product: any;
-    variants: any[];
-    styles: any[];
+    product: Product;
+    variants: Variant[];
+    styles: QrStyle[];
 }>();
 
 const navigationItems = inventoryNavigation;

@@ -48,6 +48,7 @@ export interface Variant {
   attribute_values?: AttributeValue[];
   attributes?: Record<string, string>;
   name?: string;
+  product?: Product;
   created_at: string;
   updated_at: string;
 }

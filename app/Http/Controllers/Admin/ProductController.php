@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Image;
 use App\Models\QrStyle;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
@@ -17,7 +19,6 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
-
     public function index()
     {
         Gate::authorize('read_products', Product::class);
@@ -628,5 +629,55 @@ class ProductController extends Controller
     public function getCategoriesApi()
     {
         return Category::with('parent')->get();
+    }
+    public function kardexWeb(Request $request, Product $product)
+    {
+        Gate::authorize('read_products', $product);
+
+        $warehouses = Warehouse::all();
+        $warehouseId = $request->input('warehouse_id', $warehouses->first()->id ?? null);
+        $fechaInicial = $request->input('fecha_inicial');
+        $fechaFinal = $request->input('fecha_final');
+        $variantId = $request->input('variant_id');
+
+        $productVariantIds = $product->variants()->pluck('id');
+
+        $inventories = Inventory::with(['warehouse', 'variant.attributeValues', 'inventoryable'])
+            ->whereIn('variant_id', $productVariantIds)
+            ->when($variantId, function ($query) use ($variantId) {
+                $query->where('variant_id', $variantId);
+            })
+            ->when($warehouseId, function ($query) use ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId);
+            })
+            ->when($fechaInicial, function ($query) use ($fechaInicial) {
+                $query->whereDate('created_at', '>=', $fechaInicial);
+            })
+            ->when($fechaFinal, function ($query) use ($fechaFinal) {
+                $query->whereDate('created_at', '<=', $fechaFinal);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(20)
+            ->withQueryString();
+
+        return Inertia::render('inventory/products/Kardex', [
+            'product' => $product->load('variants.attributeValues'),
+            'warehouses' => $warehouses,
+            'inventories' => $inventories,
+            'variants' => $product->variants->map(function ($variant) {
+                $attributes = $variant->attributeValues->map(fn($av) => $av->value)->join(', ') ?: 'Sin atributos';
+                return [
+                    'id' => $variant->id,
+                    'name' => $attributes,
+                    'sku' => $variant->sku
+                ];
+            }),
+            'filters' => [
+                'warehouse_id' => $warehouseId,
+                'fecha_inicial' => $fechaInicial,
+                'fecha_final' => $fechaFinal,
+                'variant_id' => $variantId
+            ]
+        ]);
     }
 }

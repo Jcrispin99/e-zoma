@@ -5,7 +5,7 @@ import Form from '@/components/ui/Form.vue';
 import Input from '@/components/ui/Input.vue';
 import Label from '@/components/ui/Label.vue';
 import Button from '@/components/ui/Button.vue';
-import { CloudUpload, QrCode } from 'lucide-vue-next';
+import { CloudUpload, QrCode, ClipboardList } from 'lucide-vue-next';
 import ProductImageGallery from '@/components/inventory/ProductImageGallery.vue';
 import { useForm } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
@@ -125,12 +125,16 @@ const variantName = computed(() => {
     <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
         <Form title="Variantes" subtitle="Editar" :tabs="tabs" :loading="form.processing" @submit="handleSubmit"
             @cancel="handleCancel" :disabled="!isDirty" back-route="/finanzas/inventario/variantes">
-
             <template #header-actions>
                 <Button @click="router.visit(`/finanzas/inventario/variantes/${variant.id}/qr`)" variant="secondary"
                     title="Generar QR">
                     <QrCode class="w-4 h-4 mr-2" />
                     Generar QR
+                </Button>
+                <Button @click="router.visit(`/finanzas/inventario/variantes/${variant.id}/kardex`)" variant="secondary"
+                    title="Ver Kardex">
+                    <ClipboardList class="w-4 h-4 mr-2" />
+                    Kardex
                 </Button>
             </template>
 

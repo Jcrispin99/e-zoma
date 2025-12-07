@@ -4,14 +4,13 @@ import {
     LayoutGrid,
     List,
     X,
-    ChevronLeft,
-    ChevronRight,
     Settings,
     Trash2,
     Search,
     QrCode,
 } from 'lucide-vue-next';
 import Button from '@/components/ui/Button.vue';
+import Pagination from '@/components/ui/Pagination.vue';
 import { router } from '@inertiajs/vue3';
 import { watch } from 'vue';
 
@@ -34,6 +33,7 @@ interface Props {
     totalCount?: number;
     isAllSelected?: boolean;
     selectionMessage?: string;
+    showQr?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -42,6 +42,7 @@ const props = withDefaults(defineProps<Props>(), {
     totalCount: 0,
     isAllSelected: false,
     selectionMessage: '',
+    showQr: false,
 });
 
 const emit = defineEmits<{
@@ -93,17 +94,19 @@ onUnmounted(() => {
                 </h1>
             </div>
 
-            <div class="flex sm:hidden items-center bg-white rounded-lg border border-gray-200 p-1">
-                <button @click="emit('update:viewMode', 'grid')" class="p-1.5 rounded-md transition-colors" :class="viewMode === 'grid'
-                    ? 'bg-gray-100 text-gray-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                    ">
+            <div class="flex sm:hidden items-center bg-gray-100 rounded-lg p-1">
+                <button @click="emit('update:viewMode', 'grid')" class="p-1.5 rounded-md transition-all shadow-sm"
+                    :class="viewMode === 'grid'
+                        ? 'bg-white text-gray-900'
+                        : 'text-gray-500 hover:text-gray-900'
+                        ">
                     <LayoutGrid class="w-5 h-5" />
                 </button>
-                <button @click="emit('update:viewMode', 'list')" class="p-1.5 rounded-md transition-colors" :class="viewMode === 'list'
-                    ? 'bg-gray-100 text-gray-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                    ">
+                <button @click="emit('update:viewMode', 'list')" class="p-1.5 rounded-md transition-all shadow-sm"
+                    :class="viewMode === 'list'
+                        ? 'bg-white text-gray-900'
+                        : 'text-gray-500 hover:text-gray-900'
+                        ">
                     <List class="w-5 h-5" />
                 </button>
             </div>
@@ -114,23 +117,23 @@ onUnmounted(() => {
             <div class="relative">
                 <Search class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input :value="searchTerm" @input="emit('update:searchTerm', ($event.target as HTMLInputElement).value)"
-                    type="text" placeholder="Buscar..." :class="{
+                    type="text" placeholder="Buscar" :class="{
                         'text-gray-500': !searchTerm,
                         'text-gray-900': searchTerm,
                     }"
-                    class="w-full pl-10 pr-4 py-2 text-sm border-[0.5px] border-gray-300 rounded-lg shadow-sm focus:ring-[0.5px] focus:ring-teal-500 focus:border-teal-500" />
+                    class="w-full pl-10 pr-4 py-1.5 text-sm border-[0.5px] border-gray-300 rounded-lg shadow-sm focus:ring-[0.5px] focus:ring-teal-500 focus:border-teal-500" />
             </div>
         </div>
 
         <div v-if="(selectedCount > 0 || isAllSelected) && viewMode === 'list'"
             class="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 order-last sm:order-none">
             <div
-                class="flex-1 flex items-center gap-2 sm:gap-4 bg-blue-50 px-3 py-2 rounded-lg border border-blue-100 justify-between">
+                class="flex-1 flex items-center gap-2 sm:gap-4 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 justify-between">
                 <span class="text-teal-500 font-medium text-sm whitespace-nowrap">{{ selectionMessage }}</span>
 
                 <div class="flex items-center gap-2">
                     <button v-if="!isAllSelected && totalCount > selectedCount" @click="emit('select-all-total')"
-                        class="text-blue-500 bg-blue-200 py-1 px-2 rounded hover:text-blue-600 font-medium flex items-center text-xs whitespace-nowrap">
+                        class="text-blue-500 bg-blue-200 py-1 px-10 rounded hover:text-blue-600 font-medium flex items-center text-xs whitespace-nowrap">
                         Todos ({{ totalCount }})
                     </button>
 
@@ -141,14 +144,15 @@ onUnmounted(() => {
             </div>
 
             <div class="relative" ref="actionsDropdownRef">
-                <Button variant="secondary" size="sm" @click="showActionsDropdown = !showActionsDropdown" class="w-full sm:w-auto justify-center">
+                <Button variant="secondary" size="sm" @click="showActionsDropdown = !showActionsDropdown"
+                    class="w-full sm:w-auto justify-center">
                     <Settings class="w-4 h-4 mr-2" />
                     Acciones
                 </Button>
 
                 <div v-if="showActionsDropdown"
-                    class="absolute top-full right-0 sm:right-0 left-0 sm:left-auto mt-1 w-full sm:w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
-                    <button @click="emit('generate-qr'); showActionsDropdown = false"
+                    class="absolute top-full right-0 sm:right-0 left-0 sm:left-auto mt-2 w-full sm:w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50 py-1">
+                    <button v-if="showQr" @click="emit('generate-qr'); showActionsDropdown = false"
                         class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                         <QrCode class="w-4 h-4" />
                         Generar QR
@@ -163,38 +167,21 @@ onUnmounted(() => {
         </div>
 
         <div class="flex items-center justify-center sm:justify-end gap-4 w-full sm:w-auto">
-            <div class="flex items-center gap-3" v-if="pagination && pagination.total > 0">
-                <span class="text-sm text-gray-600 font-medium">
-                    {{ pagination.from }}-{{ pagination.to }} / {{ pagination.total }}
-                </span>
-                <div class="flex items-center bg-white rounded-lg border border-gray-200 p-1">
-                    <button :disabled="!pagination.prev_page_url"
-                        @click="pagination.prev_page_url && router.visit(pagination.prev_page_url, { preserveState: true })"
-                        class="p-1.5 rounded-md transition-colors disabled:opacity-50"
-                        :class="!pagination.prev_page_url ? 'text-gray-300' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'">
-                        <ChevronLeft class="w-5 h-5" />
-                    </button>
-                    <div class="w-[1px] h-4 bg-gray-200 mx-0.5"></div>
-                    <button :disabled="!pagination.next_page_url"
-                        @click="pagination.next_page_url && router.visit(pagination.next_page_url, { preserveState: true })"
-                        class="p-1.5 rounded-md transition-colors disabled:opacity-50"
-                        :class="!pagination.next_page_url ? 'text-gray-300' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'">
-                        <ChevronRight class="w-5 h-5" />
-                    </button>
-                </div>
-            </div>
+            <Pagination v-if="pagination" :pagination="pagination" />
 
-            <div class="hidden sm:flex items-center bg-white rounded-lg border border-gray-200 p-1">
-                <button @click="emit('update:viewMode', 'grid')" class="p-1.5 rounded-md transition-colors" :class="viewMode === 'grid'
-                    ? 'bg-gray-100 text-gray-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                    ">
+            <div class="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
+                <button @click="emit('update:viewMode', 'grid')" class="p-1.5 rounded-md transition-all shadow-sm"
+                    :class="viewMode === 'grid'
+                        ? 'bg-white text-gray-900'
+                        : 'text-gray-500 hover:text-gray-900'
+                        ">
                     <LayoutGrid class="w-5 h-5" />
                 </button>
-                <button @click="emit('update:viewMode', 'list')" class="p-1.5 rounded-md transition-colors" :class="viewMode === 'list'
-                    ? 'bg-gray-100 text-gray-700'
-                    : 'text-gray-500 hover:text-gray-700'
-                    ">
+                <button @click="emit('update:viewMode', 'list')" class="p-1.5 rounded-md transition-all shadow-sm"
+                    :class="viewMode === 'list'
+                        ? 'bg-white text-gray-900'
+                        : 'text-gray-500 hover:text-gray-900'
+                        ">
                     <List class="w-5 h-5" />
                 </button>
             </div>

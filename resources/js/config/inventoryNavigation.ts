@@ -15,7 +15,7 @@ export const inventoryNavigation: NavigationItem[] = [
     sections: [
       {
         title: 'Gestión del almacén',
-        items: [{ label: 'Almacenes', href: '#' }],
+        items: [{ label: 'Almacenes', href: '/finanzas/inventario/almacenes' }],
       },
       {
         title: 'Productos',

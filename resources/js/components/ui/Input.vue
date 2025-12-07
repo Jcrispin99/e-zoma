@@ -21,7 +21,7 @@ const searchQuery = ref('');
 const containerRef = ref<HTMLElement | null>(null);
 
 const initializeSearchQuery = () => {
-    if (props.options && props.modelValue) {
+    if (props.options && (props.modelValue || props.modelValue === 0 || props.modelValue === '')) {
         const selectedOption = props.options.find(
             (opt) => opt.value === props.modelValue
         );
@@ -30,7 +30,7 @@ const initializeSearchQuery = () => {
         } else if (props.allowCustom) {
             searchQuery.value = String(props.modelValue);
         }
-    } else if (props.modelValue) {
+    } else if (props.modelValue || props.modelValue === 0) {
         searchQuery.value = String(props.modelValue);
     }
 };

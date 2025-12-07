@@ -245,10 +245,40 @@ class VariantController extends Controller
         ]);
     }
 
-    public function kardex(Variant $variant)
+    public function kardexWeb(Request $request, Variant $variant)
     {
         Gate::authorize('read_variants_kardex', $variant);
-        return view('admin.variants.kardex', compact('variant'));
+
+        $warehouses = \App\Models\Warehouse::all();
+        $warehouseId = $request->input('warehouse_id', $warehouses->first()->id ?? null);
+        $fechaInicial = $request->input('fecha_inicial');
+        $fechaFinal = $request->input('fecha_final');
+
+        $inventories = \App\Models\Inventory::with(['warehouse', 'inventoryable'])
+            ->where('variant_id', $variant->id)
+            ->when($warehouseId, function ($query) use ($warehouseId) {
+                $query->where('warehouse_id', $warehouseId);
+            })
+            ->when($fechaInicial, function ($query) use ($fechaInicial) {
+                $query->whereDate('created_at', '>=', $fechaInicial);
+            })
+            ->when($fechaFinal, function ($query) use ($fechaFinal) {
+                $query->whereDate('created_at', '<=', $fechaFinal);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(20)
+            ->withQueryString();
+
+        return Inertia::render('inventory/variants/Kardex', [
+            'variant' => $variant->load('product', 'attributeValues'),
+            'warehouses' => $warehouses,
+            'inventories' => $inventories,
+            'filters' => [
+                'warehouse_id' => $warehouseId,
+                'fecha_inicial' => $fechaInicial,
+                'fecha_final' => $fechaFinal,
+            ]
+        ]);
     }
 
     public function qrWeb(Variant $variant)

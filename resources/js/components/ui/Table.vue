@@ -16,6 +16,7 @@ interface Props {
   modelValue?: any[];
   globalSelect?: boolean;
   rowKey?: string;
+  clickable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -24,6 +25,7 @@ const props = withDefaults(defineProps<Props>(), {
   modelValue: () => [],
   globalSelect: false,
   rowKey: 'id',
+  clickable: true,
 });
 
 const emit = defineEmits<{
@@ -93,7 +95,9 @@ const toggleSelection = (item: any) => {
 };
 
 const handleRowClick = (item: any) => {
-  emit('row-click', item);
+  if (props.clickable) {
+    emit('row-click', item);
+  }
 };
 </script>
 
@@ -114,8 +118,8 @@ const handleRowClick = (item: any) => {
         </tr>
       </thead>
       <tbody class="divide-y">
-        <tr v-for="(item, index) in items" :key="index" class="hover:bg-gray-100 transition-colors cursor-pointer"
-          @click="handleRowClick(item)">
+        <tr v-for="(item, index) in items" :key="index" class="hover:bg-gray-100 transition-colors"
+          :class="{ 'cursor-pointer': clickable }" @click="handleRowClick(item)">
           <td v-if="selectable" class="px-6 py-4 whitespace-nowrap w-10" @click.stop>
             <Checkbox :checked="isSelected(item)" @change="toggleSelection(item)" />
           </td>

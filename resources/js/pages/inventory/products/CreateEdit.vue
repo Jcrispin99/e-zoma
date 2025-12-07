@@ -5,7 +5,7 @@ import Form from '@/components/ui/Form.vue';
 import Input from '@/components/ui/Input.vue';
 import Label from '@/components/ui/Label.vue';
 import Button from '@/components/ui/Button.vue';
-import { CloudUpload, QrCode } from 'lucide-vue-next';
+import { CloudUpload, QrCode, ClipboardList } from 'lucide-vue-next';
 import GeneralInfoForm from '@/components/inventory/GeneralInfoForm.vue';
 import ProductImageGallery from '@/components/inventory/ProductImageGallery.vue';
 import ProductAttributesForm from '@/components/inventory/ProductAttributesForm.vue';
@@ -156,11 +156,18 @@ const isDirty = computed(() => {
             @submit="handleSubmit" @cancel="handleCancel" :disabled="!isDirty">
 
             <template #header-actions>
-                <Button v-if="isEditing" @click="router.visit(`/finanzas/inventario/productos/${product?.id}/qr`)"
-                    variant="secondary" title="Generar QR">
-                    <QrCode class="w-4 h-4 mr-2" />
-                    Generar QR
-                </Button>
+                <div v-if="isEditing" class="flex gap-2">
+                    <Button @click="router.visit(`/finanzas/inventario/productos/${product?.id}/qr`)"
+                        variant="secondary" title="Generar QR">
+                        <QrCode class="w-4 h-4 mr-2" />
+                        Generar QR
+                    </Button>
+                    <Button @click="router.visit(`/finanzas/inventario/productos/${product?.id}/kardex`)"
+                        variant="secondary" title="Ver Kardex">
+                        <ClipboardList class="w-4 h-4 mr-2" />
+                        Kardex
+                    </Button>
+                </div>
             </template>
 
             <template #top-left>

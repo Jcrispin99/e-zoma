@@ -108,8 +108,6 @@ const selectionMessage = computed(() => {
     return `${count} ${count === 1 ? 'seleccionado' : 'seleccionados'}`;
 });
 
-
-
 const deleteSelected = () => {
     showDeleteModal.value = true;
 };
@@ -159,9 +157,10 @@ const handleGenerateQr = () => {
                 v-model:search-term="searchTerm" v-model:view-mode="viewMode" :pagination="products"
                 :selected-count="selectedProducts.length" :total-count="totalItems" :is-all-selected="isAllSelected"
                 :selection-message="selectionMessage" @select-all-total="selectAllTotal"
-                @clear-selection="clearSelection" @delete-selected="deleteSelected" @generate-qr="handleGenerateQr" />
+                @clear-selection="clearSelection" @delete-selected="deleteSelected" @generate-qr="handleGenerateQr"
+                :show-qr="true" />
 
-            <div v-if="viewMode === 'list'" class="bg-white rounded-lg overflow-hidden">
+            <div v-if="viewMode === 'list'" class="bg-white overflow-hidden">
                 <div class="bg-gray-300 h-[0.5px]"></div>
 
                 <Table :headers="headers" :items="products.data" selectable v-model="selectedProducts"

@@ -12,7 +12,7 @@ export const inventoryNavigation: NavigationItem[] = [
       { label: 'Variantes', href: '/finanzas/inventario/variantes' },
     ],
   },
-  { label: 'Reportes', href: '#' },
+  { label: 'Reportes', href: '/finanzas/inventario/reportes' },
   {
     label: 'Configuración',
     sections: [

@@ -39,6 +39,7 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn() => $request->session()->get('error'),
                 'warning' => fn() => $request->session()->get('warning'),
                 'swalt' => fn() => $request->session()->get('swalt'),
+                'download_url' => fn() => $request->session()->get('download_url'),
             ],
         ];
     }

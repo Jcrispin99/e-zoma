@@ -8,6 +8,7 @@ import {
     Trash2,
     Search,
     QrCode,
+    Download,
 } from 'lucide-vue-next';
 import Button from '@/components/ui/Button.vue';
 import Pagination from '@/components/ui/Pagination.vue';
@@ -24,7 +25,9 @@ interface PaginationData {
 
 interface Props {
     title: string;
-    newRoute: string;
+    parentTitle?: string;
+    parentRoute?: string;
+    newRoute?: string;
     newLabel?: string;
     searchTerm: string;
     viewMode: 'grid' | 'list';
@@ -34,6 +37,8 @@ interface Props {
     isAllSelected?: boolean;
     selectionMessage?: string;
     showQr?: boolean;
+    showExport?: boolean;
+    showDelete?: boolean;
     hideViewToggle?: boolean;
 }
 
@@ -44,6 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
     isAllSelected: false,
     selectionMessage: '',
     showQr: false,
+    showDelete: true,
     hideViewToggle: false,
 });
 
@@ -54,6 +60,7 @@ const emit = defineEmits<{
     (e: 'clear-selection'): void;
     (e: 'delete-selected'): void;
     (e: 'generate-qr'): void;
+    (e: 'export-selected'): void;
 }>();
 
 import { ref, onMounted, onUnmounted } from 'vue';
@@ -87,13 +94,18 @@ onUnmounted(() => {
     <div class="flex flex-col sm:flex-row sm:flex-wrap justify-between items-center gap-3 px-4 sm:px-7 mt-2">
         <div class="flex items-center justify-between w-full sm:w-auto gap-4">
             <div class="flex items-center gap-4">
-                <Button @click="router.visit(newRoute)" class="-mr-2">
+                <Button v-if="newRoute" @click="router.visit(newRoute)" class="-mr-2">
                     <Plus class="w-4 h-4 mr-2" />
                     {{ newLabel }}
                 </Button>
-                <h1 class="text-sm font-medium text-teal-600 truncate max-w-[150px] sm:max-w-none">
-                    {{ title }}
-                </h1>
+                <div class="flex items-center text-sm font-medium text-teal-600 truncate max-w-[150px] sm:max-w-none">
+                    <span v-if="parentTitle && parentRoute" @click="router.visit(parentRoute)"
+                        class="cursor-pointer hover:underline">
+                        {{ parentTitle }}
+                    </span>
+                    <span v-if="parentTitle && parentRoute" class="mx-1 opacity-50">/</span>
+                    <span>{{ title }}</span>
+                </div>
             </div>
 
             <div v-if="!hideViewToggle" class="flex sm:hidden items-center bg-gray-100 rounded-lg p-1">
@@ -145,7 +157,7 @@ onUnmounted(() => {
                 </div>
             </div>
 
-            <div class="relative" ref="actionsDropdownRef">
+            <div class="relative z-30" ref="actionsDropdownRef">
                 <Button variant="secondary" size="sm" @click="showActionsDropdown = !showActionsDropdown"
                     class="w-full sm:w-auto justify-center">
                     <Settings class="w-4 h-4 mr-2" />
@@ -159,7 +171,12 @@ onUnmounted(() => {
                         <QrCode class="w-4 h-4" />
                         Generar QR
                     </button>
-                    <button @click="emit('delete-selected'); showActionsDropdown = false"
+                    <button v-if="showExport" @click="emit('export-selected'); showActionsDropdown = false"
+                        class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                        <Download class="w-4 h-4" />
+                        Exportar
+                    </button>
+                    <button v-if="showDelete" @click="emit('delete-selected'); showActionsDropdown = false"
                         class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                         <Trash2 class="w-4 h-4" />
                         Eliminar
@@ -168,7 +185,8 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="flex items-center justify-center sm:justify-end gap-4 w-full sm:w-auto">
+        <div class="flex flex-wrap items-center justify-center sm:justify-end gap-4 w-full sm:w-auto">
+            <slot name="toolbar-end" />
             <Pagination v-if="pagination" :pagination="pagination" />
 
             <div v-if="!hideViewToggle" class="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">

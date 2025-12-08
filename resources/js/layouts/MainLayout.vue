@@ -14,7 +14,7 @@ import { Toaster } from 'vue-sonner';
             </template>
         </Topbar>
 
-        <main class="pt-10 pb-12 max-w-9xl mx-auto">
+        <main class="pt-10 max-w-9xl mx-auto">
             <slot />
         </main>
 

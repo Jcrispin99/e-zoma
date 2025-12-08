@@ -125,7 +125,7 @@ const isDirty = computed(() => form.isDirty);
                                 </td>
                             </tr>
                             <tr v-if="form.values.length === 0">
-                                <td colspan="2" class="px-6 py-10 text-center text-gray-500 text-sm">
+                                <td colspan="2" class="px-6 pt-10 text-center text-gray-500 text-sm">
                                     No hay valores definidos. Añade uno abajo.
                                 </td>
                             </tr>

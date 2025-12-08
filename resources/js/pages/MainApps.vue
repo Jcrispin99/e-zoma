@@ -2,7 +2,6 @@
 import { ref, watch } from 'vue';
 import MenuCard from '@/components/ui/MenuCard.vue';
 import draggable from 'vuedraggable';
-
 import posIcon from '@/assets/images/iconos-modulos/pos-koodi.png';
 import inventarioIcon from '@/assets/images/iconos-modulos/inventario-koodi.png';
 import ventasIcon from '@/assets/images/iconos-modulos/ventas-koodi.png';

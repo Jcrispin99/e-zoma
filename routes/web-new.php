@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\InventoryController;
+use App\Http\Controllers\Admin\ReportController;
 
 Route::get('/web', function () {
     return Inertia::render('MainApps');
@@ -15,6 +16,15 @@ Route::get('/web', function () {
 
 // INVENTARIO
 Route::get('/finanzas/inventario', [InventoryController::class, 'dashboard'])->name('inventory.index');
+
+// REPORTES
+Route::get('/finanzas/inventario/reportes', [ReportController::class, 'index'])->name('inventory.reports.index');
+Route::get('/finanzas/inventario/reportes/bajo-stock', [ReportController::class, 'lowStock'])->name('inventory.reports.low_stock');
+Route::post('/finanzas/inventario/reportes/bajo-stock/export', [ReportController::class, 'exportLowStock'])->name('inventory.reports.low_stock.export');
+Route::get('/finanzas/inventario/reportes/valorizacion', [ReportController::class, 'valuation'])->name('inventory.reports.valuation');
+Route::post('/finanzas/inventario/reportes/valorizacion/export', [ReportController::class, 'exportValuation'])->name('inventory.reports.valuation.export');
+Route::get('/finanzas/inventario/reportes/transacciones', [ReportController::class, 'kardex'])->name('inventory.reports.kardex');
+Route::post('/finanzas/inventario/reportes/transacciones/export', [ReportController::class, 'exportKardex'])->name('inventory.reports.kardex.export');
 
 // PRODUCTOS
 Route::get('/finanzas/inventario/productos', [ProductController::class, 'indexWeb'])->name('inventory.products.index');

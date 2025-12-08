@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import ModuleLayout from '@/components/layouts/ModuleLayout.vue';
-import inventarioIcon from '@/assets/images/iconos-modulos/inventario-koodi.png';
 import Table from '@/components/ui/Table.vue';
 import CardData from '@/components/ui/CardData.vue';
 import DataToolbar from '@/components/ui/DataToolbar.vue';
@@ -8,7 +7,7 @@ import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
 import { ref, computed, onMounted, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import { useNotification } from '@/hooks/useNotification';
-import { inventoryNavigation } from '@/config/inventoryNavigation';
+import { inventoryNavigation, inventoryIcon } from '@/config/inventoryNavigation';
 
 const props = defineProps<{
     variants: any;
@@ -151,7 +150,7 @@ const handleGenerateQr = () => {
 </script>
 
 <template>
-    <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
+    <ModuleLayout title="Inventario" :icon="inventoryIcon" :navigation-items="navigationItems">
         <div class="space-y-6">
             <DataToolbar title="Variantes" new-route="/finanzas/inventario/productos/crear" new-label="Nuevo"
                 v-model:search-term="searchTerm" v-model:view-mode="viewMode" :pagination="variants"

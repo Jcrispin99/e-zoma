@@ -7,10 +7,10 @@ use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Attribute;
+use App\Models\Warehouse;
 use App\Models\AttributeValue;
 use App\Models\Image;
 use App\Models\QrStyle;
-use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
@@ -24,11 +24,6 @@ class ProductController extends Controller
         Gate::authorize('read_products', Product::class);
         $products = Product::query()->paginate(10);
         return view('admin.products.index', compact('products'));
-    }
-
-    public function inventoryDashboard()
-    {
-        return Inertia::render('inventory/Index');
     }
 
     public function indexWeb(Request $request)

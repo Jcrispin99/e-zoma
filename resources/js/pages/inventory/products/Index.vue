@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import ModuleLayout from '@/components/layouts/ModuleLayout.vue';
-import inventarioIcon from '@/assets/images/iconos-modulos/inventario-koodi.png';
 import Table from '@/components/ui/Table.vue';
 import CardData from '@/components/ui/CardData.vue';
 import DataToolbar from '@/components/ui/DataToolbar.vue';
@@ -12,7 +11,7 @@ import { router } from '@inertiajs/vue3';
 import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
 import { useNotification } from '@/hooks/useNotification';
 import type { ProductsData, Product } from '@/types/product';
-import { inventoryNavigation } from '@/config/inventoryNavigation';
+import { inventoryNavigation, inventoryIcon } from '@/config/inventoryNavigation';
 
 const props = defineProps<{
     products: ProductsData;
@@ -151,7 +150,7 @@ const handleGenerateQr = () => {
 </script>
 
 <template>
-    <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
+    <ModuleLayout title="Inventario" :icon="inventoryIcon" :navigation-items="navigationItems">
         <div class="space-y-6">
             <DataToolbar title="Productos" new-route="/finanzas/inventario/productos/crear"
                 v-model:search-term="searchTerm" v-model:view-mode="viewMode" :pagination="products"
@@ -185,7 +184,7 @@ const handleGenerateQr = () => {
                     <template #cell-category="{ item }">
                         <span class="text-gray-600">{{
                             item.category?.name || 'Sin categoría'
-                        }}</span>
+                            }}</span>
                     </template>
 
                     <template #cell-stock="{ item }">

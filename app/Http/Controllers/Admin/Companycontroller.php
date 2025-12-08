@@ -155,7 +155,6 @@ class Companycontroller extends Controller
             'name' => 'required|string|max:255',
             'trade_name' => 'nullable|string|max:255',
             'identity_id' => 'required|exists:identities,id',
-            'document_number' => 'required|string|max:255|unique:companies,document_number,' . $company->id,
             'document_number' => [
                 'required',
                 'string',
@@ -198,8 +197,6 @@ class Companycontroller extends Controller
             'icon' => 'success',
             'title' => '¡Bien hecho!',
             'text' => 'Compañía ' . $data['name'] . ' ha sido actualizada exitosamente',
-            'title' => '¡Actualizado!',
-            'text' => 'La compañía ' . $company->name . ' ha sido actualizada exitosamente.',
         ]);
 
         return redirect()->route('admin.companies.index');

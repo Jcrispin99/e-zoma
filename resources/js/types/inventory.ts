@@ -39,3 +39,22 @@ export interface PaginatedInventory {
   path?: string;
   per_page?: number;
 }
+
+export interface DashboardStats {
+  products_count: number;
+  variants_count: number;
+  warehouses_count: number;
+  categories_count: number;
+  attributes_count: number;
+  total_stock: number;
+}
+
+export interface CategoryDistribution {
+  name: string;
+  value: number;
+}
+
+export interface WarehouseStockDistribution {
+  name: string;
+  total_stock: number;
+}

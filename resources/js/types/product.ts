@@ -22,6 +22,7 @@ export interface Attribute {
   id: number;
   name: string;
   attribute_values?: AttributeValue[];
+  attribute_values_count?: number;
   created_at: string;
   updated_at: string;
 }

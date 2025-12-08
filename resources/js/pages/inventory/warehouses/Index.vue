@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import ModuleLayout from '@/components/layouts/ModuleLayout.vue';
 import DataToolbar from '@/components/ui/DataToolbar.vue';
 import Table from '@/components/ui/Table.vue';
 import CardData from '@/components/ui/CardData.vue';
 import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
-import inventarioIcon from '@/assets/images/iconos-modulos/inventario-koodi.png';
-import { inventoryNavigation } from '@/config/inventoryNavigation';
+import { inventoryNavigation, inventoryIcon } from '@/config/inventoryNavigation';
 import { useNotification } from '@/hooks/useNotification';
 import type { Warehouse } from '@/types/warehouse';
 
@@ -37,13 +36,6 @@ const headers = [
     { key: 'name', label: 'Nombre' },
     { key: 'location', label: 'Ubicación' },
 ];
-
-onMounted(() => {
-    const savedViewMode = localStorage.getItem('inventoryViewMode');
-    if (savedViewMode === 'list' || savedViewMode === 'grid') {
-        viewMode.value = savedViewMode;
-    }
-});
 
 watch(viewMode, (newValue) => {
     localStorage.setItem('inventoryViewMode', newValue);
@@ -133,13 +125,14 @@ const paginationData = computed(() => ({
 </script>
 
 <template>
-    <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
+    <ModuleLayout title="Inventario" :icon="inventoryIcon" :navigation-items="navigationItems">
         <div class="space-y-6">
             <DataToolbar title="Almacenes" new-route="/finanzas/inventario/almacenes/crear"
                 v-model:searchTerm="searchTerm" v-model:view-mode="viewMode" :pagination="paginationData"
                 :selected-count="selectedWarehouses.length" :total-count="totalItems" :is-all-selected="isAllSelected"
                 :selection-message="selectionMessage" @select-all-total="selectAllTotal"
-                @clear-selection="clearSelection" @delete-selected="deleteSelected" @click-new="handleCreate" />
+                @clear-selection="clearSelection" @delete-selected="deleteSelected" @click-new="handleCreate"
+                hide-view-toggle />
 
             <div v-if="viewMode === 'list'" class="bg-white overflow-hidden">
                 <div class="bg-gray-300 h-[0.5px]"></div>

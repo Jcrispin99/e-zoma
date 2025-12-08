@@ -72,7 +72,7 @@ class WarehouseController extends Controller
                 ->orWhere('location', 'like', "%{$search}%");
         }
 
-        $warehouses = $query->paginate(10);
+        $warehouses = $query->paginate(80);
 
         return Inertia::render('inventory/warehouses/Index', compact('warehouses'));
     }

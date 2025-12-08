@@ -1,4 +1,7 @@
 import { NavigationItem } from '@/components/layouts/ModuleLayout.vue';
+import inventarioIconRaw from '@/assets/images/iconos-modulos/inventario-koodi.png';
+
+export const inventoryIcon = inventarioIconRaw;
 
 export const inventoryNavigation: NavigationItem[] = [
   { label: 'Información general', href: '/finanzas/inventario' },
@@ -21,7 +24,7 @@ export const inventoryNavigation: NavigationItem[] = [
         title: 'Productos',
         items: [
           { label: 'Categorías', href: '/finanzas/inventario/categorias' },
-          { label: 'Atributos', href: '#' },
+          { label: 'Atributos', href: '/finanzas/inventario/atributos' },
         ],
       },
     ],

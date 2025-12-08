@@ -67,16 +67,16 @@ onUnmounted(() => {
   <MainLayout>
     <template #brand>
       <Link :href="backUrl || '/web'" class="flex items-center gap-2 group">
-      <div class="relative w-10 h-10 flex items-center justify-center">
-        <img :src="icon" :alt="title"
-          class="w-10 h-10 object-contain absolute transition-all duration-300 ease-in-out group-hover:opacity-0 group-hover:-translate-x-4" />
-        <ChevronLeft
-          class="w-8 h-8 text-white absolute transition-all duration-300 ease-in-out opacity-0 translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 group-hover:-ml-2" />
-      </div>
-      <span
-        class="text-white font-bold text-lg transition-transform duration-300 ease-in-out group-hover:-translate-x-2">
-        {{ title }}
-      </span>
+        <div class="relative w-10 h-10 flex items-center justify-center">
+          <img :src="icon" :alt="title"
+            class="w-10 h-10 object-contain absolute transition-all duration-300 ease-in-out group-hover:opacity-0 group-hover:-translate-x-4" />
+          <ChevronLeft
+            class="w-8 h-8 text-white absolute transition-all duration-300 ease-in-out opacity-0 translate-x-3 group-hover:opacity-100 group-hover:translate-x-0 group-hover:-ml-2" />
+        </div>
+        <span
+          class="text-white font-bold text-lg transition-transform duration-300 ease-in-out group-hover:-translate-x-2">
+          {{ title }}
+        </span>
       </Link>
     </template>
 
@@ -86,7 +86,7 @@ onUnmounted(() => {
         <template v-for="item in navigationItems" :key="item.label">
           <Link v-if="!item.items && !item.sections" :href="item.href || '#'"
             class="text-gray-300 hover:text-white text-sm font-medium transition-colors">
-          {{ item.label }}
+            {{ item.label }}
           </Link>
 
           <div v-else class="relative w-full md:w-auto" :ref="(el) => setDropdownRef(el, item.label)">
@@ -104,7 +104,7 @@ onUnmounted(() => {
                 <template v-if="item.items">
                   <Link v-for="subItem in item.items" :key="subItem.label" :href="subItem.href"
                     class="block px-4 py-2 text-sm text-gray-300 md:text-gray-700 hover:bg-white/10 md:hover:bg-gray-100">
-                  {{ subItem.label }}
+                    {{ subItem.label }}
                   </Link>
                 </template>
 
@@ -119,7 +119,7 @@ onUnmounted(() => {
 
                     <Link v-for="subItem in section.items" :key="subItem.label" :href="subItem.href"
                       class="block px-4 py-2 text-sm text-gray-300 md:text-gray-700 hover:bg-white/10 md:hover:bg-gray-100">
-                    {{ subItem.label }}
+                      {{ subItem.label }}
                     </Link>
                   </template>
                 </template>

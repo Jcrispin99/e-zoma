@@ -34,6 +34,7 @@ interface Props {
     isAllSelected?: boolean;
     selectionMessage?: string;
     showQr?: boolean;
+    hideViewToggle?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -43,6 +44,7 @@ const props = withDefaults(defineProps<Props>(), {
     isAllSelected: false,
     selectionMessage: '',
     showQr: false,
+    hideViewToggle: false,
 });
 
 const emit = defineEmits<{
@@ -94,7 +96,7 @@ onUnmounted(() => {
                 </h1>
             </div>
 
-            <div class="flex sm:hidden items-center bg-gray-100 rounded-lg p-1">
+            <div v-if="!hideViewToggle" class="flex sm:hidden items-center bg-gray-100 rounded-lg p-1">
                 <button @click="emit('update:viewMode', 'grid')" class="p-1.5 rounded-md transition-all shadow-sm"
                     :class="viewMode === 'grid'
                         ? 'bg-white text-gray-900'
@@ -169,7 +171,7 @@ onUnmounted(() => {
         <div class="flex items-center justify-center sm:justify-end gap-4 w-full sm:w-auto">
             <Pagination v-if="pagination" :pagination="pagination" />
 
-            <div class="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
+            <div v-if="!hideViewToggle" class="hidden sm:flex items-center bg-gray-100 rounded-lg p-1">
                 <button @click="emit('update:viewMode', 'grid')" class="p-1.5 rounded-md transition-all shadow-sm"
                     :class="viewMode === 'grid'
                         ? 'bg-white text-gray-900'

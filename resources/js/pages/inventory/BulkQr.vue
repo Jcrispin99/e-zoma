@@ -35,10 +35,11 @@ const breadcrumbs = computed(() => {
 });
 
 const pageTitle = computed(() => props.context === 'products' ? 'Productos' : 'Variantes');
+const icon = inventarioIcon;
 </script>
 
 <template>
-    <ModuleLayout :title="pageTitle" :icon="inventarioIcon" :navigation-items="navigationItems">
+    <ModuleLayout :title="pageTitle" :icon="icon" :navigation-items="navigationItems">
         <Form title="Generar QR Masivo" :breadcrumbs="breadcrumbs" :hide-default-actions="true">
             <template #actions>
                 <Button @click="handlePrint">

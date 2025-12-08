@@ -6,15 +6,17 @@ use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\VariantController;
 use App\Http\Controllers\Admin\WarehouseController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\AttributeController;
+use App\Http\Controllers\Admin\InventoryController;
 
 Route::get('/web', function () {
     return Inertia::render('MainApps');
 })->name('web');
 
 // INVENTARIO
+Route::get('/finanzas/inventario', [InventoryController::class, 'dashboard'])->name('inventory.index');
 
 // PRODUCTOS
-Route::get('/finanzas/inventario', [ProductController::class, 'inventoryDashboard'])->name('inventory.index');
 Route::get('/finanzas/inventario/productos', [ProductController::class, 'indexWeb'])->name('inventory.products.index');
 Route::get('/finanzas/inventario/productos/crear', [ProductController::class, 'createWeb'])->name('inventory.products.create');
 Route::get('/finanzas/inventario/productos/{product}/editar', [ProductController::class, 'editWeb'])->name('inventory.products.edit');
@@ -43,6 +45,16 @@ Route::post('/finanzas/inventario/categorias', [CategoryController::class, 'stor
 Route::put('/finanzas/inventario/categorias/{category}', [CategoryController::class, 'updateWeb'])->name('inventory.categories.update');
 Route::post('/finanzas/inventario/categorias/mass-destroy', [CategoryController::class, 'massDestroyWeb'])->name('inventory.categories.mass_destroy');
 Route::delete('/finanzas/inventario/categorias/{category}', [CategoryController::class, 'destroyWeb'])->name('inventory.categories.destroy');
+
+// ATRIBUTOS
+Route::get('/finanzas/inventario/atributos', [AttributeController::class, 'indexWeb'])->name('inventory.attributes.index');
+Route::get('/finanzas/inventario/atributos/crear', [AttributeController::class, 'createWeb'])->name('inventory.attributes.create');
+Route::get('/finanzas/inventario/atributos/{attribute}/editar', [AttributeController::class, 'editWeb'])->name('inventory.attributes.edit');
+Route::post('/finanzas/inventario/atributos', [AttributeController::class, 'storeWeb'])->name('inventory.attributes.store');
+Route::put('/finanzas/inventario/atributos/{attribute}', [AttributeController::class, 'updateWeb'])->name('inventory.attributes.update');
+Route::post('/finanzas/inventario/atributos/mass-destroy', [AttributeController::class, 'massDestroyWeb'])->name('inventory.attributes.mass_destroy');
+Route::delete('/finanzas/inventario/atributos/{attribute}', [AttributeController::class, 'destroyWeb'])->name('inventory.attributes.destroy');
+
 
 // ALMACENES
 Route::get('/finanzas/inventario/almacenes', [WarehouseController::class, 'indexWeb'])->name('inventory.warehouses.index');

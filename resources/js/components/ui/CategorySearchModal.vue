@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { X, Search } from 'lucide-vue-next';
+import { X, Search, Loader2 } from 'lucide-vue-next';
 import Button from './Button.vue';
 import type { Category } from '@/types/product';
 
@@ -118,7 +118,7 @@ const goToPage = (page: number) => {
                         <div class="flex items-center gap-2">
                             <div class="text-sm text-gray-600">
                                 {{ (currentPage - 1) * perPage + 1 }}-{{ Math.min(currentPage * perPage,
-                                filteredCategories.length) }} / {{ filteredCategories.length }}
+                                    filteredCategories.length) }} / {{ filteredCategories.length }}
                             </div>
                             <div class="flex gap-1">
                                 <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
@@ -142,8 +142,10 @@ const goToPage = (page: number) => {
                     </div>
 
                     <div class="flex-1 overflow-y-auto">
-                        <div v-if="isLoading" class="p-8 text-center text-gray-500">
-                            Cargando categorías...
+                        <div v-if="isLoading"
+                            class="p-8 text-center text-gray-500 flex flex-col items-center justify-center">
+                            <Loader2 class="w-8 h-8 mb-2 animate-spin text-teal-600" />
+                            Cargando categorías
                         </div>
 
                         <div v-else-if="paginatedCategories.length === 0" class="p-8 text-center text-gray-500">

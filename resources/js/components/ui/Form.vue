@@ -71,7 +71,8 @@ const slots = useSlots();
                                 <CloudUpload class="w-4 h-4 mr-2" />
                                 Guardar
                             </Button>
-                            <Button @click="$emit('cancel')" variant="secondary" title="Descartar" :disabled="disabled">
+                            <Button @click.prevent="$emit('cancel')" variant="secondary" title="Descartar"
+                                :disabled="disabled">
                                 <RotateCcw class="w-4 h-4 mr-2" />
                                 Descartar
                             </Button>

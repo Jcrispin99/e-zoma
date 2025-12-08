@@ -20,7 +20,7 @@ export const inventoryNavigation: NavigationItem[] = [
       {
         title: 'Productos',
         items: [
-          { label: 'Categorías', href: '#' },
+          { label: 'Categorías', href: '/finanzas/inventario/categorias' },
           { label: 'Atributos', href: '#' },
         ],
       },

@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import { Shapes, Warehouse, Package } from 'lucide-vue-next';
 
 const props = withDefaults(defineProps<{
   item: any;
-  type?: 'product' | 'variant' | 'warehouse';
+  type?: 'product' | 'variant' | 'warehouse' | 'category';
 }>(), {
   type: 'product'
 });
 
 const isProduct = computed(() => props.type === 'product');
 const isWarehouse = computed(() => props.type === 'warehouse');
+const isCategory = computed(() => props.type === 'category');
 
 const stock = computed(() => {
   if (isProduct.value) {
@@ -28,7 +30,7 @@ const formattedPrice = computed(() => {
 });
 
 const displayName = computed(() => {
-  if (isProduct.value || isWarehouse.value) {
+  if (isProduct.value || isWarehouse.value || isCategory.value) {
     return props.item.name;
   }
   return props.item.product?.name + ' - ' + (props.item.attribute_values?.map((av: any) => av.value).join(', ') || 'Sin atributos');
@@ -41,14 +43,9 @@ const displayName = computed(() => {
     <div class="w-20 h-20 bg-gray-100 rounded-md flex-shrink-0 flex items-center justify-center">
       <img v-if="item.image" :src="item.image" :alt="displayName" class="w-full h-full object-cover rounded-md" />
       <div v-else class="text-gray-300">
-        <svg v-if="isWarehouse" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-        </svg>
-        <svg v-else class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
+        <Warehouse v-if="isWarehouse" class="w-8 h-8 text-gray-400" />
+        <Shapes v-else-if="isCategory" class="w-8 h-8 text-gray-400" />
+        <Package v-else class="w-8 h-8 text-gray-400" />
       </div>
     </div>
 
@@ -64,11 +61,14 @@ const displayName = computed(() => {
       <p v-else-if="isWarehouse" class="text-xs font-medium text-gray-600 mb-2">
         {{ item.location || 'Sin ubicación' }}
       </p>
+      <p v-else-if="isCategory" class="text-xs font-medium text-gray-600 mb-2">
+        {{ item.description || 'Sin descripción' }}
+      </p>
       <p v-else class="text-xs font-medium text-gray-600 mb-2">
         SKU: {{ item.sku }}
       </p>
 
-      <div v-if="!isWarehouse" class="space-y-1">
+      <div v-if="!isWarehouse && !isCategory" class="space-y-1">
         <p class="text-xs text-gray-500">
           Precio:
           <span class="font-medium text-gray-900">S/ {{ formattedPrice }}</span>

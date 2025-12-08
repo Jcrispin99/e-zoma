@@ -56,8 +56,8 @@ const filteredOptions = computed(() => {
 const displayOptions = computed(() => {
     const opts = filteredOptions.value;
 
-    if (props.showSearchMore && !searchQuery.value && opts.length > 0) {
-        return [...opts, { value: '__search_more__', label: 'Buscar más' }];
+    if (props.showSearchMore) {
+        return [...opts, { value: '__search_more__', label: 'Buscar más...' }];
     }
 
     return opts;

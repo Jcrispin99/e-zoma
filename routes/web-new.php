@@ -5,6 +5,7 @@ use Inertia\Inertia;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\VariantController;
 use App\Http\Controllers\Admin\WarehouseController;
+use App\Http\Controllers\Admin\CategoryController;
 
 Route::get('/web', function () {
     return Inertia::render('MainApps');
@@ -33,6 +34,15 @@ Route::get('/finanzas/inventario/variantes/{variant}/kardex', [VariantController
 Route::get('/finanzas/inventario/variantes/{variant}/qr', [VariantController::class, 'qrWeb'])->name('inventory.variants.qr');
 Route::post('/finanzas/inventario/variantes/mass-destroy', [VariantController::class, 'massDestroy'])->name('inventory.variants.mass_destroy');
 Route::match(['get', 'post'], '/finanzas/inventario/variantes/qr-masivo', [VariantController::class, 'massQrWeb'])->name('inventory.variants.mass_qr');
+
+// CATEGORIAS
+Route::get('/finanzas/inventario/categorias', [CategoryController::class, 'indexWeb'])->name('inventory.categories.index');
+Route::get('/finanzas/inventario/categorias/crear', [CategoryController::class, 'createWeb'])->name('inventory.categories.create');
+Route::get('/finanzas/inventario/categorias/{category}/editar', [CategoryController::class, 'editWeb'])->name('inventory.categories.edit');
+Route::post('/finanzas/inventario/categorias', [CategoryController::class, 'storeWeb'])->name('inventory.categories.store');
+Route::put('/finanzas/inventario/categorias/{category}', [CategoryController::class, 'updateWeb'])->name('inventory.categories.update');
+Route::post('/finanzas/inventario/categorias/mass-destroy', [CategoryController::class, 'massDestroyWeb'])->name('inventory.categories.mass_destroy');
+Route::delete('/finanzas/inventario/categorias/{category}', [CategoryController::class, 'destroyWeb'])->name('inventory.categories.destroy');
 
 // ALMACENES
 Route::get('/finanzas/inventario/almacenes', [WarehouseController::class, 'indexWeb'])->name('inventory.warehouses.index');

@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import Input from '@/components/ui/Input.vue';
 import Label from '@/components/ui/Label.vue';
 import Textarea from '@/components/ui/Textarea.vue';
-import CategorySearchModal from '@/components/ui/CategorySearchModal.vue';
+import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import type { Category } from '@/types/product';
 
 const props = defineProps<{
@@ -160,7 +160,7 @@ const rightColumnFields = computed<Field[]>(() => [
             </div>
         </div>
 
-        <CategorySearchModal v-model="showCategoryModal" :selected-category-id="form.category_id"
+        <GeneralSearchModal v-model="showCategoryModal" :selected-category-id="form.category_id"
             @select="handleCategorySelect" />
     </div>
 </template>

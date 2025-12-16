@@ -7,6 +7,7 @@ use App\Models\Purchase;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class PurchaseController extends Controller
 {
@@ -17,6 +18,12 @@ class PurchaseController extends Controller
     {
         Gate::authorize('read_purchases', Purchase::class);
         return view('admin.purchases.index');
+    }
+
+    public function dashboard()
+    {
+        // Simple dashboard for now
+        return Inertia::render('purchases/Index');
     }
 
     public function edit(Purchase $purchase)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import { ChevronDown } from 'lucide-vue-next';
 
 const props = defineProps<{
@@ -19,16 +19,22 @@ const emit = defineEmits(['update:modelValue', 'enter', 'search-more']);
 const isOpen = ref(false);
 const searchQuery = ref('');
 const containerRef = ref<HTMLElement | null>(null);
+const dropdownRef = ref<HTMLElement | null>(null);
+const dropdownStyle = ref({});
 
 const initializeSearchQuery = () => {
-    if (props.options && (props.modelValue || props.modelValue === 0 || props.modelValue === '')) {
-        const selectedOption = props.options.find(
-            (opt) => opt.value === props.modelValue
-        );
-        if (selectedOption) {
-            searchQuery.value = selectedOption.label;
-        } else if (props.allowCustom) {
-            searchQuery.value = String(props.modelValue);
+    if (props.options) {
+        if (props.modelValue || props.modelValue === 0 || props.modelValue === '') {
+            const selectedOption = props.options.find(
+                (opt) => opt.value === props.modelValue
+            );
+            if (selectedOption) {
+                searchQuery.value = selectedOption.label;
+            } else if (props.allowCustom) {
+                searchQuery.value = String(props.modelValue);
+            } else if (props.modelValue === '') {
+                searchQuery.value = '';
+            }
         }
     } else if (props.modelValue || props.modelValue === 0) {
         searchQuery.value = String(props.modelValue);
@@ -57,11 +63,53 @@ const displayOptions = computed(() => {
     const opts = filteredOptions.value;
 
     if (props.showSearchMore) {
-        return [...opts, { value: '__search_more__', label: 'Buscar más...' }];
+        return [...opts, { value: '__search_more__', label: 'Buscar más' }];
     }
 
     return opts;
 });
+
+const calculatePosition = async () => {
+    if (!containerRef.value) return;
+    await nextTick();
+    const rect = containerRef.value.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const spaceBelow = viewportHeight - rect.bottom;
+    const height = 250;
+
+    let style: any = {
+        position: 'fixed',
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        maxHeight: '240px',
+        zIndex: 9999
+    };
+
+    if (spaceBelow < height && rect.top > spaceBelow) {
+        style.bottom = `${viewportHeight - rect.top + 4}px`;
+        style.top = 'auto';
+    } else {
+        style.top = `${rect.bottom + 4}px`;
+        style.bottom = 'auto';
+    }
+
+    dropdownStyle.value = style;
+};
+
+watch(isOpen, (newVal) => {
+    if (newVal) {
+        calculatePosition();
+        window.addEventListener('scroll', updatePosition, true);
+        window.addEventListener('resize', updatePosition);
+    } else {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+    }
+});
+
+const updatePosition = () => {
+    if (isOpen.value) calculatePosition();
+};
 
 const handleInput = (e: Event) => {
     const val = (e.target as HTMLInputElement).value;
@@ -115,20 +163,27 @@ const handleBlur = () => {
         }
     }
     setTimeout(() => {
-        isOpen.value = false;
     }, 200);
 };
 
 const handleClickOutside = (e: MouseEvent) => {
-    if (containerRef.value && !containerRef.value.contains(e.target as Node)) {
+    const target = e.target as Node;
+    const isContainer = containerRef.value && containerRef.value.contains(target);
+    const isDropdown = dropdownRef.value && dropdownRef.value.contains(target);
+
+    if (!isContainer && !isDropdown) {
         if (isOpen.value) {
-            handleBlur();
+            isOpen.value = false;
         }
     }
 };
 
 onMounted(() => document.addEventListener('click', handleClickOutside));
-onUnmounted(() => document.removeEventListener('click', handleClickOutside));
+onUnmounted(() => {
+    document.removeEventListener('click', handleClickOutside);
+    window.removeEventListener('scroll', updatePosition, true);
+    window.removeEventListener('resize', updatePosition);
+});
 </script>
 
 <template>
@@ -152,31 +207,35 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside));
             </div>
         </div>
 
-        <div v-if="isOpen && options"
-            class="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto py-1">
-            <ul v-if="displayOptions.length > 0">
-                <li v-for="option in displayOptions" :key="option.value" @click="selectOption(option)"
-                    class="px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors" :class="[
-                        option.value === '__search_more__'
-                            ? 'text-teal-600 hover:bg-teal-50 font-medium border-t border-gray-200'
-                            : 'text-gray-700 hover:bg-teal-50 hover:text-teal-700',
-                        {
-                            'bg-teal-50 text-teal-700 font-medium': modelValue === option.value && option.value !== '__search_more__',
-                        }
-                    ]">
-                    {{ option.label }}
-                    <span v-if="modelValue === option.value && option.value !== '__search_more__'"
-                        class="text-teal-600 text-xs">✓</span>
-                </li>
-            </ul>
-            <div v-else-if="allowCustom && searchQuery"
-                class="px-4 py-2 text-sm text-gray-500 italic cursor-pointer hover:bg-teal-50" @click="isOpen = false">
-                Usar "{{ searchQuery }}"
+        <Teleport to="body">
+            <div v-if="isOpen && options" ref="dropdownRef" :style="dropdownStyle"
+                class="fixed bg-white border border-gray-200 rounded-md shadow-lg overflow-auto py-1">
+                <ul v-if="displayOptions.length > 0">
+                    <li v-for="option in displayOptions" :key="option.value" @click="selectOption(option)"
+                        class="px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors"
+                        :class="[
+                            option.value === '__search_more__'
+                                ? 'text-teal-600 hover:bg-teal-50 font-medium border-t border-gray-200'
+                                : 'text-gray-700 hover:bg-teal-50 hover:text-teal-700',
+                            {
+                                'bg-teal-50 text-teal-700 font-medium': modelValue === option.value && option.value !== '__search_more__',
+                            }
+                        ]">
+                        {{ option.label }}
+                        <span v-if="modelValue === option.value && option.value !== '__search_more__'"
+                            class="text-teal-600 text-xs">✓</span>
+                    </li>
+                </ul>
+                <div v-else-if="allowCustom && searchQuery"
+                    class="px-4 py-2 text-sm text-gray-500 italic cursor-pointer hover:bg-teal-50"
+                    @click="isOpen = false">
+                    Usar "{{ searchQuery }}"
+                </div>
+                <div v-else class="px-4 py-2 text-sm text-gray-500 italic">
+                    No se encontraron resultados.
+                </div>
             </div>
-            <div v-else class="px-4 py-2 text-sm text-gray-500 italic">
-                No se encontraron resultados.
-            </div>
-        </div>
+        </Teleport>
 
         <p v-if="error" class="mt-1 text-xs text-red-600">{{ error }}</p>
     </div>

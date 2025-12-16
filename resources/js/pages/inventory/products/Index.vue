@@ -207,11 +207,8 @@ const handleGenerateQr = () => {
                 </Table>
             </div>
 
-            <div v-else
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-7 bg-gray-300 h-[0.5px]">
-                <CardData v-for="product in products.data" :key="product.id" :item="product"
-                    @click="handleRowClick(product)" class="cursor-pointer mt-4" />
-            </div>
+            <CardData v-else :items="products.data" type="product" 
+                @click="handleRowClick" :class="(product: any) => selectedProducts.some(s => s.id === product.id)" />
         </div>
 
         <ConfirmationModal :show="showDeleteModal" title="Eliminar productos"

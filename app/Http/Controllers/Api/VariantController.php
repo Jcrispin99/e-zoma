@@ -70,4 +70,35 @@ class VariantController extends Controller
             ];
         });
     }
+    public function search(Request $request)
+    {
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $variants = Variant::query()
+            ->with(['product', 'attributeValues'])
+            ->when($request->search, function ($query, $search) {
+                $query->where('barcode', 'like', "%{$search}%")
+                    ->orWhereHas('product', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('attributeValues', function ($q) use ($search) {
+                        $q->where('value', 'like', "%{$search}%");
+                    });
+            })
+            ->latest()
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $variants->getCollection()->transform(function ($variant) {
+            return [
+                'id' => $variant->id,
+                'name' => $variant->fullName,
+                'sku' => $variant->sku,
+                'price' => $variant->price,
+                'stock' => $variant->stock,
+            ];
+        });
+
+        return $variants;
+    }
 }

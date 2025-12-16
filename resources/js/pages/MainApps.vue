@@ -23,7 +23,7 @@ const defaultMenuItems = [
     id: 5,
     title: 'Compras',
     description: 'Gestión de compras y proveedores',
-    route: '/operaciones/compras',
+    route: '/finanzas/compras',
     image: comprasIcon,
   },
   {

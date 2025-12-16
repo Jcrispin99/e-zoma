@@ -189,11 +189,8 @@ const handleGenerateQr = () => {
                 </Table>
             </div>
 
-            <div v-else
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-7 bg-gray-300 h-[0.5px]">
-                <CardData v-for="variant in variants.data" :key="variant.id" :item="variant" type="variant"
-                    @click="handleRowClick(variant)" class="cursor-pointer mt-4" />
-            </div>
+            <CardData v-else :items="variants.data" type="variant" 
+                @click="handleRowClick" :class="(variant: any) => selectedVariants.some(s => s.id === variant.id)" />
         </div>
 
         <ConfirmationModal :show="showDeleteModal" title="Eliminar variantes"

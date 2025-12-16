@@ -4,7 +4,6 @@ import { router } from '@inertiajs/vue3';
 import ModuleLayout from '@/components/layouts/ModuleLayout.vue';
 import DataToolbar from '@/components/ui/DataToolbar.vue';
 import Table from '@/components/ui/Table.vue';
-import CardData from '@/components/ui/CardData.vue';
 import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
 import { inventoryNavigation, inventoryIcon } from '@/config/inventoryNavigation';
 import { useNotification } from '@/hooks/useNotification';
@@ -134,7 +133,7 @@ const paginationData = computed(() => ({
                 @clear-selection="clearSelection" @delete-selected="deleteSelected" @click-new="handleCreate"
                 hide-view-toggle />
 
-            <div v-if="viewMode === 'list'" class="bg-white overflow-hidden">
+            <div class="bg-white overflow-hidden">
                 <div class="bg-gray-300 h-[0.5px]"></div>
 
                 <Table :headers="headers" :items="warehouses.data" selectable v-model="selectedWarehouses"
@@ -148,12 +147,6 @@ const paginationData = computed(() => ({
                         <span class="text-gray-500">{{ item.location || '-' }}</span>
                     </template>
                 </Table>
-            </div>
-
-            <div v-else
-                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-7 bg-gray-300 h-[0.5px]">
-                <CardData v-for="warehouse in warehouses.data" :key="warehouse.id" :item="warehouse" type="warehouse"
-                    @click="handleEdit(warehouse)" class="cursor-pointer mt-4" />
             </div>
         </div>
 

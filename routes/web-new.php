@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\VariantController;
 use App\Http\Controllers\Admin\WarehouseController;
@@ -9,6 +10,10 @@ use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\AttributeController;
 use App\Http\Controllers\Admin\InventoryController;
 use App\Http\Controllers\Admin\ReportController;
+
+use App\Http\Controllers\Admin\PurchaseController;
+use App\Http\Controllers\Admin\SupplierController;
+use App\Http\Controllers\Admin\PurchaseOrderController;
 
 Route::get('/web', function () {
     return Inertia::render('MainApps');
@@ -74,6 +79,27 @@ Route::post('/finanzas/inventario/almacenes', [WarehouseController::class, 'stor
 Route::put('/finanzas/inventario/almacenes/{warehouse}', [WarehouseController::class, 'updateWeb'])->name('inventory.warehouses.update');
 Route::post('/finanzas/inventario/almacenes/mass-destroy', [WarehouseController::class, 'massDestroy'])->name('inventory.warehouses.mass_destroy');
 Route::delete('/finanzas/inventario/almacenes/{warehouse}', [WarehouseController::class, 'destroyWeb'])->name('inventory.warehouses.destroy');
+
+// COMPRAS
+Route::get('/finanzas/compras', [PurchaseController::class, 'dashboard'])->name('purchases.index');
+
+// PROVEEDORES
+Route::get('/finanzas/compras/proveedores', [SupplierController::class, 'indexWeb'])->name('purchases.suppliers.index');
+Route::get('/finanzas/compras/proveedores/crear', [SupplierController::class, 'createWeb'])->name('purchases.suppliers.create');
+Route::get('/finanzas/compras/proveedores/{supplier}/editar', [SupplierController::class, 'editWeb'])->name('purchases.suppliers.edit');
+Route::post('/finanzas/compras/proveedores', [SupplierController::class, 'storeWeb'])->name('purchases.suppliers.store');
+Route::put('/finanzas/compras/proveedores/{supplier}', [SupplierController::class, 'updateWeb'])->name('purchases.suppliers.update');
+Route::post('/finanzas/compras/proveedores/mass-destroy', [SupplierController::class, 'massDestroyWeb'])->name('purchases.suppliers.mass_destroy');
+Route::delete('/finanzas/compras/proveedores/{supplier}', [SupplierController::class, 'destroyWeb'])->name('purchases.suppliers.destroy');
+
+// ORDENES DE COMPRA
+Route::get('/finanzas/compras/ordenes', [PurchaseOrderController::class, 'indexWeb'])->name('purchases.orders.index');
+Route::get('/finanzas/compras/ordenes/crear', [PurchaseOrderController::class, 'createWeb'])->name('purchases.orders.create');
+Route::get('/finanzas/compras/ordenes/{purchaseOrder}/editar', [PurchaseOrderController::class, 'editWeb'])->name('purchases.orders.edit');
+Route::post('/finanzas/compras/ordenes', [PurchaseOrderController::class, 'storeWeb'])->name('purchases.orders.store');
+Route::put('/finanzas/compras/ordenes/{purchaseOrder}', [PurchaseOrderController::class, 'updateWeb'])->name('purchases.orders.update');
+Route::post('/finanzas/compras/ordenes/mass-destroy', [PurchaseOrderController::class, 'massDestroyWeb'])->name('purchases.orders.mass_destroy');
+Route::delete('/finanzas/compras/ordenes/{purchaseOrder}', [PurchaseOrderController::class, 'destroyWeb'])->name('purchases.orders.destroy');
 
 // API Routes
 Route::get('/api/categories', [ProductController::class, 'getCategoriesApi'])->name('api.categories');

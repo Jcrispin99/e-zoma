@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Habilitar autenticación stateful de Sanctum para el grupo API
         $middleware->api(prepend: [EnsureFrontendRequestsAreStateful::class]);
-        
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);

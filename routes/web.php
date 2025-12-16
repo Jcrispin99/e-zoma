@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\PurchaseOrderController;
 use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\QuoteController;
-use Inertia\Inertia;
 
 // SPA POS: ruta base y comodín para deep links
 Route::get('/pos/{posSession}', [PosController::class, '__invoke'])

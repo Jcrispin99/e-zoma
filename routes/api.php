@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::apiResource('categories', CategoryController::class);
 
+Route::post('categories/search', [CategoryController::class, 'search']);
+
 Route::post('/suppliers', [SupplierController::class, 'index'])->name('api.suppliers.index');
 
 Route::post('/customers', [CustomerController::class, 'index'])->name('api.customers.index');
@@ -31,6 +33,8 @@ Route::post('/customers/lookup', [CustomerLookupController::class, 'lookup'])->n
 Route::post('/warehouses', [WarehouseController::class, 'index'])->name('api.warehouse.index');
 
 Route::post('/product', [VariantController::class, 'index'])->name('api.product.index');
+
+Route::post('/product/search', [VariantController::class, 'search'])->name('api.product.search');
 
 Route::post('/product-pos', [VariantController::class, 'getVariantsPos'])->name('api.product.getVariantsPos');
 

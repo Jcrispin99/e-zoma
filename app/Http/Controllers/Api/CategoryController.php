@@ -63,4 +63,19 @@ class CategoryController extends Controller
     {
         //
     }
+    public function search(Request $request)
+    {
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+
+        $categories = Category::query()
+            ->select(['id', 'name'])
+            ->when($request->search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->orderBy('name')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        return $categories;
+    }
 }

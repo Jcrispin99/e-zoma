@@ -16,11 +16,6 @@ export default defineConfig({
     vue(),
   ],
   server: {
-    host: 'e-zoma.test',
-    port: 5173,
-    strictPort: true,
-    hmr: {
-      host: 'e-zoma.test',
-    },
+    host: 'localhost',
   },
 });

@@ -281,5 +281,9 @@ return [
         'winner'                   => 'ganador',
         'work'                     => 'trabajo',
         'year'                     => 'año',
+        'supplier_id'              => 'proveedor',
+        'identity_id'              => 'tipo de documento',
+        'document_number'          => 'número de documento',
+        'document_type'            => 'tipo de documento',
     ],
 ];

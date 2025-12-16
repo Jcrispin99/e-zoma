@@ -8,7 +8,7 @@ import Form from '@/components/ui/Form.vue';
 import Input from '@/components/ui/Input.vue';
 import Label from '@/components/ui/Label.vue';
 import Textarea from '@/components/ui/Textarea.vue';
-import CategorySearchModal from '@/components/ui/CategorySearchModal.vue';
+import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import { useNotification } from '@/hooks/useNotification';
 import type { Category } from '@/types/product';
 
@@ -92,7 +92,7 @@ const isDirty = computed(() => form.isDirty);
 
 <template>
     <ModuleLayout title="Inventario" :icon="inventarioIcon" :navigation-items="navigationItems">
-        <Form :title="isEditing ? 'Editar Categoría' : 'Nueva Categoría'" :breadcrumbs="breadcrumbs"
+        <Form :title="isEditing ? 'Editar' : 'Nuevo'" :breadcrumbs="breadcrumbs"
             :loading="form.processing" @submit="handleSubmit" @cancel="handleCancel" :disabled="!isDirty">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
                 <div class="col-span-1 md:col-span-2">
@@ -115,7 +115,7 @@ const isDirty = computed(() => form.isDirty);
             </div>
         </Form>
 
-        <CategorySearchModal v-model="showCategoryModal" :selected-category-id="form.parent_id || ''"
+        <GeneralSearchModal v-model="showCategoryModal" :selected-category-id="form.parent_id || ''"
             @select="handleCategorySelect" />
     </ModuleLayout>
 </template>

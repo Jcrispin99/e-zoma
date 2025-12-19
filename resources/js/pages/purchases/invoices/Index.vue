@@ -7,29 +7,29 @@ import Table from '@/components/ui/Table.vue';
 import DataToolbar from '@/components/ui/DataToolbar.vue';
 import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
 import { useNotification } from '@/hooks/useNotification';
+import { Purchase, PaginatedData } from '@/types/purchases';
 import CardData from '@/components/ui/CardData.vue';
-import { PurchaseOrder, PaginatedData } from '@/types/purchases';
 
 const props = defineProps<{
-    purchaseOrders: PaginatedData<PurchaseOrder>;
+    purchases: PaginatedData<Purchase>;
 }>();
 
 const { notify } = useNotification();
 
 const viewMode = ref<'list' | 'grid'>('list');
-const selectedOrders = ref<PurchaseOrder[]>([]);
+const selectedPurchases = ref<Purchase[]>([]);
 
 onMounted(() => {
-    const savedViewMode = localStorage.getItem('ordersViewMode');
+    const savedViewMode = localStorage.getItem('purchasesViewMode');
     if (savedViewMode === 'list' || savedViewMode === 'grid') {
         viewMode.value = savedViewMode;
     }
 });
 
 watch(viewMode, (newValue) => {
-    localStorage.setItem('ordersViewMode', newValue);
+    localStorage.setItem('purchasesViewMode', newValue);
     if (newValue === 'grid') {
-        selectedOrders.value = [];
+        selectedPurchases.value = [];
         selectAllAcrossPages.value = false;
     }
 });
@@ -40,7 +40,8 @@ const showDeleteModal = ref(false);
 const isDeleting = ref(false);
 
 const headers = [
-    { key: 'serie_correlative', label: 'N° Orden' },
+    { key: 'serie_correlative', label: 'N° Compra' },
+    { key: 'purchase_order', label: 'Orden de Compra' },
     { key: 'supplier', label: 'Proveedor' },
     { key: 'total', label: 'Total' },
     { key: 'status', label: 'Estado' },
@@ -55,19 +56,19 @@ watch(searchTerm, (newValue) => {
 
     searchTimeout = setTimeout(() => {
         router.get(
-            '/finanzas/compras/ordenes',
+            '/finanzas/compras/facturas',
             { search: newValue },
             {
                 preserveState: true,
                 preserveScroll: true,
-                only: ['purchaseOrders'],
+                only: ['purchases'],
             }
         );
     }, 300);
 });
 
-const handleRowClick = (order: PurchaseOrder) => {
-    router.visit(`/finanzas/compras/ordenes/${order.id}/editar`);
+const handleRowClick = (purchase: Purchase) => {
+    router.visit(`/finanzas/compras/facturas/${purchase.id}/editar`);
 };
 
 const deleteId = ref<number | null>(null);
@@ -81,63 +82,60 @@ const confirmDelete = () => {
     isDeleting.value = true;
 
     if (deleteId.value) {
-        router.delete(`/finanzas/compras/ordenes/${deleteId.value}`, {
+        router.delete(`/finanzas/compras/facturas/${deleteId.value}`, {
             onSuccess: () => {
                 showDeleteModal.value = false;
                 isDeleting.value = false;
                 deleteId.value = null;
-                notify('Orden eliminada correctamente', 'success');
+                notify('Compra eliminada correctamente', 'success');
             },
             onError: () => {
                 isDeleting.value = false;
-                notify('Error al eliminar la orden', 'error');
+                notify('Error al eliminar la compra', 'error');
             }
         });
     } else {
-        const count = selectedOrders.value.length;
+        const count = selectedPurchases.value.length;
         router.post(
-            '/finanzas/compras/ordenes/mass-destroy',
+            '/finanzas/compras/facturas/mass-destroy',
             {
-                ids: selectedOrders.value.map((s) => s.id),
+                ids: selectedPurchases.value.map((s) => s.id),
             },
             {
                 onSuccess: () => {
-                    selectedOrders.value = [];
+                    selectedPurchases.value = [];
                     showDeleteModal.value = false;
                     isDeleting.value = false;
                     notify(
                         count === 1
-                            ? 'Orden eliminada correctamente'
-                            : `${count} ordenes eliminadas correctamente`,
+                            ? 'Compra eliminada correctamente'
+                            : `${count} compras eliminadas correctamente`,
                         'success'
                     );
                 },
                 onError: () => {
                     isDeleting.value = false;
-                    notify('Error al eliminar las ordenes', 'error');
+                    notify('Error al eliminar las compras', 'error');
                 },
             }
         );
     }
 };
 
-const totalItems = computed(() => props.purchaseOrders.total || 0);
+const totalItems = computed(() => props.purchases.total || 0);
 const isAllSelected = computed(() => selectAllAcrossPages.value);
 const selectionMessage = computed(() => {
     if (selectAllAcrossPages.value) {
-        return `Todas las ${totalItems.value} ordenes seleccionadas`;
+        return `Todas las ${totalItems.value} compras seleccionadas`;
     }
-    const count = selectedOrders.value.length;
+    const count = selectedPurchases.value.length;
     return `${count} ${count === 1 ? 'seleccionada' : 'seleccionadas'}`;
 });
 
 const getStatusColor = (status: string) => {
     switch (status) {
         case 'draft': return 'bg-gray-100 text-gray-800';
-        case 'confirmed': return 'bg-teal-100 text-teal-800';
-        case 'approved': return 'bg-blue-100 text-blue-800';
-        case 'sent': return 'bg-yellow-100 text-yellow-800';
-        case 'received': return 'bg-green-100 text-green-800';
+        case 'posted': return 'bg-green-100 text-green-800';
         case 'cancelled': return 'bg-red-100 text-red-800';
         default: return 'bg-gray-100 text-gray-800';
     }
@@ -146,10 +144,7 @@ const getStatusColor = (status: string) => {
 const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
         'draft': 'Borrador',
-        'confirmed': 'Confirmada',
-        'approved': 'Aprobada',
-        'sent': 'Enviada',
-        'received': 'Recibida',
+        'posted': 'Publicado',
         'cancelled': 'Cancelada'
     };
     return labels[status] || status;
@@ -160,17 +155,17 @@ const getStatusLabel = (status: string) => {
 <template>
     <ModuleLayout title="Compras" :icon="purchasesIcon" :navigation-items="purchasesNavigation">
         <div class="space-y-6">
-            <DataToolbar title="Ordenes de Compra" new-route="/finanzas/compras/ordenes/crear" new-label="Nuevo"
-                v-model:search-term="searchTerm" v-model:view-mode="viewMode" :pagination="purchaseOrders"
-                :selected-count="selectedOrders.length" :total-count="totalItems" :is-all-selected="isAllSelected"
+            <DataToolbar title="Compras (Facturas)" new-route="/finanzas/compras/facturas/crear" new-label="Nuevo"
+                v-model:search-term="searchTerm" v-model:view-mode="viewMode" :pagination="purchases"
+                :selected-count="selectedPurchases.length" :total-count="totalItems" :is-all-selected="isAllSelected"
                 :selection-message="selectionMessage" @select-all-total="selectAllAcrossPages = true"
-                @clear-selection="selectedOrders = []; selectAllAcrossPages = false"
+                @clear-selection="selectedPurchases = []; selectAllAcrossPages = false"
                 @delete-selected="deleteSelected" />
 
             <div v-if="viewMode === 'list'" class="bg-white overflow-hidden">
                 <div class="bg-gray-300 h-[0.5px]"></div>
 
-                <Table :headers="headers" :items="purchaseOrders.data" selectable v-model="selectedOrders"
+                <Table :headers="headers" :items="purchases.data" selectable v-model="selectedPurchases"
                     :global-select="isAllSelected" @row-click="handleRowClick"
                     @header-select="selectAllAcrossPages = $event">
 
@@ -178,6 +173,13 @@ const getStatusLabel = (status: string) => {
                         <span class="font-medium text-gray-900">
                             {{ item.serie }}-{{ item.correlative }}
                         </span>
+                    </template>
+
+                    <template #cell-purchase_order="{ item }">
+                        <div v-if="item.purchase_order" class="text-sm text-gray-700">
+                            {{ item.purchase_order.serie }}-{{ item.purchase_order.correlative }}
+                        </div>
+                        <span v-else class="text-xs text-gray-400">Sin orden</span>
                     </template>
 
                     <template #cell-supplier="{ item }">
@@ -206,12 +208,12 @@ const getStatusLabel = (status: string) => {
                 </Table>
             </div>
 
-            <CardData v-else :items="purchaseOrders.data" type="purchase_order" @click="handleRowClick"
-                :class="(order: PurchaseOrder) => selectedOrders.some(s => s.id === order.id)" />
+            <CardData v-else :items="purchases.data" type="purchase_order" @click="handleRowClick"
+                :class="(purchase: Purchase) => selectedPurchases.some(s => s.id === purchase.id)" />
         </div>
 
-        <ConfirmationModal :show="showDeleteModal" title="Eliminar orden"
-            message="¿Estás seguro de que deseas eliminar las ordenes seleccionadas? Esta acción no se puede deshacer."
+        <ConfirmationModal :show="showDeleteModal" title="Eliminar compra"
+            message="¿Estás seguro de que deseas eliminar las compras seleccionadas? Esta acción no se puede deshacer."
             confirm-text="Eliminar" cancel-text="Cancelar" variant="danger" :loading="isDeleting"
             @close="showDeleteModal = false" @confirm="confirmDelete" />
     </ModuleLayout>

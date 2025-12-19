@@ -11,32 +11,35 @@ import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
-import { PlusIcon, Trash, Menu, CheckCircle, XCircle, FileText, Mail } from 'lucide-vue-next';
-import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption } from '@/types/purchases';
+import { PlusIcon, Trash } from 'lucide-vue-next';
+import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption, Purchase } from '@/types/purchases';
+import axios from 'axios';
 
 const props = defineProps<{
-    purchaseOrder?: PurchaseOrder;
+    purchase?: Purchase;
     suppliers: Supplier[];
     taxes?: Tax[];
     journals?: Journal[];
     products?: VariantOption[];
+    purchaseOrders?: { id: number; label: string; supplier_id: number }[];
 }>();
 
 const { notify } = useNotification();
-const isEditing = computed(() => !!props.purchaseOrder);
+const isEditing = computed(() => !!props.purchase);
 const showProductSearch = ref(false);
 const selectedProductId = ref<number | string>('');
 const extraProducts = ref<VariantOption[]>([]);
 
 const form = useForm({
-    supplier_id: props.purchaseOrder?.supplier_id || '',
-    journal_id: props.purchaseOrder?.journal_id || '',
-    serie: props.purchaseOrder?.serie || '',
-    correlative: props.purchaseOrder?.correlative || '',
-    date: props.purchaseOrder?.date ? new Date(props.purchaseOrder.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    observation: props.purchaseOrder?.observation || '',
-    total: props.purchaseOrder?.total || 0,
-    items: props.purchaseOrder?.variants?.map((v: PurchaseOrderItem) => {
+    supplier_id: props.purchase?.supplier_id || '',
+    journal_id: props.purchase?.journal_id || '',
+    serie: props.purchase?.serie || '',
+    correlative: props.purchase?.correlative || '',
+    date: props.purchase?.date ? new Date(props.purchase.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    observation: props.purchase?.observation || '',
+    total: props.purchase?.total || 0,
+    purchase_order_id: props.purchase?.purchase_order_id || '',
+    items: props.purchase?.variants?.map((v: PurchaseOrderItem) => {
         let taxId: number | string = '';
         if (props.taxes) {
             const matchingTax = props.taxes.find(t => Number(t.rate_percent) === Number(v.pivot?.tax_rate || 0));
@@ -61,6 +64,67 @@ const supplierOptions = computed(() => {
         label: `${supplier.name} (${supplier.document_number})`
     }));
 });
+
+const purchaseOrderOptions = computed(() => {
+    return props.purchaseOrders?.map(po => ({
+        value: po.id,
+        label: po.label
+    })) || [];
+});
+
+watch(() => form.purchase_order_id, (newPoId) => {
+    if (newPoId && !isEditing.value) {
+        fetchPurchaseOrderDetails(newPoId);
+    }
+});
+
+const fetchPurchaseOrderDetails = async (poId: number | string) => {
+    try {
+        const response = await axios.get(`/finanzas/compras/ordenes/${poId}/api-details`);
+        const po: PurchaseOrder = response.data;
+
+        form.supplier_id = po.supplier_id;
+
+        if (po.date) {
+            form.date = po.date.split('T')[0];
+        }
+
+        form.observation = po.observation || '';
+        form.correlative = po.correlative || '';
+
+        if (!form.journal_id && props.journals && props.journals.length > 0) {
+            form.journal_id = props.journals[0].id;
+        }
+
+        form.items = (po.variants?.map((v: PurchaseOrderItem) => {
+            const quantity = Number(v.pivot?.quantity || 1);
+            const price = Number(v.pivot?.price || 0);
+            const taxRate = Number(v.pivot?.tax_rate || 0);
+
+            let taxId: number | string = '';
+            if (props.taxes) {
+                const matchingTax = props.taxes.find(t => Number(t.rate_percent) === taxRate);
+                if (matchingTax) taxId = matchingTax.id;
+            }
+
+            return {
+                id: v.id,
+                name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: any) => av.value).join(', ') : ''),
+                quantity: quantity,
+                price: price,
+                tax_rate: taxRate,
+                tax_id: taxId,
+                subtotal: Number(v.pivot?.subtotal || 0)
+            };
+        }) || []) as any[];
+
+        notify('Datos de la orden cargados correctamente', 'success');
+    } catch (error) {
+        console.error(error);
+        notify('Error al cargar detalles de la orden', 'error');
+    }
+};
+
 
 const allProducts = computed(() => {
     const base = props.products || [];
@@ -246,8 +310,8 @@ const handleSubmit = () => {
         onSuccess: () => {
             notify(
                 isEditing.value
-                    ? 'Orden de compra actualizada correctamente'
-                    : 'Orden de compra creada correctamente',
+                    ? 'Compra actualizada correctamente'
+                    : 'Compra creada correctamente',
                 'success'
             );
         },
@@ -261,10 +325,10 @@ const handleSubmit = () => {
         },
     };
 
-    if (isEditing.value && props.purchaseOrder) {
-        form.put(`/finanzas/compras/ordenes/${props.purchaseOrder.id}`, options);
+    if (isEditing.value && props.purchase) {
+        form.put(`/finanzas/compras/facturas/${props.purchase.id}`, options);
     } else {
-        form.post('/finanzas/compras/ordenes', options);
+        form.post('/finanzas/compras/facturas', options);
     }
 };
 
@@ -272,7 +336,7 @@ const handleCancel = () => {
     if (isEditing.value) {
         router.visit(location.pathname, {
             replace: true,
-            only: ['purchaseOrder'],
+            only: ['purchase'],
             preserveScroll: true,
             onSuccess: () => notify('Cambios descartados', 'info')
         });
@@ -283,89 +347,26 @@ const handleCancel = () => {
 };
 
 const breadcrumbs = computed(() => [
-    { label: 'Ordenes de Compra', route: '/finanzas/compras/ordenes' },
+    { label: 'Compras', route: '/finanzas/compras/facturas' },
     { label: isEditing.value ? 'Editar' : 'Nuevo' }
 ]);
 
 const isDirty = computed(() => form.isDirty);
-
-const showActionsDropdown = ref(false);
-
-const handleConfirm = () => {
-    showActionsDropdown.value = false;
-    if (!props.purchaseOrder) return;
-    router.post(`/finanzas/compras/ordenes/${props.purchaseOrder.id}/confirm`, {}, {
-        onSuccess: () => notify('Orden confirmada correctamente', 'success'),
-        onError: () => notify('Error al confirmar la orden', 'error')
-    });
-};
-
-const handleCancelOrder = () => {
-    showActionsDropdown.value = false;
-    if (!props.purchaseOrder) return;
-    if (!confirm('¿Estás seguro de cancelar esta orden? Esta acción no se puede deshacer.')) return;
-
-    router.post(`/finanzas/compras/ordenes/${props.purchaseOrder.id}/cancel`, {}, {
-        onSuccess: () => notify('Orden cancelada correctamente', 'success'),
-        onError: () => notify('Error al cancelar la orden', 'error')
-    });
-};
 </script>
 
 <template>
     <ModuleLayout title="Compras" :icon="purchasesIcon" :navigation-items="purchasesNavigation">
-        <Form title="Ordenes de Compra" :subtitle="isEditing ? 'Editar' : 'Nuevo'" :loading="form.processing"
+        <Form title="Compras (Facturas)" :subtitle="isEditing ? 'Editar' : 'Nuevo'" :loading="form.processing"
             @submit="handleSubmit" @cancel="handleCancel" :disabled="!isDirty" :breadcrumbs="breadcrumbs">
 
-            <template #header-actions>
-                <div class="relative" v-if="isEditing">
-                    <Button variant="secondary" @click="showActionsDropdown = !showActionsDropdown" type="button">
-                        <Menu class="w-4 h-4" />
-                    </Button>
-
-                    <div v-if="showActionsDropdown"
-                        class="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                        <div class="py-1">
-                            <button v-if="purchaseOrder?.status === 'draft'" @click="handleConfirm" type="button"
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                <CheckCircle class="w-4 h-4 text-green-500" />
-                                Confirmar Orden
-                            </button>
-
-                            <button v-if="purchaseOrder?.status === 'confirmed'"
-                                @click="notify('Funcionalidad pendiente: Enviar por Correo', 'info')" type="button"
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                <Mail class="w-4 h-4 text-blue-500" />
-                                Enviar por Correo (OC)
-                            </button>
-
-                            <button v-if="purchaseOrder?.status === 'confirmed'"
-                                @click="notify('Funcionalidad pendiente: Ver PDF', 'info')" type="button"
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                <FileText class="w-4 h-4 text-gray-500" />
-                                Ver PDF
-                            </button>
-
-                            <div class="border-t border-gray-100 my-1" v-if="purchaseOrder?.status !== 'cancelled'">
-                            </div>
-
-                            <button v-if="purchaseOrder?.status !== 'cancelled'" @click="handleCancelOrder"
-                                type="button"
-                                class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
-                                <XCircle class="w-4 h-4" />
-                                Cancelar Orden
-                            </button>
-                        </div>
+            <template #top-left>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                        <Label class="text-sm font-bold text-gray-700 mb-1 block">Orden de Compra</Label>
+                        <Input v-model="form.purchase_order_id" :options="purchaseOrderOptions"
+                            placeholder="Seleccione una orden de compra" :disabled="isEditing" />
                     </div>
 
-                    <!-- Overlay to close dropdown -->
-                    <div v-if="showActionsDropdown" @click="showActionsDropdown = false"
-                        class="fixed inset-0 z-40 bg-transparent"></div>
-                </div>
-            </template>
-
-            <template #top-left>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <Label class="text-sm font-bold text-gray-700 mb-1 block">Proveedor <span
                                 class="text-red-500">*</span></Label>

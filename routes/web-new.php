@@ -81,7 +81,7 @@ Route::post('/finanzas/inventario/almacenes/mass-destroy', [WarehouseController:
 Route::delete('/finanzas/inventario/almacenes/{warehouse}', [WarehouseController::class, 'destroyWeb'])->name('inventory.warehouses.destroy');
 
 // COMPRAS
-Route::get('/finanzas/compras', [PurchaseController::class, 'dashboard'])->name('purchases.index');
+Route::get('/finanzas/compras', [PurchaseController::class, 'dashboard'])->name('purchases.index'); // Redirect or Dashboard
 
 // PROVEEDORES
 Route::get('/finanzas/compras/proveedores', [SupplierController::class, 'indexWeb'])->name('purchases.suppliers.index');
@@ -100,6 +100,18 @@ Route::post('/finanzas/compras/ordenes', [PurchaseOrderController::class, 'store
 Route::put('/finanzas/compras/ordenes/{purchaseOrder}', [PurchaseOrderController::class, 'updateWeb'])->name('purchases.orders.update');
 Route::post('/finanzas/compras/ordenes/mass-destroy', [PurchaseOrderController::class, 'massDestroyWeb'])->name('purchases.orders.mass_destroy');
 Route::delete('/finanzas/compras/ordenes/{purchaseOrder}', [PurchaseOrderController::class, 'destroyWeb'])->name('purchases.orders.destroy');
+Route::post('/finanzas/compras/ordenes/{purchaseOrder}/confirm', [PurchaseOrderController::class, 'confirmWeb'])->name('purchases.orders.confirm');
+Route::post('/finanzas/compras/ordenes/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancelWeb'])->name('purchases.orders.cancel');
+Route::get('/finanzas/compras/ordenes/{purchaseOrder}/api-details', [PurchaseOrderController::class, 'apiDetails'])->name('purchases.orders.api-details');
+
+// COMPRAS (FACTURAS)
+Route::get('/finanzas/compras/facturas', [PurchaseController::class, 'indexWeb'])->name('purchases.invoices.index');
+Route::get('/finanzas/compras/facturas/crear', [PurchaseController::class, 'createWeb'])->name('purchases.invoices.create');
+Route::get('/finanzas/compras/facturas/{purchase}/editar', [PurchaseController::class, 'editWeb'])->name('purchases.invoices.edit');
+Route::post('/finanzas/compras/facturas', [PurchaseController::class, 'storeWeb'])->name('purchases.invoices.store');
+Route::put('/finanzas/compras/facturas/{purchase}', [PurchaseController::class, 'updateWeb'])->name('purchases.invoices.update');
+Route::post('/finanzas/compras/facturas/mass-destroy', [PurchaseController::class, 'massDestroyWeb'])->name('purchases.invoices.mass_destroy');
+Route::delete('/finanzas/compras/facturas/{purchase}', [PurchaseController::class, 'destroyWeb'])->name('purchases.invoices.destroy');
 
 // API Routes
 Route::get('/api/categories', [ProductController::class, 'getCategoriesApi'])->name('api.categories');

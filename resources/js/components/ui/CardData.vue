@@ -46,31 +46,33 @@ const displayName = computed(() => {
     return props.item.name;
   }
   if (isPurchaseOrder.value) {
-      return `${props.item.serie}-${props.item.correlative}`;
+    return `${props.item.serie}-${props.item.correlative}`;
   }
   return props.item.product?.name + ' - ' + (props.item.attribute_values?.map((av: any) => av.value).join(', ') || 'Sin atributos');
 });
 
 const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'draft': return 'bg-gray-100 text-gray-800';
-        case 'approved': return 'bg-blue-100 text-blue-800';
-        case 'sent': return 'bg-yellow-100 text-yellow-800';
-        case 'received': return 'bg-green-100 text-green-800';
-        case 'cancelled': return 'bg-red-100 text-red-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
+  switch (status) {
+    case 'draft': return 'bg-gray-100 text-gray-800';
+    case 'confirmed': return 'bg-teal-100 text-teal-800';
+    case 'approved': return 'bg-blue-100 text-blue-800';
+    case 'sent': return 'bg-yellow-100 text-yellow-800';
+    case 'received': return 'bg-green-100 text-green-800';
+    case 'cancelled': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
 };
 
 const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-        'draft': 'Borrador',
-        'approved': 'Aprobada',
-        'sent': 'Enviada',
-        'received': 'Recibida',
-        'cancelled': 'Cancelada'
-    };
-    return labels[status] || status;
+  const labels: Record<string, string> = {
+    'draft': 'Borrador',
+    'confirmed': 'Confirmada',
+    'approved': 'Aprobada',
+    'sent': 'Enviada',
+    'received': 'Recibida',
+    'cancelled': 'Cancelada'
+  };
+  return labels[status] || status;
 };
 
 const emit = defineEmits<{
@@ -78,22 +80,23 @@ const emit = defineEmits<{
 }>();
 
 const handleClick = (item: any) => {
-    emit('click', item);
+  emit('click', item);
 };
 </script>
 
 <template>
   <div v-if="isGrid">
-      <div class="bg-gray-300 h-[0.5px]"></div>
-      
-      <div v-if="items && items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-7 mt-4">
-          <CardData v-for="singleItem in items" :key="singleItem.id" :item="singleItem" :type="type"
-              @click="handleClick(singleItem)" class="cursor-pointer" :class="$attrs.class" />
-      </div>
-      
-      <div v-else class="text-center py-8 text-gray-500 text-sm bg-white">
-          {{ emptyMessage }}
-      </div>
+    <div class="bg-gray-300 h-[0.5px]"></div>
+
+    <div v-if="items && items.length > 0"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-7 mt-4">
+      <CardData v-for="singleItem in items" :key="singleItem.id" :item="singleItem" :type="type"
+        @click="handleClick(singleItem)" class="cursor-pointer" :class="$attrs.class" />
+    </div>
+
+    <div v-else class="text-center py-8 text-gray-500 text-sm bg-white">
+      {{ emptyMessage }}
+    </div>
   </div>
 
   <div v-else
@@ -112,12 +115,12 @@ const handleClick = (item: any) => {
 
     <div class="flex-1 min-w-0">
       <div v-if="isPurchaseOrder" class="flex justify-between items-start mb-1">
-          <h3 class="text-sm font-semibold text-gray-900 line-clamp-2" :title="displayName">
-            {{ displayName }}
-          </h3>
-          <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full" :class="getStatusColor(item.status)">
-              {{ getStatusLabel(item.status) }}
-          </span>
+        <h3 class="text-sm font-semibold text-gray-900 line-clamp-2" :title="displayName">
+          {{ displayName }}
+        </h3>
+        <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full" :class="getStatusColor(item.status)">
+          {{ getStatusLabel(item.status) }}
+        </span>
       </div>
       <h3 v-else class="text-sm font-semibold text-gray-900 line-clamp-2 mb-1" :title="displayName">
         {{ displayName }}
@@ -137,7 +140,7 @@ const handleClick = (item: any) => {
         {{ item.identity?.name || 'Doc' }}: {{ item.document_number }}
       </p>
       <p v-else-if="isPurchaseOrder" class="text-xs font-medium text-gray-600 mb-1">
-          {{ new Date(item.created_at).toLocaleDateString() }}
+        {{ new Date(item.created_at).toLocaleDateString() }}
       </p>
       <p v-else class="text-xs font-medium text-gray-600 mb-2">
         SKU: {{ item.sku }}
@@ -156,20 +159,20 @@ const handleClick = (item: any) => {
 
       <div v-if="isSupplier" class="space-y-1">
         <p class="text-xs text-gray-500 truncate" :title="item.email">
-            <span class="font-medium text-gray-900">{{ item.email || 'Sin email' }}</span>
+          <span class="font-medium text-gray-900">{{ item.email || 'Sin email' }}</span>
         </p>
         <p class="text-xs text-gray-500">
-            <span class="font-medium text-gray-900">{{ item.phone || 'Sin teléfono' }}</span>
+          <span class="font-medium text-gray-900">{{ item.phone || 'Sin teléfono' }}</span>
         </p>
       </div>
 
       <div v-if="isPurchaseOrder" class="space-y-1 mt-2">
-          <p class="text-xs text-gray-500">
-              <span class="font-medium text-gray-900">{{ item.supplier?.name || 'Sin proveedor' }}</span>
-          </p>
-          <div class="flex justify-between items-end mt-2">
-            <span class="text-xs text-gray-500">Total</span>
-            <span class="text-sm font-bold text-gray-900">S/ {{ Number(item.total || 0).toFixed(2) }}</span>
+        <p class="text-xs text-gray-500">
+          <span class="font-medium text-gray-900">{{ item.supplier?.name || 'Sin proveedor' }}</span>
+        </p>
+        <div class="flex justify-between items-end mt-2">
+          <span class="text-xs text-gray-500">Total</span>
+          <span class="text-sm font-bold text-gray-900">S/ {{ Number(item.total || 0).toFixed(2) }}</span>
         </div>
       </div>
     </div>

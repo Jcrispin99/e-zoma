@@ -8,10 +8,12 @@ use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\Tax;
 use App\Models\Variant;
+use Exception;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use App\Services\SequenceService;
 
 class PurchaseOrderController extends Controller
 {
@@ -189,6 +191,24 @@ class PurchaseOrderController extends Controller
         $data['company_id'] = 1;
         $data['status'] = 'draft';
 
+        if (!empty($data['journal_id'])) {
+            try {
+                $parts = SequenceService::getNextParts($data['journal_id']);
+                $data['serie'] = $parts['serie'];
+                $data['correlative'] = $parts['correlative'];
+            } catch (Exception $e) {
+                $data['serie'] = 'PO';
+                $data['correlative'] = str_pad((string) rand(1, 999999), 8, '0', STR_PAD_LEFT);
+            }
+        }
+
+        if (empty($data['serie'])) {
+            $data['serie'] = 'PO';
+        }
+        if (empty($data['correlative'])) {
+            $data['correlative'] = str_pad((string) rand(1, 999999), 8, '0', STR_PAD_LEFT);
+        }
+
         $purchaseOrder = PurchaseOrder::create($data);
 
         if (!empty($data['items'])) {
@@ -262,5 +282,34 @@ class PurchaseOrderController extends Controller
 
         PurchaseOrder::whereIn('id', $ids)->delete();
         return redirect()->route('purchases.orders.index')->with('success', 'Ordenes de compra eliminadas correctamente');
+    }
+
+    public function confirmWeb(PurchaseOrder $purchaseOrder)
+    {
+        Gate::authorize('update_purchase-orders', $purchaseOrder);
+
+        $purchaseOrder->update(['status' => 'confirmed']);
+
+        return redirect()->back()->with('success', 'Orden de compra confirmada correctamente');
+    }
+
+    public function cancelWeb(PurchaseOrder $purchaseOrder)
+    {
+        // Gate::authorize('update', $purchaseOrder);
+
+        if ($purchaseOrder->status === 'cancelled') {
+            return back()->with(['error' => 'La orden ya está cancelada']);
+        }
+
+        // TODO: Revertir lógica de inventario si se había confirmado y sumado stock
+
+        $purchaseOrder->update(['status' => 'cancelled']);
+
+        return back()->with(['success' => 'Orden de compra cancelada correctamente']);
+    }
+
+    public function apiDetails(PurchaseOrder $purchaseOrder)
+    {
+        return response()->json($purchaseOrder->load(['variants.product', 'variants.attributeValues', 'supplier']));
     }
 }

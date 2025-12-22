@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { ChevronDown } from 'lucide-vue-next';
+import { ChevronDown, Loader2 } from 'lucide-vue-next';
 
 const props = defineProps<{
     modelValue?: string | number;
@@ -12,15 +12,19 @@ const props = defineProps<{
     options?: { value: string | number; label: string }[];
     allowCustom?: boolean;
     showSearchMore?: boolean;
+    disableLocalFilter?: boolean;
+    searchDebounce?: number;
+    loading?: boolean;
 }>();
 
-const emit = defineEmits(['update:modelValue', 'enter', 'search-more']);
+const emit = defineEmits(['update:modelValue', 'enter', 'search-more', 'search']);
 
 const isOpen = ref(false);
 const searchQuery = ref('');
 const containerRef = ref<HTMLElement | null>(null);
 const dropdownRef = ref<HTMLElement | null>(null);
 const dropdownStyle = ref({});
+let searchTimeout: ReturnType<typeof setTimeout>;
 
 const initializeSearchQuery = () => {
     if (props.options) {
@@ -47,6 +51,8 @@ onMounted(initializeSearchQuery);
 const filteredOptions = computed(() => {
     if (!props.options) return [];
     if (!searchQuery.value) return props.options;
+
+    if (props.disableLocalFilter) return props.options;
 
     if (props.modelValue !== undefined && props.modelValue !== null) {
         const selectedOption = props.options.find(opt => opt.value === props.modelValue);
@@ -121,6 +127,13 @@ const handleInput = (e: Event) => {
             emit('update:modelValue', '');
         } else if (props.allowCustom) {
             emit('update:modelValue', val);
+        }
+
+        if (props.disableLocalFilter || props.options.length === 0) {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                emit('search', val);
+            }, props.searchDebounce ?? 300);
         }
     } else {
         emit('update:modelValue', val);
@@ -200,17 +213,21 @@ onUnmounted(() => {
                     { 'disabled:text-gray-400': disabled },
                 ]" />
 
-            <div v-if="options"
-                class="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none group-hover:text-teal-600 transition-colors"
-                :class="{ 'rotate-180': isOpen }">
-                <ChevronDown class="w-4 h-4" />
+            <div v-if="options" class="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 transition-colors"
+                :class="{ 'rotate-180': isOpen, 'group-hover:text-teal-600 pointer-events-none': !disabled }">
+                <Loader2 v-if="loading" class="w-4 h-4 animate-spin" />
+                <ChevronDown v-else class="w-4 h-4" />
             </div>
         </div>
 
         <Teleport to="body">
             <div v-if="isOpen && options" ref="dropdownRef" :style="dropdownStyle"
                 class="fixed bg-white border border-gray-200 rounded-md shadow-lg overflow-auto py-1">
-                <ul v-if="displayOptions.length > 0">
+                <div v-if="loading" class="px-4 py-3 text-sm text-gray-500 flex items-center justify-center gap-2">
+                    <Loader2 class="w-4 h-4 animate-spin text-teal-600" />
+                    Buscando
+                </div>
+                <ul v-else-if="displayOptions.length > 0">
                     <li v-for="option in displayOptions" :key="option.value" @click="selectOption(option)"
                         class="px-4 py-2 text-sm cursor-pointer flex items-center justify-between transition-colors"
                         :class="[

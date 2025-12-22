@@ -5,6 +5,7 @@ import Label from '@/components/ui/Label.vue';
 import Textarea from '@/components/ui/Textarea.vue';
 import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import type { Category } from '@/types/product';
+import axios from 'axios';
 
 const props = defineProps<{
     form: any;
@@ -12,6 +13,31 @@ const props = defineProps<{
 }>();
 
 const showCategoryModal = ref(false);
+const searchedCategories = ref<Category[]>([]);
+const isSearching = ref(false);
+const isLoading = ref(false);
+
+const handleCategorySearch = async (query: string) => {
+    if (!query) {
+        isSearching.value = false;
+        searchedCategories.value = [];
+        return;
+    }
+    isSearching.value = true;
+    isLoading.value = true;
+    try {
+        const response = await axios.post('/api/categories/search', {
+            search: query,
+            page: 1,
+            per_page: 50
+        });
+        searchedCategories.value = response.data.data;
+    } catch (error) {
+        console.error('Error searching categories:', error);
+    } finally {
+        isLoading.value = false;
+    }
+};
 
 const topCategories = computed(() => {
     return props.categories?.slice(0, 20) || [];
@@ -47,13 +73,20 @@ const leftColumnFields = computed<Field[]>(() => [
         component: Input,
         props: {
             modelValue: props.form.category_id,
-            options: topCategories.value.map((c) => ({
-                value: c.id,
-                label: getCategoryFullName(c)
-            })),
+            options: isSearching.value
+                ? searchedCategories.value.map((c) => ({
+                    value: c.id,
+                    label: getCategoryFullName(c)
+                }))
+                : topCategories.value.map((c) => ({
+                    value: c.id,
+                    label: getCategoryFullName(c)
+                })),
             placeholder: 'Seleccionar',
             error: props.form.errors.category_id,
             showSearchMore: true,
+            disableLocalFilter: true,
+            loading: isLoading.value,
         },
         gridCols: 'grid-cols-[140px_1fr]',
         itemsCenter: true,
@@ -132,7 +165,8 @@ const rightColumnFields = computed<Field[]>(() => [
                     </Label>
                     <component :is="field.component" v-bind="field.props" @update:modelValue="
                         (form as any)[field.id] = $event
-                        " @search-more="showCategoryModal = true" />
+                        " @search-more="showCategoryModal = true"
+                        @search="(query: string) => field.id === 'category_id' ? handleCategorySearch(query) : null" />
                 </div>
             </div>
 

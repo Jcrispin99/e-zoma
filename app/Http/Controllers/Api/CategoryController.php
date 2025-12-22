@@ -65,13 +65,17 @@ class CategoryController extends Controller
     }
     public function search(Request $request)
     {
-        $perPage = $request->input('per_page', 20);
+        $perPage = $request->input('per_page', 50);
         $page = $request->input('page', 1);
 
         $categories = Category::query()
-            ->select(['id', 'name'])
+            ->with('parent')
+            ->select(['id', 'name', 'parent_id'])
             ->when($request->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%");
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('parent', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
             })
             ->orderBy('name')
             ->paginate($perPage, ['*'], 'page', $page);

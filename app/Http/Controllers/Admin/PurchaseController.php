@@ -217,7 +217,6 @@ class PurchaseController extends Controller
         $suppliers = Supplier::all();
         $taxes = Tax::all();
         $journals = Journal::where('type', 'purchase')->get();
-        // For edit, load all confirmed POs
         $purchaseOrders = PurchaseOrder::where('status', 'confirmed')->get()
             ->map(function ($po) {
                 return [

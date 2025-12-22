@@ -29,6 +29,9 @@ const isEditing = computed(() => !!props.purchase);
 const showProductSearch = ref(false);
 const selectedProductId = ref<number | string>('');
 const extraProducts = ref<VariantOption[]>([]);
+const searchedProducts = ref<VariantOption[]>([]);
+const isSearching = ref(false);
+const isLoading = ref(false);
 
 const form = useForm({
     supplier_id: props.purchase?.supplier_id || '',
@@ -127,6 +130,9 @@ const fetchPurchaseOrderDetails = async (poId: number | string) => {
 
 
 const allProducts = computed(() => {
+    if (isSearching.value) {
+        return [...searchedProducts.value, ...extraProducts.value];
+    }
     const base = props.products || [];
     return [...base, ...extraProducts.value];
 });
@@ -173,6 +179,28 @@ const confirmAddProduct = () => {
     if (product) {
         addItem(product);
         selectedProductId.value = '';
+    }
+};
+
+const handleSearch = async (query: string) => {
+    if (!query) {
+        isSearching.value = false;
+        searchedProducts.value = [];
+        return;
+    }
+    isSearching.value = true;
+    isLoading.value = true;
+    try {
+        const response = await axios.post('/api/product/search', {
+            search: query,
+            page: 1,
+            per_page: 50
+        });
+        searchedProducts.value = response.data.data;
+    } catch (error) {
+        console.error('Error searching products:', error);
+    } finally {
+        isLoading.value = false;
     }
 };
 
@@ -399,10 +427,11 @@ const isDirty = computed(() => form.isDirty);
                     <div class="flex-1">
                         <Label class="text-sm font-bold text-gray-700 mb-1 block">Producto</Label>
                         <Input v-model="selectedProductId" :options="productOptions"
-                            placeholder="Seleccione un producto" show-search-more
-                            @search-more="showProductSearch = true" @update:model-value="handleProductSelect" />
+                            placeholder="Seleccione un producto" show-search-more disable-local-filter
+                            @search-more="showProductSearch = true" @update:model-value="handleProductSelect"
+                            @search="handleSearch" :loading="isLoading" />
                     </div>
-                    <Button type="button" @click="confirmAddProduct" variant="primary">
+                    <Button type="button" @click="confirmAddProduct" variant="primary" :disabled="!selectedProductId">
                         <PlusIcon class="w-4 h-4 mr-1" />
                         Agregar
                     </Button>

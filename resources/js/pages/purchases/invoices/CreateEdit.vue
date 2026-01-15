@@ -11,7 +11,7 @@ import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
-import { PlusIcon, Trash } from 'lucide-vue-next';
+import { PlusIcon, Trash, Menu, FileText, Mail, CheckCircle, XCircle, DollarSign, RefreshCw, File } from 'lucide-vue-next';
 import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption, Purchase } from '@/types/purchases';
 import axios from 'axios';
 
@@ -380,12 +380,163 @@ const breadcrumbs = computed(() => [
 ]);
 
 const isDirty = computed(() => form.isDirty);
+
+const showActionsDropdown = ref(false);
+
+const handleConfirm = () => {
+    if (!props.purchase) return;
+    router.post(`/finanzas/compras/facturas/${props.purchase.id}/contabilizar`, {}, {
+        onSuccess: (page: any) => {
+            if (page.props.flash?.error) {
+                notify(page.props.flash.error, 'error');
+            } else {
+                notify(page.props.flash?.success || 'Compra contabilizada', 'success');
+            }
+        },
+        onError: () => notify('Error al contabilizar', 'error')
+    });
+    showActionsDropdown.value = false;
+};
+
+const handleCancelOrder = () => {
+    if (!props.purchase) return;
+    router.post(`/finanzas/compras/facturas/${props.purchase.id}/cancelar`, {}, {
+        onSuccess: (page: any) => {
+            if (page.props.flash?.error) {
+                notify(page.props.flash.error, 'error');
+            } else {
+                notify(page.props.flash?.success || 'Compra anulada', 'success');
+            }
+        },
+        onError: (err: any) => notify(err?.response?.data?.message || 'Error al anular', 'error')
+    });
+    showActionsDropdown.value = false;
+};
+
+const handleReopen = () => {
+    if (!props.purchase) return;
+    router.post(`/finanzas/compras/facturas/${props.purchase.id}/reabrir`, {}, {
+        onSuccess: (page: any) => {
+            if (page.props.flash?.error) {
+                notify(page.props.flash.error, 'error');
+            } else {
+                notify(page.props.flash?.success || 'Compra reabierta', 'success');
+            }
+        },
+        onError: () => notify('Error al reabrir', 'error')
+    });
+    showActionsDropdown.value = false;
+};
+
+const handleMarkPaid = () => {
+    if (!props.purchase) return;
+    router.post(`/finanzas/compras/facturas/${props.purchase.id}/pagar`, {}, {
+        onSuccess: (page: any) => {
+            if (page.props.flash?.error) {
+                notify(page.props.flash.error, 'error');
+            } else {
+                notify(page.props.flash?.success || 'Pago registrado', 'success');
+            }
+        },
+        onError: () => notify('Error al registrar pago', 'error')
+    });
+    showActionsDropdown.value = false;
+};
+
+const handleMarkUnpaid = () => {
+    if (!props.purchase) return;
+    router.post(`/finanzas/compras/facturas/${props.purchase.id}/anular-pago`, {}, {
+        onSuccess: (page: any) => {
+            if (page.props.flash?.error) {
+                notify(page.props.flash.error, 'error');
+            } else {
+                notify(page.props.flash?.success || 'Pago anulado', 'success');
+            }
+        },
+        onError: () => notify('Error al anular pago', 'error')
+    });
+    showActionsDropdown.value = false;
+};
 </script>
 
 <template>
     <ModuleLayout title="Compras" :icon="purchasesIcon" :navigation-items="purchasesNavigation">
         <Form title="Compras (Facturas)" :subtitle="isEditing ? 'Editar' : 'Nuevo'" :loading="form.processing"
             @submit="handleSubmit" @cancel="handleCancel" :disabled="!isDirty" :breadcrumbs="breadcrumbs">
+            <template #header-actions>
+                <div class="relative" v-if="isEditing">
+                    <Button variant="secondary" @click="showActionsDropdown = !showActionsDropdown" type="button">
+                        <Menu class="w-4 h-4" />
+                    </Button>
+
+                    <div v-if="showActionsDropdown"
+                        class="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                        <div class="py-1">
+                            <template v-if="purchase?.status === 'draft'">
+                                <button @click="handleConfirm" type="button"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <CheckCircle class="w-4 h-4 text-emerald-500" />
+                                    Contabilizar
+                                </button>
+                                <button @click="handleCancelOrder" type="button"
+                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <XCircle class="w-4 h-4" />
+                                    Cancelar
+                                </button>
+                            </template>
+
+                            <template v-if="purchase?.status === 'posted'">
+                                <button v-if="purchase?.payment_status !== 'paid'" @click="handleMarkPaid" type="button"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <DollarSign class="w-4 h-4 text-emerald-500" />
+                                    Registrar pago
+                                </button>
+                                <button v-else @click="handleMarkUnpaid" type="button"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <DollarSign class="w-4 h-4 text-amber-500" />
+                                    Anular pago
+                                </button>
+
+                                <div class="border-t border-gray-100 my-1"></div>
+
+                                <button @click="handleCancelOrder" type="button"
+                                    class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <XCircle class="w-4 h-4" />
+                                    Anular
+                                </button>
+                            </template>
+
+                            <template v-if="purchase?.status === 'cancelled'">
+                                <button @click="handleReopen" type="button"
+                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <RefreshCw class="w-4 h-4 text-blue-500" />
+                                    Reabrir
+                                </button>
+                            </template>
+
+                            <div class="border-t border-gray-100 my-1" v-if="purchase?.purchase_order_id"></div>
+                            <button v-if="purchase?.purchase_order_id"
+                                @click="router.visit(`/finanzas/compras/ordenes/${purchase.purchase_order_id}/editar`)"
+                                type="button"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <FileText class="w-4 h-4 text-indigo-500" />
+                                Ver Orden de Compra
+                            </button>
+
+                            <div class="border-t border-gray-100 my-1"></div>
+
+                            <button @click="notify('Funcionalidad pendiente: Enviar por correo', 'info')" type="button"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <Mail class="w-4 h-4 text-gray-500" />
+                                Enviar por correo
+                            </button>
+                        </div>
+                    </div>
+
+                    <div v-if="showActionsDropdown" @click="showActionsDropdown = false"
+                        class="fixed inset-0 z-40 bg-transparent"></div>
+                </div>
+            </template>
 
             <template #top-left>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

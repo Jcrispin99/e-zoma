@@ -105,6 +105,7 @@ export interface Purchase {
   purchase_order?: PurchaseOrder;
   variants?: PurchaseOrderItem[];
   observation?: string | null;
+  payment_status?: string;
   created_at?: string;
   updated_at?: string;
 }

@@ -89,7 +89,7 @@ const slots = useSlots();
         <div class="px-8 py-6">
             <div class="border border-gray-200 rounded-lg p-6">
                 <div v-if="slots['top-left'] || slots['top-right']" class="flex gap-8 items-start mb-6">
-                    <div class="flex-1">
+                    <div class="flex-1 w-full">
                         <slot name="top-left" />
                     </div>
 

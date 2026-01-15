@@ -12,6 +12,7 @@ use App\Models\Variant;
 use App\Models\Warehouse;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
@@ -28,8 +29,53 @@ class PurchaseController extends Controller
 
     public function dashboard()
     {
-        // Simple dashboard for now
-        return Inertia::render('purchases/Index');
+        $stats = [
+            'purchases_count' => Purchase::count(),
+            'orders_count' => PurchaseOrder::count(),
+            'suppliers_count' => Supplier::count(),
+            'products_count' => Variant::count(),
+            'total_spent' => Purchase::sum('total'),
+        ];
+
+        $recentPurchases = Purchase::with('supplier')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($purchase) {
+                return [
+                    'id' => $purchase->id,
+                    'supplier_name' => $purchase->supplier->name,
+                    'total' => $purchase->total,
+                    'date' => $purchase->created_at->format('d/m/Y'),
+                    'status' => $purchase->status
+                ];
+            });
+
+        $monthlySpend = Purchase::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(total) as total')
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        $topSuppliers = Purchase::selectRaw('supplier_id, SUM(total) as total_spent')
+            ->with('supplier:id,name')
+            ->groupBy('supplier_id')
+            ->orderByDesc('total_spent')
+            ->take(5)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => $item->supplier->name,
+                    'value' => $item->total_spent
+                ];
+            });
+
+        return Inertia::render('purchases/Index', [
+            'stats' => $stats,
+            'recentPurchases' => $recentPurchases,
+            'monthlySpend' => $monthlySpend,
+            'topSuppliers' => $topSuppliers
+        ]);
     }
 
     public function edit(Purchase $purchase)
@@ -307,5 +353,147 @@ class PurchaseController extends Controller
 
         Purchase::whereIn('id', $ids)->delete();
         return redirect()->route('purchases.invoices.index')->with('success', 'Compras eliminadas correctamente');
+    }
+    public function confirmWeb(Purchase $purchase)
+    {
+        // Gate::authorize('update_purchases', $purchase);
+        if ($purchase->status !== 'draft') {
+            return redirect()->back()->with('error', 'Solo compras en borrador pueden contabilizarse.');
+        }
+
+        $purchase->load(['variants']);
+        $warehouseId = $purchase->warehouse_id;
+        foreach ($purchase->variants as $variant) {
+            \App\Facades\Kardex::registerEntry(
+                $purchase,
+                [
+                    'id' => $variant->id,
+                    'quantity' => (float) ($variant->pivot->quantity ?? 0),
+                    'price' => (float) ($variant->pivot->price ?? 0),
+                    'subtotal' => (float) ($variant->pivot->subtotal ?? 0),
+                ],
+                $warehouseId,
+                'Compra'
+            );
+        }
+
+        $purchase->update(['status' => 'posted']);
+
+        if ($purchase->purchase_order_id && $purchase->purchaseOrder) {
+            $this->recalcPoMetrics($purchase->purchaseOrder);
+        }
+
+        return redirect()->back()->with('success', 'Compra contabilizada correctamente.');
+    }
+
+    public function cancelWeb(Purchase $purchase)
+    {
+        // Gate::authorize('update_purchases', $purchase);
+        if (in_array($purchase->payment_status, ['partial', 'paid'])) {
+            return redirect()->back()->with('error', 'No permitido. La compra tiene pagos registrados. Anule los pagos antes de cancelar.');
+        }
+
+        if ($purchase->status === 'posted') {
+            $purchase->load(['variants']);
+            foreach ($purchase->variants as $variant) {
+                \App\Facades\Kardex::registerExit(
+                    $purchase,
+                    [
+                        'id' => $variant->id,
+                        'quantity' => (float) ($variant->pivot->quantity ?? 0),
+                        'price' => (float) ($variant->pivot->price ?? 0),
+                        'subtotal' => (float) ($variant->pivot->subtotal ?? 0),
+                    ],
+                    $purchase->warehouse_id,
+                    'Anulación de compra'
+                );
+            }
+        }
+
+        $purchase->update(['status' => 'cancelled']);
+
+        if ($purchase->purchase_order_id && $purchase->purchaseOrder) {
+            $this->recalcPoMetrics($purchase->purchaseOrder);
+        }
+
+        return redirect()->back()->with('success', 'Compra anulada correctamente.');
+    }
+
+    public function reopenWeb(Purchase $purchase)
+    {
+        // Gate::authorize('update_purchases', $purchase);
+        if (!in_array($purchase->status, ['posted', 'cancelled'])) {
+            return redirect()->back()->with('error', 'Estado no válido para reabrir.');
+        }
+
+        $purchase->update(['status' => 'draft']);
+
+        if ($purchase->purchase_order_id && $purchase->purchaseOrder) {
+            $this->recalcPoMetrics($purchase->purchaseOrder);
+        }
+
+        return redirect()->back()->with('success', 'Compra reabierta a borrador.');
+    }
+
+    public function markPaidWeb(Purchase $purchase)
+    {
+        // Gate::authorize('update_purchases', $purchase);
+        if ($purchase->status !== 'posted') {
+            return redirect()->back()->with('error', 'Solo se puede registrar pago para compras publicadas.');
+        }
+        if ($purchase->payment_status === 'paid') {
+            return redirect()->back()->with('info', 'La compra ya está marcada como pagada.');
+        }
+
+        $purchase->update(['payment_status' => 'paid']);
+
+        return redirect()->back()->with('success', 'Pago registrado correctamente.');
+    }
+
+    public function markUnpaidWeb(Purchase $purchase)
+    {
+        // Gate::authorize('update_purchases', $purchase);
+        if ($purchase->status !== 'posted') {
+            return redirect()->back()->with('error', 'Solo se puede anular el pago en compras publicadas.');
+        }
+        if ($purchase->payment_status === 'unpaid') {
+            return redirect()->back()->with('info', 'La compra ya está como no pagada.');
+        }
+
+        $purchase->update(['payment_status' => 'unpaid']);
+
+        return redirect()->back()->with('success', 'Pago anulado correctamente.');
+    }
+
+    private function recalcPoMetrics(PurchaseOrder $po): void
+    {
+        $orderedQty = DB::table('variantables')
+            ->where('variantable_type', PurchaseOrder::class)
+            ->where('variantable_id', $po->id)
+            ->sum('quantity');
+
+        $billedQty = DB::table('variantables')
+            ->join('purchases', 'variantables.variantable_id', '=', 'purchases.id')
+            ->where('variantables.variantable_type', Purchase::class)
+            ->where('purchases.purchase_order_id', $po->id)
+            ->where('purchases.status', '<>', 'cancelled')
+            ->sum('variantables.quantity');
+
+        $purchasesCount = Purchase::query()
+            ->where('purchase_order_id', $po->id)
+            ->where('status', '<>', 'cancelled')
+            ->count();
+
+        $billingStatus = $billedQty <= 0
+            ? 'none'
+            : ($billedQty < $orderedQty ? 'partial' : 'complete');
+
+        $po->update([
+            'ordered_qty_total' => (float) $orderedQty,
+            'billed_qty_total' => (float) $billedQty,
+            'purchases_count' => $purchasesCount,
+            'billing_status' => $billingStatus,
+            'billed_at' => $billingStatus === 'complete' ? now() : null,
+        ]);
     }
 }

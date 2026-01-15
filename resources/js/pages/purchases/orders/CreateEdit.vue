@@ -11,7 +11,7 @@ import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
-import { PlusIcon, Trash, Menu, CheckCircle, XCircle, FileText, Mail } from 'lucide-vue-next';
+import { PlusIcon, Trash, Menu, CheckCircle, XCircle, FileText, Mail, File } from 'lucide-vue-next';
 import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption } from '@/types/purchases';
 import axios from 'axios';
 
@@ -329,6 +329,12 @@ const handleConfirm = () => {
     });
 };
 
+const handleViewInvoice = () => {
+    showActionsDropdown.value = false;
+    if (!props.purchaseOrder) return;
+    router.visit(`/finanzas/compras/facturas/${props.purchaseOrder.id}/editar`);
+}
+
 const handleCancelOrder = () => {
     showActionsDropdown.value = false;
     if (!props.purchaseOrder) return;
@@ -361,11 +367,18 @@ const handleCancelOrder = () => {
                                 Confirmar Orden
                             </button>
 
+                            <button v-if="purchaseOrder?.status === 'confirmed'" type="button"
+                                @click="handleViewInvoice"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <File class="w-4 h-4 text-green-500" />
+                                Ver Factura
+                            </button>
+
                             <button v-if="purchaseOrder?.status === 'confirmed'"
                                 @click="notify('Funcionalidad pendiente: Enviar por Correo', 'info')" type="button"
                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                 <Mail class="w-4 h-4 text-blue-500" />
-                                Enviar por Correo (OC)
+                                Enviar por Correo
                             </button>
 
                             <button v-if="purchaseOrder?.status === 'confirmed'"

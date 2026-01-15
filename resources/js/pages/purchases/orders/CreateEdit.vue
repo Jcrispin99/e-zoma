@@ -11,9 +11,19 @@ import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
-import { PlusIcon, Trash, Menu, CheckCircle, XCircle, FileText, Mail, File } from 'lucide-vue-next';
-import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption } from '@/types/purchases';
+import { PlusIcon, Trash, Menu, CheckCircle, XCircle, FileText, Mail, File, RefreshCw } from 'lucide-vue-next';
+import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption, FormItem } from '@/types/purchases';
+import { AttributeValue } from '@/types/product';
+import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
 import axios from 'axios';
+import { PageProps } from '@inertiajs/core';
+
+interface PageWithFlash extends PageProps {
+    flash: {
+        success?: string;
+        error?: string;
+    }
+}
 
 const props = defineProps<{
     purchaseOrder?: PurchaseOrder;
@@ -31,6 +41,8 @@ const extraProducts = ref<VariantOption[]>([]);
 const searchedProducts = ref<VariantOption[]>([]);
 const isSearching = ref(false);
 const isLoading = ref(false);
+const showConfirmModal = ref(false);
+const isProcessingAction = ref(false);
 
 const form = useForm({
     supplier_id: props.purchaseOrder?.supplier_id || '',
@@ -49,7 +61,7 @@ const form = useForm({
 
         return {
             id: v.id,
-            name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: any) => av.value).join(', ') : ''),
+            name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: AttributeValue) => av.value).join(', ') : ''),
             quantity: Number(v.pivot?.quantity || 1),
             price: Number(v.pivot?.price || 0),
             tax_rate: Number(v.pivot?.tax_rate || 0),
@@ -57,7 +69,22 @@ const form = useForm({
             subtotal: Number(v.pivot?.subtotal || 0)
         };
     }) || []
-});
+}) as unknown as {
+    supplier_id: number | string;
+    journal_id: number | string;
+    serie: string;
+    correlative: string;
+    date: string;
+    observation: string;
+    total: number;
+    items: FormItem[];
+    processing: boolean;
+    errors: Record<string, string>;
+    put: (url: string, options: any) => void;
+    post: (url: string, options: any) => void;
+    reset: () => void;
+    isDirty: boolean;
+};
 
 const supplierOptions = computed(() => {
     return props.suppliers.map(supplier => ({
@@ -87,7 +114,7 @@ const productOptions = computed(() => {
         if (!label || label === product.product?.name || label === 'undefined - undefined') {
             let baseName = product.product?.name || product.name || 'Producto';
             if (product.attribute_values && product.attribute_values.length > 0) {
-                baseName += ' - ' + product.attribute_values.map((av: any) => av.value).join(', ');
+                baseName += ' - ' + product.attribute_values.map((av: AttributeValue) => av.value).join(', ');
             } else if (product.sku) {
                 baseName += ` (${product.sku})`;
             }
@@ -100,11 +127,11 @@ const productOptions = computed(() => {
     });
 });
 
-const handleProductSelect = (productId: any) => {
+const handleProductSelect = (productId: number | string) => {
     selectedProductId.value = productId;
 };
 
-const handleModalSelect = (product: any) => {
+const handleModalSelect = (product: VariantOption) => {
     extraProducts.value.push(product);
     selectedProductId.value = product.id;
 };
@@ -156,8 +183,8 @@ const taxOptions = computed(() => {
 });
 
 
-watch(() => form.items, (items: any[]) => {
-    items.forEach((item: any) => {
+watch(() => form.items, (items: FormItem[]) => {
+    items.forEach((item: FormItem) => {
         const q = Number(item.quantity || 0);
         const p = Number(item.price || 0);
         const tax = props.taxes?.find(t => t.id == item.tax_id);
@@ -177,7 +204,7 @@ watch(() => form.items, (items: any[]) => {
 }, { deep: true });
 
 const calculatedSubtotal = computed(() => {
-    return form.items.reduce((acc: number, item: any) => {
+    return form.items.reduce((acc: number, item: FormItem) => {
         const q = Number(item.quantity || 0);
         const p = Number(item.price || 0);
         const tax = props.taxes?.find(t => t.id == item.tax_id);
@@ -193,7 +220,7 @@ const calculatedSubtotal = computed(() => {
 });
 
 const calculatedTaxTotal = computed(() => {
-    return form.items.reduce((acc: number, item: any) => {
+    return form.items.reduce((acc: number, item: FormItem) => {
         const q = Number(item.quantity || 0);
         const p = Number(item.price || 0);
         const tax = props.taxes?.find(t => t.id == item.tax_id);
@@ -228,13 +255,13 @@ watch(() => form.journal_id, (newVal) => {
     }
 });
 
-const addItem = (product: any) => {
+const addItem = (product: VariantOption) => {
     let name = product.full_name || product.name;
 
     if (!name || name === product.product?.name || name === 'undefined - undefined') {
         let baseName = product.product?.name || product.name || 'Producto';
         if (product.attribute_values && product.attribute_values.length > 0) {
-            baseName += ' - ' + product.attribute_values.map((av: any) => av.value).join(', ');
+            baseName += ' - ' + product.attribute_values.map((av: AttributeValue) => av.value).join(', ');
         } else if (product.sku) {
             baseName += ` (${product.sku})`;
         }
@@ -249,7 +276,7 @@ const addItem = (product: any) => {
         tax_id: props.taxes?.[0]?.id || '',
         tax_rate: 0,
         subtotal: 0
-    } as any;
+    } as FormItem;
 
     if (newItem.tax_id && props.taxes) {
         const matchingTax = props.taxes.find(t => t.id === newItem.tax_id);
@@ -265,7 +292,7 @@ const removeItem = (index: number) => {
     form.items.splice(index, 1);
 };
 
-const updateItemTax = (item: any) => {
+const updateItemTax = (item: FormItem) => {
     const tax = props.taxes?.find(t => t.id == item.tax_id);
     item.tax_rate = tax ? Number(tax.rate_percent) : 0;
 };
@@ -280,7 +307,7 @@ const handleSubmit = () => {
                 'success'
             );
         },
-        onError: (errors: any) => {
+        onError: (errors: Record<string, string>) => {
             if (Object.keys(errors).length > 0) {
                 const errorMessages = Object.values(errors).flat().join('\n');
                 notify(`Errores de validación:\n${errorMessages}`, 'error');
@@ -324,7 +351,14 @@ const handleConfirm = () => {
     showActionsDropdown.value = false;
     if (!props.purchaseOrder) return;
     router.post(`/finanzas/compras/ordenes/${props.purchaseOrder.id}/confirm`, {}, {
-        onSuccess: () => notify('Orden confirmada correctamente', 'success'),
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
+            } else {
+                notify(props.flash?.success || 'Orden confirmada correctamente', 'success');
+            }
+        },
         onError: () => notify('Error al confirmar la orden', 'error')
     });
 };
@@ -338,11 +372,44 @@ const handleViewInvoice = () => {
 const handleCancelOrder = () => {
     showActionsDropdown.value = false;
     if (!props.purchaseOrder) return;
-    if (!confirm('¿Estás seguro de cancelar esta orden? Esta acción no se puede deshacer.')) return;
+    showConfirmModal.value = true;
+};
+
+const confirmCancelOrder = () => {
+    if (!props.purchaseOrder) return;
+    isProcessingAction.value = true;
 
     router.post(`/finanzas/compras/ordenes/${props.purchaseOrder.id}/cancel`, {}, {
-        onSuccess: () => notify('Orden cancelada correctamente', 'success'),
-        onError: () => notify('Error al cancelar la orden', 'error')
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
+            } else {
+                notify(props.flash?.success || 'Orden cancelada correctamente', 'success');
+            }
+            showConfirmModal.value = false;
+        },
+        onError: () => notify('Error al cancelar la orden', 'error'),
+        onFinish: () => {
+            isProcessingAction.value = false;
+        }
+    });
+};
+
+const handleReopen = () => {
+    showActionsDropdown.value = false;
+    if (!props.purchaseOrder) return;
+
+    router.post(`/finanzas/compras/ordenes/${props.purchaseOrder.id}/reopen`, {}, {
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
+            } else {
+                notify(props.flash?.success || 'Orden reabierta correctamente', 'success');
+            }
+        },
+        onError: () => notify('Error al reabrir la orden', 'error')
     });
 };
 </script>
@@ -374,14 +441,14 @@ const handleCancelOrder = () => {
                                 Ver Factura
                             </button>
 
-                            <button v-if="purchaseOrder?.status === 'confirmed'"
+                            <button v-if="['confirmed', 'cancelled'].includes(purchaseOrder?.status || '')"
                                 @click="notify('Funcionalidad pendiente: Enviar por Correo', 'info')" type="button"
                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                 <Mail class="w-4 h-4 text-blue-500" />
                                 Enviar por Correo
                             </button>
 
-                            <button v-if="purchaseOrder?.status === 'confirmed'"
+                            <button v-if="['confirmed', 'cancelled'].includes(purchaseOrder?.status || '')"
                                 @click="notify('Funcionalidad pendiente: Ver PDF', 'info')" type="button"
                                 class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                 <FileText class="w-4 h-4 text-gray-500" />
@@ -396,6 +463,12 @@ const handleCancelOrder = () => {
                                 class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                 <XCircle class="w-4 h-4" />
                                 Cancelar Orden
+                            </button>
+
+                            <button v-if="purchaseOrder?.status === 'cancelled'" @click="handleReopen" type="button"
+                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <RefreshCw class="w-4 h-4 text-blue-500" />
+                                Reabrir Orden
                             </button>
                         </div>
                     </div>
@@ -537,5 +610,10 @@ const handleCancelOrder = () => {
         </Form>
 
         <GeneralSearchModal v-model="showProductSearch" type="product" @select="handleModalSelect" />
+
+        <ConfirmationModal :show="showConfirmModal" title="Cancelar Orden de Compra"
+            message="¿Estás seguro que deseas cancelar esta orden? Esta acción no se puede deshacer y revertirá cualquier movimiento de inventario si ya fue confirmada."
+            confirmText="Sí, cancelar orden" cancelText="No, mantener" variant="danger" :loading="isProcessingAction"
+            @close="showConfirmModal = false" @confirm="confirmCancelOrder" />
     </ModuleLayout>
 </template>

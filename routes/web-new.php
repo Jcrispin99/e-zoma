@@ -102,6 +102,7 @@ Route::post('/finanzas/compras/ordenes/mass-destroy', [PurchaseOrderController::
 Route::delete('/finanzas/compras/ordenes/{purchaseOrder}', [PurchaseOrderController::class, 'destroyWeb'])->name('purchases.orders.destroy');
 Route::post('/finanzas/compras/ordenes/{purchaseOrder}/confirm', [PurchaseOrderController::class, 'confirmWeb'])->name('purchases.orders.confirm');
 Route::post('/finanzas/compras/ordenes/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancelWeb'])->name('purchases.orders.cancel');
+Route::post('/finanzas/compras/ordenes/{purchaseOrder}/reopen', [PurchaseOrderController::class, 'reopenWeb'])->name('purchases.orders.reopen');
 Route::get('/finanzas/compras/ordenes/{purchaseOrder}/api-details', [PurchaseOrderController::class, 'apiDetails'])->name('purchases.orders.api-details');
 
 // COMPRAS (FACTURAS)

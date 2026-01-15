@@ -33,16 +33,12 @@ const emit = defineEmits(['close', 'confirm']);
             'bg-red-100': variant === 'danger',
             'bg-yellow-100': variant === 'warning',
             'bg-blue-100': variant === 'info',
-          }"
-        >
-          <AlertTriangle
-            class="h-6 w-6"
-            :class="{
-              'text-red-600': variant === 'danger',
-              'text-yellow-600': variant === 'warning',
-              'text-blue-600': variant === 'info',
-            }"
-          />
+          }">
+          <AlertTriangle class="h-6 w-6" :class="{
+            'text-red-600': variant === 'danger',
+            'text-yellow-600': variant === 'warning',
+            'text-blue-600': variant === 'info',
+          }" />
         </div>
         <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
           <h3 class="text-lg leading-6 font-medium text-gray-900">
@@ -57,11 +53,7 @@ const emit = defineEmits(['close', 'confirm']);
       </div>
     </div>
     <div class="bg-gray-50 pt-3 flex justify-end gap-2">
-      <Button
-        :variant="variant === 'info' ? 'primary' : variant"
-        :loading="loading"
-        @click="$emit('confirm')"
-      >
+      <Button :variant="variant === 'info' ? 'primary' : variant" :disabled="loading" @click="$emit('confirm')">
         {{ confirmText }}
       </Button>
       <Button variant="secondary" @click="$emit('close')" :disabled="loading">

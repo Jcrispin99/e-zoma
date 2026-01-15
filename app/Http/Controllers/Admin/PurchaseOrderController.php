@@ -301,11 +301,22 @@ class PurchaseOrderController extends Controller
             return back()->with(['error' => 'La orden ya está cancelada']);
         }
 
-        // TODO: Revertir lógica de inventario si se había confirmado y sumado stock
-
         $purchaseOrder->update(['status' => 'cancelled']);
 
         return back()->with(['success' => 'Orden de compra cancelada correctamente']);
+    }
+
+    public function reopenWeb(PurchaseOrder $purchaseOrder)
+    {
+        Gate::authorize('update_purchase-orders', $purchaseOrder);
+
+        if ($purchaseOrder->status === 'draft') {
+            return back()->with(['error' => 'La orden ya está en borrador']);
+        }
+
+        $purchaseOrder->update(['status' => 'draft']);
+
+        return back()->with(['success' => 'Orden de compra reabierta correctamente']);
     }
 
     public function apiDetails(PurchaseOrder $purchaseOrder)

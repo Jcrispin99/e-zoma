@@ -1,4 +1,4 @@
-import { Variant } from './product';
+import { Variant, AttributeValue } from './product';
 
 export interface Supplier {
   id: number;
@@ -44,12 +44,12 @@ export interface PurchaseOrderItem extends Variant {
   pivot?: PurchaseOrderItemPivot;
   tax_id?: number | string;
   full_name?: string;
-  attribute_values?: any[];
+  attribute_values?: AttributeValue[];
 }
 
 export interface VariantOption extends Variant {
   full_name?: string;
-  attribute_values?: any[];
+  attribute_values?: AttributeValue[];
 }
 
 export interface PurchaseOrder {
@@ -108,4 +108,14 @@ export interface Purchase {
   payment_status?: string;
   created_at?: string;
   updated_at?: string;
+}
+
+export interface FormItem {
+  id: number;
+  name: string;
+  quantity: number;
+  price: number;
+  tax_rate: number;
+  tax_id: number | string;
+  subtotal: number;
 }

@@ -9,7 +9,7 @@ defineOptions({
 const props = withDefaults(defineProps<{
   item?: any;
   items?: any[];
-  type?: 'product' | 'variant' | 'warehouse' | 'category' | 'supplier' | 'purchase_order';
+  type?: 'product' | 'variant' | 'warehouse' | 'category' | 'supplier' | 'purchase_order' | 'order';
   emptyMessage?: string;
 }>(), {
   type: 'product',
@@ -23,6 +23,7 @@ const isWarehouse = computed(() => props.type === 'warehouse');
 const isCategory = computed(() => props.type === 'category');
 const isSupplier = computed(() => props.type === 'supplier');
 const isPurchaseOrder = computed(() => props.type === 'purchase_order');
+const isOrder = computed(() => props.type === 'order');
 
 const stock = computed(() => {
   if (isProduct.value && props.item) {
@@ -45,7 +46,7 @@ const displayName = computed(() => {
   if (isProduct.value || isWarehouse.value || isCategory.value || isSupplier.value) {
     return props.item.name;
   }
-  if (isPurchaseOrder.value) {
+  if (isPurchaseOrder.value || isOrder.value) {
     return `${props.item.serie}-${props.item.correlative}`;
   }
   return props.item.product?.name + ' - ' + (props.item.attribute_values?.map((av: any) => av.value).join(', ') || 'Sin atributos');
@@ -56,6 +57,7 @@ const getStatusColor = (status: string) => {
     case 'draft': return 'bg-gray-100 text-gray-800';
     case 'confirmed': return 'bg-teal-100 text-teal-800';
     case 'approved': return 'bg-blue-100 text-blue-800';
+    case 'posted': return 'bg-green-100 text-green-800';
     case 'sent': return 'bg-yellow-100 text-yellow-800';
     case 'received': return 'bg-green-100 text-green-800';
     case 'cancelled': return 'bg-red-100 text-red-800';
@@ -68,6 +70,7 @@ const getStatusLabel = (status: string) => {
     'draft': 'Borrador',
     'confirmed': 'Confirmada',
     'approved': 'Aprobada',
+    'posted': 'Publicada',
     'sent': 'Enviada',
     'received': 'Recibida',
     'cancelled': 'Cancelada'

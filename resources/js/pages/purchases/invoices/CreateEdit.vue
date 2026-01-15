@@ -11,9 +11,19 @@ import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
-import { PlusIcon, Trash, Menu, FileText, Mail, CheckCircle, XCircle, DollarSign, RefreshCw, File } from 'lucide-vue-next';
-import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption, Purchase } from '@/types/purchases';
+import { PlusIcon, Trash, Menu, FileText, Mail, CheckCircle, XCircle, DollarSign, RefreshCw } from 'lucide-vue-next';
+import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption, Purchase, FormItem } from '@/types/purchases';
+import { AttributeValue } from '@/types/product';
+import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
 import axios from 'axios';
+import { PageProps } from '@inertiajs/core';
+
+interface PageWithFlash extends PageProps {
+    flash: {
+        success?: string;
+        error?: string;
+    }
+}
 
 const props = defineProps<{
     purchase?: Purchase;
@@ -32,6 +42,15 @@ const extraProducts = ref<VariantOption[]>([]);
 const searchedProducts = ref<VariantOption[]>([]);
 const isSearching = ref(false);
 const isLoading = ref(false);
+const showConfirmModal = ref(false);
+const isProcessingAction = ref(false);
+const confirmModalConfig = ref({
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    variant: 'danger' as 'danger' | 'warning' | 'info',
+    action: () => { }
+});
 
 const form = useForm({
     supplier_id: props.purchase?.supplier_id || '',
@@ -51,7 +70,7 @@ const form = useForm({
 
         return {
             id: v.id,
-            name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: any) => av.value).join(', ') : ''),
+            name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: AttributeValue) => av.value).join(', ') : ''),
             quantity: Number(v.pivot?.quantity || 1),
             price: Number(v.pivot?.price || 0),
             tax_rate: Number(v.pivot?.tax_rate || 0),
@@ -112,14 +131,14 @@ const fetchPurchaseOrderDetails = async (poId: number | string) => {
 
             return {
                 id: v.id,
-                name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: any) => av.value).join(', ') : ''),
+                name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: AttributeValue) => av.value).join(', ') : ''),
                 quantity: quantity,
                 price: price,
                 tax_rate: taxRate,
                 tax_id: taxId,
                 subtotal: Number(v.pivot?.subtotal || 0)
             };
-        }) || []) as any[];
+        }) || []) as FormItem[];
 
         notify('Datos de la orden cargados correctamente', 'success');
     } catch (error) {
@@ -150,7 +169,7 @@ const productOptions = computed(() => {
         if (!label || label === product.product?.name || label === 'undefined - undefined') {
             let baseName = product.product?.name || product.name || 'Producto';
             if (product.attribute_values && product.attribute_values.length > 0) {
-                baseName += ' - ' + product.attribute_values.map((av: any) => av.value).join(', ');
+                baseName += ' - ' + product.attribute_values.map((av: AttributeValue) => av.value).join(', ');
             } else if (product.sku) {
                 baseName += ` (${product.sku})`;
             }
@@ -163,11 +182,11 @@ const productOptions = computed(() => {
     });
 });
 
-const handleProductSelect = (productId: any) => {
+const handleProductSelect = (productId: number | string) => {
     selectedProductId.value = productId;
 };
 
-const handleModalSelect = (product: any) => {
+const handleModalSelect = (product: VariantOption) => {
     extraProducts.value.push(product);
     selectedProductId.value = product.id;
 };
@@ -219,8 +238,8 @@ const taxOptions = computed(() => {
 });
 
 
-watch(() => form.items, (items: any[]) => {
-    items.forEach((item: any) => {
+watch(() => form.items, (items: FormItem[]) => {
+    items.forEach((item: FormItem) => {
         const q = Number(item.quantity || 0);
         const p = Number(item.price || 0);
         const tax = props.taxes?.find(t => t.id == item.tax_id);
@@ -240,7 +259,7 @@ watch(() => form.items, (items: any[]) => {
 }, { deep: true });
 
 const calculatedSubtotal = computed(() => {
-    return form.items.reduce((acc: number, item: any) => {
+    return form.items.reduce((acc: number, item: FormItem) => {
         const q = Number(item.quantity || 0);
         const p = Number(item.price || 0);
         const tax = props.taxes?.find(t => t.id == item.tax_id);
@@ -256,7 +275,7 @@ const calculatedSubtotal = computed(() => {
 });
 
 const calculatedTaxTotal = computed(() => {
-    return form.items.reduce((acc: number, item: any) => {
+    return form.items.reduce((acc: number, item: FormItem) => {
         const q = Number(item.quantity || 0);
         const p = Number(item.price || 0);
         const tax = props.taxes?.find(t => t.id == item.tax_id);
@@ -291,13 +310,13 @@ watch(() => form.journal_id, (newVal) => {
     }
 });
 
-const addItem = (product: any) => {
+const addItem = (product: VariantOption) => {
     let name = product.full_name || product.name;
 
     if (!name || name === product.product?.name || name === 'undefined - undefined') {
         let baseName = product.product?.name || product.name || 'Producto';
         if (product.attribute_values && product.attribute_values.length > 0) {
-            baseName += ' - ' + product.attribute_values.map((av: any) => av.value).join(', ');
+            baseName += ' - ' + product.attribute_values.map((av: AttributeValue) => av.value).join(', ');
         } else if (product.sku) {
             baseName += ` (${product.sku})`;
         }
@@ -312,7 +331,7 @@ const addItem = (product: any) => {
         tax_id: props.taxes?.[0]?.id || '',
         tax_rate: 0,
         subtotal: 0
-    } as any;
+    } as FormItem;
 
     if (newItem.tax_id && props.taxes) {
         const matchingTax = props.taxes.find(t => t.id === newItem.tax_id);
@@ -328,7 +347,7 @@ const removeItem = (index: number) => {
     form.items.splice(index, 1);
 };
 
-const updateItemTax = (item: any) => {
+const updateItemTax = (item: FormItem) => {
     const tax = props.taxes?.find(t => t.id == item.tax_id);
     item.tax_rate = tax ? Number(tax.rate_percent) : 0;
 };
@@ -343,7 +362,7 @@ const handleSubmit = () => {
                 'success'
             );
         },
-        onError: (errors: any) => {
+        onError: (errors: Record<string, string>) => {
             if (Object.keys(errors).length > 0) {
                 const errorMessages = Object.values(errors).flat().join('\n');
                 notify(`Errores de validación:\n${errorMessages}`, 'error');
@@ -386,11 +405,12 @@ const showActionsDropdown = ref(false);
 const handleConfirm = () => {
     if (!props.purchase) return;
     router.post(`/finanzas/compras/facturas/${props.purchase.id}/contabilizar`, {}, {
-        onSuccess: (page: any) => {
-            if (page.props.flash?.error) {
-                notify(page.props.flash.error, 'error');
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
             } else {
-                notify(page.props.flash?.success || 'Compra contabilizada', 'success');
+                notify(props.flash?.success || 'Compra contabilizada', 'success');
             }
         },
         onError: () => notify('Error al contabilizar', 'error')
@@ -400,27 +420,50 @@ const handleConfirm = () => {
 
 const handleCancelOrder = () => {
     if (!props.purchase) return;
-    router.post(`/finanzas/compras/facturas/${props.purchase.id}/cancelar`, {}, {
-        onSuccess: (page: any) => {
-            if (page.props.flash?.error) {
-                notify(page.props.flash.error, 'error');
-            } else {
-                notify(page.props.flash?.success || 'Compra anulada', 'success');
-            }
-        },
-        onError: (err: any) => notify(err?.response?.data?.message || 'Error al anular', 'error')
-    });
+
+    confirmModalConfig.value = {
+        title: 'Anular Compra',
+        message: '¿Estás seguro que deseas anular esta compra? Esta acción no se puede deshacer y revertirá los movimientos de inventario.',
+        confirmText: 'Sí, anular',
+        variant: 'danger',
+        action: processCancelOrder
+    };
+    showConfirmModal.value = true;
     showActionsDropdown.value = false;
+};
+
+const processCancelOrder = () => {
+    if (!props.purchase) return;
+    isProcessingAction.value = true;
+
+    router.post(`/finanzas/compras/facturas/${props.purchase.id}/cancelar`, {}, {
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
+            } else {
+                notify(props.flash?.success || 'Compra anulada', 'success');
+            }
+            showConfirmModal.value = false;
+        },
+        onError: (err: Record<string, string>) => {
+            notify(Object.values(err).flat().join('\n') || 'Error al anular', 'error');
+        },
+        onFinish: () => {
+            isProcessingAction.value = false;
+        }
+    });
 };
 
 const handleReopen = () => {
     if (!props.purchase) return;
     router.post(`/finanzas/compras/facturas/${props.purchase.id}/reabrir`, {}, {
-        onSuccess: (page: any) => {
-            if (page.props.flash?.error) {
-                notify(page.props.flash.error, 'error');
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
             } else {
-                notify(page.props.flash?.success || 'Compra reabierta', 'success');
+                notify(props.flash?.success || 'Compra reabierta', 'success');
             }
         },
         onError: () => notify('Error al reabrir', 'error')
@@ -431,11 +474,12 @@ const handleReopen = () => {
 const handleMarkPaid = () => {
     if (!props.purchase) return;
     router.post(`/finanzas/compras/facturas/${props.purchase.id}/pagar`, {}, {
-        onSuccess: (page: any) => {
-            if (page.props.flash?.error) {
-                notify(page.props.flash.error, 'error');
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
             } else {
-                notify(page.props.flash?.success || 'Pago registrado', 'success');
+                notify(props.flash?.success || 'Pago registrado', 'success');
             }
         },
         onError: () => notify('Error al registrar pago', 'error')
@@ -445,17 +489,37 @@ const handleMarkPaid = () => {
 
 const handleMarkUnpaid = () => {
     if (!props.purchase) return;
-    router.post(`/finanzas/compras/facturas/${props.purchase.id}/anular-pago`, {}, {
-        onSuccess: (page: any) => {
-            if (page.props.flash?.error) {
-                notify(page.props.flash.error, 'error');
-            } else {
-                notify(page.props.flash?.success || 'Pago anulado', 'success');
-            }
-        },
-        onError: () => notify('Error al anular pago', 'error')
-    });
+
+    confirmModalConfig.value = {
+        title: 'Anular Pago',
+        message: '¿Estás seguro que deseas anular el pago de esta compra? El estado volverá a pendiente de pago.',
+        confirmText: 'Sí, anular pago',
+        variant: 'warning',
+        action: processMarkUnpaid
+    };
+    showConfirmModal.value = true;
     showActionsDropdown.value = false;
+};
+
+const processMarkUnpaid = () => {
+    if (!props.purchase) return;
+    isProcessingAction.value = true;
+
+    router.post(`/finanzas/compras/facturas/${props.purchase.id}/anular-pago`, {}, {
+        onSuccess: (page) => {
+            const props = page.props as unknown as PageWithFlash;
+            if (props.flash?.error) {
+                notify(props.flash.error, 'error');
+            } else {
+                notify(props.flash?.success || 'Pago anulado', 'success');
+            }
+            showConfirmModal.value = false;
+        },
+        onError: () => notify('Error al anular pago', 'error'),
+        onFinish: () => {
+            isProcessingAction.value = false;
+        }
+    });
 };
 </script>
 
@@ -676,5 +740,10 @@ const handleMarkUnpaid = () => {
         </Form>
 
         <GeneralSearchModal v-model="showProductSearch" type="product" @select="handleModalSelect" />
+
+        <ConfirmationModal :show="showConfirmModal" :title="confirmModalConfig.title"
+            :message="confirmModalConfig.message" :confirmText="confirmModalConfig.confirmText" cancelText="Cancelar"
+            :variant="confirmModalConfig.variant" :loading="isProcessingAction" @close="showConfirmModal = false"
+            @confirm="confirmModalConfig.action" />
     </ModuleLayout>
 </template>

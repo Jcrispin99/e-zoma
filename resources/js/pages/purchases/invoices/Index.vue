@@ -135,7 +135,7 @@ const selectionMessage = computed(() => {
 const getStatusColor = (status: string) => {
     switch (status) {
         case 'draft': return 'bg-gray-100 text-gray-800';
-        case 'posted': return 'bg-green-100 text-green-800';
+        case 'posted': return 'bg-teal-100 text-teal-800';
         case 'cancelled': return 'bg-red-100 text-red-800';
         default: return 'bg-gray-100 text-gray-800';
     }
@@ -144,7 +144,7 @@ const getStatusColor = (status: string) => {
 const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
         'draft': 'Borrador',
-        'posted': 'Publicado',
+        'posted': 'Publicada',
         'cancelled': 'Cancelada'
     };
     return labels[status] || status;

@@ -4,12 +4,65 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Sale;
-use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class SaleController extends Controller
 {
+    public function dashboard()
+    {
+        // Gate::authorize('read_sales', Sale::class);
+
+        $stats = [
+            'sales_count' => Sale::count(),
+            'orders_count' => \App\Models\Quote::count(),
+            'customers_count' => \App\Models\Customer::count(),
+            'products_count' => \App\Models\Variant::count(),
+            'total_sales' => Sale::sum('total'),
+        ];
+
+        $recentSales = Sale::with('customer')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($sale) {
+                return [
+                    'id' => $sale->id,
+                    'customer_name' => $sale->customer->name ?? 'Cliente General',
+                    'total' => $sale->total,
+                    'date' => $sale->created_at->format('d/m/Y'),
+                    'status' => $sale->status
+                ];
+            });
+
+        $monthlySales = Sale::selectRaw('DATE_FORMAT(created_at, "%Y-%m") as month, SUM(total) as total')
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->groupBy('month')
+            ->orderBy('month')
+            ->get();
+
+        $topCustomers = Sale::selectRaw('customer_id, SUM(total) as total_spent')
+            ->with('customer:id,name')
+            ->groupBy('customer_id')
+            ->orderByDesc('total_spent')
+            ->take(5)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => $item->customer->name ?? 'Cliente General',
+                    'value' => $item->total_spent
+                ];
+            });
+
+        return Inertia::render('sales/Index', [
+            'stats' => $stats,
+            'recentSales' => $recentSales,
+            'monthlySales' => $monthlySales,
+            'topCustomers' => $topCustomers
+        ]);
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -17,6 +70,12 @@ class SaleController extends Controller
     {
         Gate::authorize('read_sales', Sale::class);
         return view('admin.sales.index');
+    }
+
+    public function indexWeb()
+    {
+        // Gate::authorize('read_sales', Sale::class);
+        return Inertia::render('sales/Index');
     }
 
     /**

@@ -32,6 +32,19 @@ const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(value);
 };
 
+const statusTranslate = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'Pendiente';
+    case 'posted':
+      return 'Publicada';
+    case 'cancelled':
+      return 'Cancelada';
+    default:
+      return 'Desconocido';
+  }
+};
+
 const spendSeries = computed(() => [{
   name: 'Gasto Mensual',
   data: props.monthlySpend.map(s => Number(s.total))
@@ -42,7 +55,6 @@ const spendColors = ['#0d9488'];
 const supplierSeries = computed(() => props.topSuppliers.map(s => Number(s.value)));
 const supplierLabels = computed(() => props.topSuppliers.map(s => s.name));
 const supplierColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
 </script>
 
 <template>
@@ -50,7 +62,7 @@ const supplierColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
     <div class="space-y-6 mx-9">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-bold text-gray-800">Panel de Compras</h1>
+          <h1 class="text-2xl font-bold text-gray-800">Información General</h1>
           <p class="text-gray-500 mt-1">Resumen general de gastos y adquisiciones</p>
         </div>
       </div>
@@ -93,8 +105,8 @@ const supplierColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
                 <td class="px-6 py-3 font-medium text-gray-900">{{ purchase.supplier_name }}</td>
                 <td class="px-6 py-3 text-gray-500">{{ purchase.date }}</td>
                 <td class="px-6 py-3">
-                  <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                    {{ purchase.status }}
+                  <span class="px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                    {{ statusTranslate(purchase.status) }}
                   </span>
                 </td>
                 <td class="px-6 py-3 font-medium text-gray-900 text-right">{{ formatCurrency(Number(purchase.total)) }}

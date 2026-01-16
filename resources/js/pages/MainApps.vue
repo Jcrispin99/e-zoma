@@ -30,7 +30,7 @@ const defaultMenuItems = [
     id: 9,
     title: 'Ventas',
     description: 'Gestión de todas las ventas y sus facturas',
-    route: '/operaciones/ventas',
+    route: '/finanzas/ventas',
     image: ventasIcon,
   },
   {

@@ -15,6 +15,8 @@ use App\Http\Controllers\Admin\PurchaseController;
 use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 
+use App\Http\Controllers\Admin\SaleController;
+
 Route::get('/web', function () {
     return Inertia::render('MainApps');
 })->name('web');
@@ -118,6 +120,9 @@ Route::post('/finanzas/compras/facturas/{purchase}/cancelar', [PurchaseControlle
 Route::post('/finanzas/compras/facturas/{purchase}/reabrir', [PurchaseController::class, 'reopenWeb'])->name('purchases.invoices.reopen');
 Route::post('/finanzas/compras/facturas/{purchase}/pagar', [PurchaseController::class, 'markPaidWeb'])->name('purchases.invoices.mark-paid');
 Route::post('/finanzas/compras/facturas/{purchase}/anular-pago', [PurchaseController::class, 'markUnpaidWeb'])->name('purchases.invoices.mark-unpaid');
+
+// VENTAS
+Route::get('/finanzas/ventas', [SaleController::class, 'dashboard'])->name('sales.index');
 
 // API Routes
 Route::get('/api/categories', [ProductController::class, 'getCategoriesApi'])->name('api.categories');

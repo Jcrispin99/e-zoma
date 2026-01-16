@@ -9,7 +9,7 @@ defineOptions({
 const props = withDefaults(defineProps<{
   item?: any;
   items?: any[];
-  type?: 'product' | 'variant' | 'warehouse' | 'category' | 'supplier' | 'purchase_order' | 'order';
+  type?: 'product' | 'variant' | 'warehouse' | 'category' | 'supplier' | 'purchase_order' | 'order' | 'customer';
   emptyMessage?: string;
 }>(), {
   type: 'product',
@@ -24,6 +24,7 @@ const isCategory = computed(() => props.type === 'category');
 const isSupplier = computed(() => props.type === 'supplier');
 const isPurchaseOrder = computed(() => props.type === 'purchase_order');
 const isOrder = computed(() => props.type === 'order');
+const isCustomer = computed(() => props.type === 'customer');
 
 const stock = computed(() => {
   if (isProduct.value && props.item) {
@@ -48,6 +49,9 @@ const displayName = computed(() => {
   }
   if (isPurchaseOrder.value || isOrder.value) {
     return `${props.item.serie}-${props.item.correlative}`;
+  }
+  if (isCustomer.value) {
+    return props.item.name.toUpperCase();
   }
   return props.item.product?.name + ' - ' + (props.item.attribute_values?.map((av: any) => av.value).join(', ') || 'Sin atributos');
 });
@@ -145,11 +149,14 @@ const handleClick = (item: any) => {
       <p v-else-if="isPurchaseOrder" class="text-xs font-medium text-gray-600 mb-1">
         {{ new Date(item.created_at).toLocaleDateString() }}
       </p>
+      <p v-else-if="isCustomer" class="text-xs font-medium text-gray-600 mb-2">
+        {{ item.identity?.name || 'Doc' }}: {{ item.document_number }}
+      </p>
       <p v-else class="text-xs font-medium text-gray-600 mb-2">
         SKU: {{ item.sku }}
       </p>
 
-      <div v-if="!isWarehouse && !isCategory && !isSupplier && !isPurchaseOrder" class="space-y-1">
+      <div v-if="!isWarehouse && !isCategory && !isSupplier && !isPurchaseOrder && !isCustomer" class="space-y-1">
         <p class="text-xs text-gray-500">
           Precio:
           <span class="font-medium text-gray-900">S/ {{ formattedPrice }}</span>
@@ -177,6 +184,15 @@ const handleClick = (item: any) => {
           <span class="text-xs text-gray-500">Total</span>
           <span class="text-sm font-bold text-gray-900">S/ {{ Number(item.total || 0).toFixed(2) }}</span>
         </div>
+      </div>
+
+      <div v-if="isCustomer" class="space-y-1 mt-2">
+        <p class="text-xs text-gray-500">
+          <span class="font-medium text-gray-900">{{ item.email || 'Sin email' }}</span>
+        </p>
+        <p class="text-xs text-gray-500">
+          <span class="font-medium text-gray-900">{{ item.phone || 'Sin teléfono' }}</span>
+        </p>
       </div>
     </div>
   </div>

@@ -39,7 +39,7 @@ const statusTranslate = (status: string) => {
         case 'pending':
             return 'Pendiente';
         case 'posted':
-            return 'Publicada'; // Or 'Validada' / 'Realizada'
+            return 'Publicada';
         case 'cancelled':
             return 'Anulada';
         default:

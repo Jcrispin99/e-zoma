@@ -7,6 +7,7 @@ use App\Models\Customer;
 use Illuminate\Http\Request;
 use App\Models\Identity;
 use Illuminate\Support\Facades\Gate;
+use Inertia\Inertia;
 
 class CustomerController extends Controller
 {
@@ -17,6 +18,30 @@ class CustomerController extends Controller
     {
         Gate::authorize('read_customers', Customer::class);
         return view('admin.customers.index');
+    }
+
+    public function indexWeb(Request $request)
+    {
+        // Gate::authorize('read_customers', Customer::class);
+
+        $query = Customer::with('identity');
+
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('document_number', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        }
+
+        $customers = $query->latest()->paginate(80)->withQueryString();
+
+        return Inertia::render('sales/customers/Index', [
+            'customers' => $customers,
+            'filters' => $request->only(['search'])
+        ]);
     }
 
     /**

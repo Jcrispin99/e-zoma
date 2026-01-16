@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CustomerController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -123,6 +124,9 @@ Route::post('/finanzas/compras/facturas/{purchase}/anular-pago', [PurchaseContro
 
 // VENTAS
 Route::get('/finanzas/ventas', [SaleController::class, 'dashboard'])->name('sales.index');
+
+// CLIENTES
+Route::get('/finanzas/ventas/clientes', [CustomerController::class, 'indexWeb'])->name('sales.customers.index');
 
 // API Routes
 Route::get('/api/categories', [ProductController::class, 'getCategoriesApi'])->name('api.categories');

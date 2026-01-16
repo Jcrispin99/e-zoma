@@ -1,7 +1,7 @@
 import { NavigationItem } from '@/components/layouts/ModuleLayout.vue';
-import inventarioIconRaw from '@/assets/images/iconos-modulos/inventario-koodi.png';
+import comprasIconRaw from '@/assets/images/iconos-modulos/compras-koodi.png';
 
-export const purchasesIcon = inventarioIconRaw;
+export const purchasesIcon = comprasIconRaw;
 
 export const purchasesNavigation: NavigationItem[] = [
   { label: 'Información general', href: '/finanzas/compras' },

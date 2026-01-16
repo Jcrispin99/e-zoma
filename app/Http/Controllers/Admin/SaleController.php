@@ -7,6 +7,7 @@ use App\Models\Sale;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
+use Request;
 
 class SaleController extends Controller
 {
@@ -72,10 +73,30 @@ class SaleController extends Controller
         return view('admin.sales.index');
     }
 
-    public function indexWeb()
+    public function indexWeb(Request $request)
     {
-        // Gate::authorize('read_sales', Sale::class);
-        return Inertia::render('sales/Index');
+        // Gate::authorize('read_purchases', Purchase::class);
+
+        $query = Sale::with(['customer']);
+
+        if ($request->has('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('serie', 'like', "%{$search}%")
+                    ->orWhere('correlative', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('document_number', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $sales = $query->latest()->paginate(20)->withQueryString();
+
+        return Inertia::render('sales/invoices/Index', [
+            'sales' => $sales,
+            'filters' => $request->only(['search'])
+        ]);
     }
 
     /**

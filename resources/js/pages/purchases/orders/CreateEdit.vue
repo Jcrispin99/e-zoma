@@ -496,7 +496,7 @@ const handleReopen = () => {
             </template>
 
             <div class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <Label class="block text-sm font-medium text-gray-700">Correlativo</Label>
                         <Input v-model="form.correlative" :error="form.errors.correlative" placeholder="Autogenerado"

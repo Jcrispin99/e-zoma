@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\CustomerController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -17,6 +16,8 @@ use App\Http\Controllers\Admin\SupplierController;
 use App\Http\Controllers\Admin\PurchaseOrderController;
 
 use App\Http\Controllers\Admin\SaleController;
+use App\Http\Controllers\Admin\CustomerController;
+use App\Http\Controllers\Admin\SaleOrderController;
 
 Route::get('/web', function () {
     return Inertia::render('MainApps');
@@ -127,6 +128,25 @@ Route::get('/finanzas/ventas', [SaleController::class, 'dashboard'])->name('sale
 
 // CLIENTES
 Route::get('/finanzas/ventas/clientes', [CustomerController::class, 'indexWeb'])->name('sales.customers.index');
+Route::get('/finanzas/ventas/clientes/crear', [CustomerController::class, 'createWeb'])->name('sales.customers.create');
+Route::get('/finanzas/ventas/clientes/{customer}/editar', [CustomerController::class, 'editWeb'])->name('sales.customers.edit');
+Route::post('/finanzas/ventas/clientes', [CustomerController::class, 'storeWeb'])->name('sales.customers.store');
+Route::put('/finanzas/ventas/clientes/{customer}', [CustomerController::class, 'updateWeb'])->name('sales.customers.update');
+Route::post('/finanzas/ventas/clientes/mass-destroy', [CustomerController::class, 'massDestroyWeb'])->name('sales.customers.mass_destroy');
+Route::delete('/finanzas/ventas/clientes/{customer}', [CustomerController::class, 'destroyWeb'])->name('sales.customers.destroy');
+
+// ORDENES DE VENTA
+Route::get('/finanzas/ventas/ordenes', [SaleOrderController::class, 'indexWeb'])->name('sales.orders.index');
+Route::get('/finanzas/ventas/ordenes/crear', [SaleOrderController::class, 'createWeb'])->name('sales.orders.create');
+Route::get('/finanzas/ventas/ordenes/{sale}/editar', [SaleOrderController::class, 'editWeb'])->name('sales.orders.edit');
+Route::post('/finanzas/ventas/ordenes', [SaleOrderController::class, 'storeWeb'])->name('sales.orders.store');
+Route::put('/finanzas/ventas/ordenes/{sale}', [SaleOrderController::class, 'updateWeb'])->name('sales.orders.update');
+Route::post('/finanzas/ventas/ordenes/mass-destroy', [SaleOrderController::class, 'massDestroyWeb'])->name('sales.orders.mass_destroy');
+Route::delete('/finanzas/ventas/ordenes/{sale}', [SaleOrderController::class, 'destroyWeb'])->name('sales.orders.destroy');
+Route::post('/finanzas/ventas/ordenes/{sale}/publicar', [SaleOrderController::class, 'postWeb'])->name('sales.orders.post');
+Route::post('/finanzas/ventas/ordenes/{sale}/cancelar', [SaleOrderController::class, 'cancelWeb'])->name('sales.orders.cancel');
+Route::post('/finanzas/ventas/ordenes/{sale}/reabrir', [SaleOrderController::class, 'reopenWeb'])->name('sales.orders.reopen');
+Route::get('/finanzas/ventas/ordenes/{sale}/api-details', [SaleOrderController::class, 'apiDetails'])->name('sales.orders.api-details');
 
 // API Routes
 Route::get('/api/categories', [ProductController::class, 'getCategoriesApi'])->name('api.categories');

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Shapes, Warehouse, Package, Truck, FileText } from 'lucide-vue-next';
+import { Shapes, Warehouse, Package, Truck, FileText, User2 } from 'lucide-vue-next';
 
 defineOptions({
   name: 'CardData'
@@ -9,7 +9,7 @@ defineOptions({
 const props = withDefaults(defineProps<{
   item?: any;
   items?: any[];
-  type?: 'product' | 'variant' | 'warehouse' | 'category' | 'supplier' | 'purchase_order' | 'order' | 'customer';
+  type?: 'product' | 'variant' | 'warehouse' | 'category' | 'supplier' | 'purchase_order' | 'order' | 'sale' | 'customer';
   emptyMessage?: string;
 }>(), {
   type: 'product',
@@ -24,6 +24,7 @@ const isCategory = computed(() => props.type === 'category');
 const isSupplier = computed(() => props.type === 'supplier');
 const isPurchaseOrder = computed(() => props.type === 'purchase_order');
 const isOrder = computed(() => props.type === 'order');
+const isSale = computed(() => props.type === 'sale');
 const isCustomer = computed(() => props.type === 'customer');
 
 const stock = computed(() => {
@@ -47,12 +48,19 @@ const displayName = computed(() => {
   if (isProduct.value || isWarehouse.value || isCategory.value || isSupplier.value) {
     return props.item.name;
   }
+
   if (isPurchaseOrder.value || isOrder.value) {
     return `${props.item.serie}-${props.item.correlative}`;
   }
+
+  if (isSale.value) {
+    return `${props.item.serie}-${props.item.correlative}`;
+  }
+
   if (isCustomer.value) {
     return props.item.name.toUpperCase();
   }
+
   return props.item.product?.name + ' - ' + (props.item.attribute_values?.map((av: any) => av.value).join(', ') || 'Sin atributos');
 });
 
@@ -116,6 +124,8 @@ const handleClick = (item: any) => {
         <Shapes v-else-if="isCategory" class="w-8 h-8 text-gray-400" />
         <Truck v-else-if="isSupplier" class="w-8 h-8 text-gray-400" />
         <FileText v-else-if="isPurchaseOrder" class="w-8 h-8 text-gray-400" />
+        <FileText v-else-if="isSale" class="w-8 h-8 text-gray-400" />
+        <User2 v-else-if="isCustomer" class="w-8 h-8 text-gray-400" />
         <Package v-else class="w-8 h-8 text-gray-400" />
       </div>
     </div>

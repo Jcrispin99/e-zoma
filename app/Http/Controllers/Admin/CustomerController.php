@@ -54,6 +54,15 @@ class CustomerController extends Controller
         return view('admin.customers.create', compact('identities'));
     }
 
+    public function createWeb()
+    {
+        Gate::authorize('create_customers', Customer::class);
+        $identities = Identity::all();
+        return Inertia::render('sales/customers/CreateEdit', [
+            'identities' => $identities
+        ]);
+    }
+
     /**
      * Store a newly created resource in storage.
      */
@@ -79,6 +88,22 @@ class CustomerController extends Controller
         return redirect()->route('admin.customers.edit', $customer);
     }
 
+    public function storeWeb(Request $request)
+    {
+        Gate::authorize('create_customers', Customer::class);
+        $data = $request->validate([
+            'identity_id' => 'required | exists:identities,id',
+            'document_number' => 'required | string | max:20 | unique:customers,document_number',
+            'name' => 'required | string | max:255',
+            'address' => 'nullable | string | max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable | string | max:20',
+        ]);
+        Customer::create($data);
+
+        return redirect()->route('sales.customers.index')->with('success', 'Cliente creado con éxito');
+    }
+
     /**
      * Show the form for editing the specified resource.
      */
@@ -87,6 +112,63 @@ class CustomerController extends Controller
         Gate::authorize('update_customers', $customer);
         $identities = Identity::all();
         return view('admin.customers.edit', compact('customer', 'identities'));
+    }
+
+    public function editWeb(Customer $customer)
+    {
+        Gate::authorize('update_customers', $customer);
+        $identities = Identity::all();
+        return Inertia::render('sales/customers/CreateEdit', [
+            'customer' => $customer,
+            'identities' => $identities
+        ]);
+    }
+
+    public function updateWeb(Request $request, Customer $customer)
+    {
+        Gate::authorize('update_customers', $customer);
+        $data = $request->validate([
+            'identity_id' => 'required | exists:identities,id',
+            'document_number' => 'required | string | max:20 | unique:customers,document_number,' . $customer->id,
+            'name' => 'required | string | max:255',
+            'address' => 'nullable | string | max:255',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable | string | max:20',
+        ]);
+        $customer->update($data);
+
+        return redirect()->route('sales.customers.index')->with('success', 'Cliente actualizado con éxito');
+    }
+
+    public function destroyWeb(Customer $customer)
+    {
+        Gate::authorize('delete_customers', $customer);
+        if ($customer->quotes()->exists() || $customer->sales()->exists()) {
+            return redirect()->back()->with('error', 'No se puede eliminar porque tiene registros asociados');
+        }
+        $customer->delete();
+        return redirect()->route('sales.customers.index')->with('success', 'Cliente eliminado correctamente');
+    }
+
+    public function massDestroyWeb(Request $request)
+    {
+        Gate::authorize('delete_customers', Customer::class);
+        $ids = $request->input('ids');
+        if (empty($ids)) {
+            return redirect()->back()->with('error', 'No se seleccionaron registros.');
+        }
+
+        $customersWithRelations = Customer::whereIn('id', $ids)
+            ->where(function ($query) {
+                $query->has('quotes')->orHas('sales');
+            })->count();
+
+        if ($customersWithRelations > 0) {
+            return redirect()->back()->with('error', 'Algunos clientes tienen registros asociados y no se pueden eliminar.');
+        }
+
+        Customer::whereIn('id', $ids)->delete();
+        return redirect()->route('sales.customers.index')->with('success', 'Clientes eliminados correctamente');
     }
 
     /**

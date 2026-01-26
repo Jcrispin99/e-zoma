@@ -64,7 +64,7 @@ watch(searchTerm, (newValue) => {
 });
 
 const handleRowClick = (customer: Customer) => {
-    router.visit(`/finanzas/ventas/clientes/${customer.identity_id}/editar`);
+    router.visit(`/finanzas/ventas/clientes/${customer.id}/editar`);
 };
 
 const deleteId = ref<number | null>(null);
@@ -95,7 +95,7 @@ const confirmDelete = () => {
         router.post(
             '/finanzas/ventas/clientes/mass-destroy',
             {
-                ids: selectedCustomers.value.map((c) => c.identity_id),
+                ids: selectedCustomers.value.map((c) => c.id),
             },
             {
                 onSuccess: () => {
@@ -157,7 +157,7 @@ const selectionMessage = computed(() => {
             </div>
 
             <CardData v-else :items="customers.data" type="customer" @click="handleRowClick"
-                :class="(customer: Customer) => selectedCustomers.some(c => c.identity_id === customer.identity_id)" />
+                :class="(customer: Customer) => selectedCustomers.some(c => c.id === customer.id)" />
         </div>
 
         <ConfirmationModal :show="showDeleteModal" title="Eliminar cliente"

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import ModuleLayout from '@/components/layouts/ModuleLayout.vue';
-import { purchasesNavigation, purchasesIcon } from '@/config/purchasesNavigation';
+import { salesNavigation, salesIcon } from '@/config/salesNavigation';
 import Form from '@/components/ui/Form.vue';
 import Input from '@/components/ui/Input.vue';
 import Label from '@/components/ui/Label.vue';
@@ -11,8 +11,8 @@ import GeneralSearchModal from '@/components/ui/GeneralSearchModal.vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 import { useNotification } from '@/hooks/useNotification';
-import { PlusIcon, Trash, Menu, FileText, Mail, CheckCircle, XCircle, DollarSign, RefreshCw } from 'lucide-vue-next';
-import { PurchaseOrder, Supplier, Tax, Journal, PurchaseOrderItem, VariantOption, Purchase, FormItem } from '@/types/purchases';
+import { PlusIcon, Trash, Menu, Mail, CheckCircle, XCircle, RefreshCw } from 'lucide-vue-next';
+import { Sale, Customer, Tax, Journal, SaleItem, VariantOption, FormItem } from '@/types/sales';
 import { AttributeValue } from '@/types/product';
 import ConfirmationModal from '@/components/ui/ConfirmationModal.vue';
 import axios from 'axios';
@@ -26,16 +26,16 @@ interface PageWithFlash extends PageProps {
 }
 
 const props = defineProps<{
-    purchase?: Purchase;
-    suppliers: Supplier[];
+    sale?: Sale & { variants?: SaleItem[] };
+    customers: Customer[];
     taxes?: Tax[];
     journals?: Journal[];
     products?: VariantOption[];
-    purchaseOrders?: { id: number; label: string; supplier_id: number }[];
+    quotes?: { id: number; label: string; customer_id: number }[];
 }>();
 
 const { notify } = useNotification();
-const isEditing = computed(() => !!props.purchase);
+const isEditing = computed(() => !!props.sale);
 const showProductSearch = ref(false);
 const selectedProductId = ref<number | string>('');
 const extraProducts = ref<VariantOption[]>([]);
@@ -52,16 +52,28 @@ const confirmModalConfig = ref({
     action: () => { }
 });
 
-const form = useForm({
-    supplier_id: props.purchase?.supplier_id || '',
-    journal_id: props.purchase?.journal_id || '',
-    serie: props.purchase?.serie || '',
-    correlative: props.purchase?.correlative || '',
-    date: props.purchase?.date ? new Date(props.purchase.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-    observation: props.purchase?.observation || '',
-    total: props.purchase?.total || 0,
-    purchase_order_id: props.purchase?.purchase_order_id || '',
-    items: props.purchase?.variants?.map((v: PurchaseOrderItem) => {
+interface FormType {
+    customer_id: number | string;
+    journal_id: number | string;
+    serie: string;
+    correlative: string;
+    date: string;
+    observation: string;
+    total: number;
+    quote_id: number | string;
+    items: FormItem[];
+}
+
+const form = useForm<FormType>({
+    customer_id: props.sale?.customer_id || '',
+    journal_id: (props.sale as any)?.journal_id || '',
+    serie: (props.sale as any)?.serie || '',
+    correlative: (props.sale as any)?.correlative || '',
+    date: (props.sale as any)?.date ? new Date((props.sale as any).date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+    observation: (props.sale as any)?.observation || '',
+    total: (props.sale as any)?.total || 0,
+    quote_id: (props.sale as any)?.quote_id || '',
+    items: props.sale?.variants?.map((v: SaleItem) => {
         let taxId: number | string = '';
         if (props.taxes) {
             const matchingTax = props.taxes.find(t => Number(t.rate_percent) === Number(v.pivot?.tax_rate || 0));
@@ -70,83 +82,67 @@ const form = useForm({
 
         return {
             id: v.id,
-            name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: AttributeValue) => av.value).join(', ') : ''),
+            name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: any) => av.value).join(', ') : ''),
             quantity: Number(v.pivot?.quantity || 1),
             price: Number(v.pivot?.price || 0),
             tax_rate: Number(v.pivot?.tax_rate || 0),
             tax_id: taxId,
+            tax_inclusive: false,
             subtotal: Number(v.pivot?.subtotal || 0)
         };
     }) || []
 });
 
-const supplierOptions = computed(() => {
-    return props.suppliers.map(supplier => ({
-        value: supplier.id,
-        label: `${supplier.name} (${supplier.document_number})`
+const customerOptions = computed(() => {
+    return props.customers.map(customer => ({
+        value: customer.id,
+        label: `${customer.name} (${customer.document_number})`
     }));
 });
 
-const purchaseOrderOptions = computed(() => {
-    return props.purchaseOrders?.map(po => ({
-        value: po.id,
-        label: po.label
-    })) || [];
-});
-
-watch(() => form.purchase_order_id, (newPoId) => {
-    if (newPoId && !isEditing.value) {
-        fetchPurchaseOrderDetails(newPoId);
+watch(() => form.quote_id, (newQuoteId) => {
+    if (newQuoteId && !isEditing.value) {
+        fetchQuoteDetails(newQuoteId);
     }
 });
 
-const fetchPurchaseOrderDetails = async (poId: number | string) => {
+const fetchQuoteDetails = async (quoteId: number | string) => {
+    isLoading.value = true;
     try {
-        const response = await axios.get(`/finanzas/compras/ordenes/${poId}/api-details`);
-        const po: PurchaseOrder = response.data;
+        const response = await axios.get(`/finanzas/ventas/ordenes/${quoteId}/api-details`);
+        const quote = response.data;
 
-        form.supplier_id = po.supplier_id;
+        form.customer_id = quote.customer_id;
 
-        if (po.date) {
-            form.date = po.date.split('T')[0];
-        }
-
-        form.observation = po.observation || '';
-        form.correlative = po.correlative || '';
-
-        if (!form.journal_id && props.journals && props.journals.length > 0) {
-            form.journal_id = props.journals[0].id;
-        }
-
-        form.items = (po.variants?.map((v: PurchaseOrderItem) => {
-            const quantity = Number(v.pivot?.quantity || 1);
-            const price = Number(v.pivot?.price || 0);
-            const taxRate = Number(v.pivot?.tax_rate || 0);
-
-            let taxId: number | string = '';
-            if (props.taxes) {
-                const matchingTax = props.taxes.find(t => Number(t.rate_percent) === taxRate);
-                if (matchingTax) taxId = matchingTax.id;
-            }
-
-            return {
+        if (quote.variants) {
+            form.items = quote.variants.map((v: any) => ({
                 id: v.id,
-                name: v.product?.name + (v.attribute_values?.length ? ' - ' + v.attribute_values.map((av: AttributeValue) => av.value).join(', ') : ''),
-                quantity: quantity,
-                price: price,
-                tax_rate: taxRate,
-                tax_id: taxId,
+                name: v.full_name || v.product?.name || v.name,
+                quantity: Number(v.pivot?.quantity || 1),
+                price: Number(v.pivot?.price || 0),
+                tax_rate: Number(v.pivot?.tax_rate || 0),
+                tax_id: '',
+                tax_inclusive: false,
                 subtotal: Number(v.pivot?.subtotal || 0)
-            };
-        }) || []) as FormItem[];
+            }));
 
-        notify('Datos de la orden cargados correctamente', 'success');
+            if (props.taxes) {
+                form.items.forEach(item => {
+                    const matchingTax = props.taxes?.find(t => Number(t.rate_percent) === Number(item.tax_rate));
+                    if (matchingTax) {
+                        item.tax_id = matchingTax.id;
+                        item.tax_inclusive = Boolean(matchingTax.is_price_inclusive);
+                    }
+                });
+            }
+        }
     } catch (error) {
-        console.error(error);
-        notify('Error al cargar detalles de la orden', 'error');
+        console.error('Error fetching quote details:', error);
+        notify('Error al cargar datos de la cotización', 'error');
+    } finally {
+        isLoading.value = false;
     }
 };
-
 
 const allProducts = computed(() => {
     if (isSearching.value) {
@@ -226,9 +222,14 @@ const handleSearch = async (query: string) => {
 const journalOptions = computed(() => {
     return props.journals?.map(journal => ({
         value: journal.id,
-        label: journal.name || journal.serie || ''
+        label: `${journal.name} (${journal.code})`
     })) || [];
 });
+
+if (!isEditing.value && props.journals?.length && !form.journal_id) {
+    const first = props.journals[0];
+    form.journal_id = first.id;
+}
 
 const taxOptions = computed(() => {
     return props.taxes?.map(tax => ({
@@ -330,6 +331,7 @@ const addItem = (product: VariantOption) => {
         price: Number(product.price || 0),
         tax_id: props.taxes?.[0]?.id || '',
         tax_rate: 0,
+        tax_inclusive: false,
         subtotal: 0
     } as FormItem;
 
@@ -357,8 +359,8 @@ const handleSubmit = () => {
         onSuccess: () => {
             notify(
                 isEditing.value
-                    ? 'Compra actualizada correctamente'
-                    : 'Compra creada correctamente',
+                    ? 'Venta actualizada correctamente'
+                    : 'Venta creada correctamente',
                 'success'
             );
         },
@@ -372,10 +374,10 @@ const handleSubmit = () => {
         },
     };
 
-    if (isEditing.value && props.purchase) {
-        form.put(`/finanzas/compras/facturas/${props.purchase.id}`, options);
+    if (isEditing.value && props.sale) {
+        form.put(`/finanzas/ventas/ordenes/${props.sale.id}`, options);
     } else {
-        form.post('/finanzas/compras/facturas', options);
+        form.post('/finanzas/ventas/ordenes', options);
     }
 };
 
@@ -383,7 +385,7 @@ const handleCancel = () => {
     if (isEditing.value) {
         router.visit(location.pathname, {
             replace: true,
-            only: ['purchase'],
+            only: ['sale'],
             preserveScroll: true,
             onSuccess: () => notify('Cambios descartados', 'info')
         });
@@ -394,7 +396,7 @@ const handleCancel = () => {
 };
 
 const breadcrumbs = computed(() => [
-    { label: 'Compras', route: '/finanzas/compras/facturas' },
+    { label: 'Ventas', route: '/finanzas/ventas/ordenes' },
     { label: isEditing.value ? 'Editar' : 'Nuevo' }
 ]);
 
@@ -402,28 +404,28 @@ const isDirty = computed(() => form.isDirty);
 
 const showActionsDropdown = ref(false);
 
-const handleConfirm = () => {
-    if (!props.purchase) return;
-    router.post(`/finanzas/compras/facturas/${props.purchase.id}/contabilizar`, {}, {
+const handlePost = () => {
+    if (!props.sale) return;
+    router.post(`/finanzas/ventas/ordenes/${props.sale.id}/publicar`, {}, {
         onSuccess: (page) => {
             const props = page.props as unknown as PageWithFlash;
             if (props.flash?.error) {
                 notify(props.flash.error, 'error');
             } else {
-                notify(props.flash?.success || 'Compra contabilizada', 'success');
+                notify(props.flash?.success || 'Cotización publicada', 'success');
             }
         },
-        onError: () => notify('Error al contabilizar', 'error')
+        onError: () => notify('Error al publicar', 'error')
     });
     showActionsDropdown.value = false;
 };
 
 const handleCancelOrder = () => {
-    if (!props.purchase) return;
+    if (!props.sale) return;
 
     confirmModalConfig.value = {
-        title: 'Anular Compra',
-        message: '¿Estás seguro que deseas anular esta compra? Esta acción no se puede deshacer y revertirá los movimientos de inventario.',
+        title: 'Anular Venta',
+        message: '¿Estás seguro que deseas anular esta venta? Esta acción no se puede deshacer y revertirá los movimientos de inventario.',
         confirmText: 'Sí, anular',
         variant: 'danger',
         action: processCancelOrder
@@ -433,16 +435,16 @@ const handleCancelOrder = () => {
 };
 
 const processCancelOrder = () => {
-    if (!props.purchase) return;
+    if (!props.sale) return;
     isProcessingAction.value = true;
 
-    router.post(`/finanzas/compras/facturas/${props.purchase.id}/cancelar`, {}, {
+    router.post(`/finanzas/ventas/ordenes/${props.sale.id}/cancelar`, {}, {
         onSuccess: (page) => {
             const props = page.props as unknown as PageWithFlash;
             if (props.flash?.error) {
                 notify(props.flash.error, 'error');
             } else {
-                notify(props.flash?.success || 'Compra anulada', 'success');
+                notify(props.flash?.success || 'Venta anulada', 'success');
             }
             showConfirmModal.value = false;
         },
@@ -456,14 +458,14 @@ const processCancelOrder = () => {
 };
 
 const handleReopen = () => {
-    if (!props.purchase) return;
-    router.post(`/finanzas/compras/facturas/${props.purchase.id}/reabrir`, {}, {
+    if (!props.sale) return;
+    router.post(`/finanzas/ventas/ordenes/${props.sale.id}/reabrir`, {}, {
         onSuccess: (page) => {
             const props = page.props as unknown as PageWithFlash;
             if (props.flash?.error) {
                 notify(props.flash.error, 'error');
             } else {
-                notify(props.flash?.success || 'Compra reabierta', 'success');
+                notify(props.flash?.success || 'Venta reabierta', 'success');
             }
         },
         onError: () => notify('Error al reabrir', 'error')
@@ -472,8 +474,8 @@ const handleReopen = () => {
 };
 
 const handleMarkPaid = () => {
-    if (!props.purchase) return;
-    router.post(`/finanzas/compras/facturas/${props.purchase.id}/pagar`, {}, {
+    if (!props.sale) return;
+    router.post(`/finanzas/ventas/ordenes/${props.sale.id}/pagar`, {}, {
         onSuccess: (page) => {
             const props = page.props as unknown as PageWithFlash;
             if (props.flash?.error) {
@@ -488,11 +490,11 @@ const handleMarkPaid = () => {
 };
 
 const handleMarkUnpaid = () => {
-    if (!props.purchase) return;
+    if (!props.sale) return;
 
     confirmModalConfig.value = {
         title: 'Anular Pago',
-        message: '¿Estás seguro que deseas anular el pago de esta compra? El estado volverá a pendiente de pago.',
+        message: '¿Estás seguro que deseas anular el pago de esta venta? El estado volverá a pendiente de pago.',
         confirmText: 'Sí, anular pago',
         variant: 'warning',
         action: processMarkUnpaid
@@ -502,10 +504,10 @@ const handleMarkUnpaid = () => {
 };
 
 const processMarkUnpaid = () => {
-    if (!props.purchase) return;
+    if (!props.sale) return;
     isProcessingAction.value = true;
 
-    router.post(`/finanzas/compras/facturas/${props.purchase.id}/anular-pago`, {}, {
+    router.post(`/finanzas/ventas/ordenes/${props.sale.id}/anular-pago`, {}, {
         onSuccess: (page) => {
             const props = page.props as unknown as PageWithFlash;
             if (props.flash?.error) {
@@ -524,8 +526,8 @@ const processMarkUnpaid = () => {
 </script>
 
 <template>
-    <ModuleLayout title="Compras" :icon="purchasesIcon" :navigation-items="purchasesNavigation">
-        <Form title="Compras (Facturas)" :subtitle="isEditing ? 'Editar' : 'Nuevo'" :loading="form.processing"
+    <ModuleLayout title="Ventas" :icon="salesIcon" :navigation-items="salesNavigation">
+        <Form title="Ventas (Ordenes)" :subtitle="isEditing ? 'Editar' : 'Nuevo'" :loading="form.processing"
             @submit="handleSubmit" @cancel="handleCancel" :disabled="!isDirty" :breadcrumbs="breadcrumbs">
             <template #header-actions>
                 <div class="relative" v-if="isEditing">
@@ -536,11 +538,11 @@ const processMarkUnpaid = () => {
                     <div v-if="showActionsDropdown"
                         class="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                         <div class="py-1">
-                            <template v-if="purchase?.status === 'draft'">
-                                <button @click="handleConfirm" type="button"
+                            <template v-if="(sale as any)?.status === 'draft'">
+                                <button @click="handlePost" type="button"
                                     class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                     <CheckCircle class="w-4 h-4 text-emerald-500" />
-                                    Contabilizar
+                                    Publicar
                                 </button>
                                 <button @click="handleCancelOrder" type="button"
                                     class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
@@ -549,20 +551,7 @@ const processMarkUnpaid = () => {
                                 </button>
                             </template>
 
-                            <template v-if="purchase?.status === 'posted'">
-                                <button v-if="purchase?.payment_status !== 'paid'" @click="handleMarkPaid" type="button"
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                    <DollarSign class="w-4 h-4 text-emerald-500" />
-                                    Registrar pago
-                                </button>
-                                <button v-else @click="handleMarkUnpaid" type="button"
-                                    class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                    <DollarSign class="w-4 h-4 text-amber-500" />
-                                    Anular pago
-                                </button>
-
-                                <div class="border-t border-gray-100 my-1"></div>
-
+                            <template v-if="(sale as any)?.status === 'posted'">
                                 <button @click="handleCancelOrder" type="button"
                                     class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2">
                                     <XCircle class="w-4 h-4" />
@@ -570,7 +559,7 @@ const processMarkUnpaid = () => {
                                 </button>
                             </template>
 
-                            <template v-if="purchase?.status === 'cancelled'">
+                            <template v-if="(sale as any)?.status === 'cancelled'">
                                 <button @click="handleReopen" type="button"
                                     class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                     <RefreshCw class="w-4 h-4 text-blue-500" />
@@ -578,14 +567,7 @@ const processMarkUnpaid = () => {
                                 </button>
                             </template>
 
-                            <div class="border-t border-gray-100 my-1" v-if="purchase?.purchase_order_id"></div>
-                            <button v-if="purchase?.purchase_order_id"
-                                @click="router.visit(`/finanzas/compras/ordenes/${purchase.purchase_order_id}/editar`)"
-                                type="button"
-                                class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                <FileText class="w-4 h-4 text-indigo-500" />
-                                Ver Orden de Compra
-                            </button>
+                            <div class="border-t border-gray-100 my-1" v-if="(sale as any)?.quote_id"></div>
 
                             <div class="border-t border-gray-100 my-1"></div>
 
@@ -596,26 +578,16 @@ const processMarkUnpaid = () => {
                             </button>
                         </div>
                     </div>
-
-                    <div v-if="showActionsDropdown" @click="showActionsDropdown = false"
-                        class="fixed inset-0 z-40 bg-transparent"></div>
                 </div>
             </template>
 
             <template #top-left>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <Label class="text-sm font-bold text-gray-700 mb-1 block">Orden de Compra</Label>
-                        <Input v-model="form.purchase_order_id" :options="purchaseOrderOptions"
-                            placeholder="Seleccione una orden de compra" :disabled="isEditing" />
-                    </div>
-
-                    <div>
-                        <Label class="text-sm font-bold text-gray-700 mb-1 block">Proveedor <span
+                        <Label class="text-sm font-bold text-gray-700 mb-1 block">Cliente <span
                                 class="text-red-500">*</span></Label>
-                        <Input v-model="form.supplier_id" :options="supplierOptions"
-                            placeholder="Seleccione un proveedor" :error="form.errors.supplier_id"
-                            :showSearchMore="false" :allowCustom="false" />
+                        <Input v-model="form.customer_id" :options="customerOptions" placeholder="Seleccione un cliente"
+                            :error="form.errors.customer_id" :showSearchMore="false" :allowCustom="false" />
                     </div>
                     <div>
                         <Label class="text-sm font-bold text-gray-700 mb-1 block">Serie del Documento</Label>

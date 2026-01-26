@@ -3,23 +3,30 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Customer;
+use App\Models\Quote;
 use App\Models\Sale;
+use App\Models\Variant;
+use App\Models\Tax;
+use App\Models\Journal;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
-use Request;
+use Illuminate\Http\Request;
+use App\Services\SequenceService;
+use Exception;
 
 class SaleController extends Controller
 {
     public function dashboard()
     {
-        // Gate::authorize('read_sales', Sale::class);
+        Gate::authorize('read_sales', Sale::class);
 
         $stats = [
             'sales_count' => Sale::count(),
-            'orders_count' => \App\Models\Quote::count(),
-            'customers_count' => \App\Models\Customer::count(),
-            'products_count' => \App\Models\Variant::count(),
+            'orders_count' => Quote::count(),
+            'customers_count' => Customer::count(),
+            'products_count' => Variant::count(),
             'total_sales' => Sale::sum('total'),
         ];
 
@@ -73,31 +80,7 @@ class SaleController extends Controller
         return view('admin.sales.index');
     }
 
-    public function indexWeb(Request $request)
-    {
-        // Gate::authorize('read_purchases', Purchase::class);
 
-        $query = Sale::with(['customer']);
-
-        if ($request->has('search')) {
-            $search = $request->input('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('serie', 'like', "%{$search}%")
-                    ->orWhere('correlative', 'like', "%{$search}%")
-                    ->orWhereHas('customer', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('document_number', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        $sales = $query->latest()->paginate(20)->withQueryString();
-
-        return Inertia::render('sales/invoices/Index', [
-            'sales' => $sales,
-            'filters' => $request->only(['search'])
-        ]);
-    }
 
     /**
      * Show the form for creating a new resource.
@@ -113,6 +96,8 @@ class SaleController extends Controller
         Gate::authorize('update_sales', $sale);
         return view('admin.sales.edit', compact('sale'));
     }
+
+
 
     /**
      * Generate a PDF for the specified resource.

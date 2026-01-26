@@ -167,7 +167,7 @@ class SupplierController extends Controller
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable | string | max:20',
         ]);
-        $supplier = Supplier::create($data);
+        Supplier::create($data);
 
         return redirect()->route('purchases.suppliers.index')->with('success', 'Proveedor creado con éxito');
     }

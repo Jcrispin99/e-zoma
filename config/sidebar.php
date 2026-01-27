@@ -78,13 +78,6 @@ $links = [
             ],
             [
                 'type' => 'link',
-                'title' => 'Ordenes de compra',
-                'route' => 'admin.purchases-orders.index',
-                'active' => 'admin.purchases-orders.*',
-                'can' => ['read_purchase-orders'],
-            ],
-            [
-                'type' => 'link',
                 'title' => 'Compras',
                 'route' => 'admin.purchases.index',
                 'active' => 'admin.purchases.*',

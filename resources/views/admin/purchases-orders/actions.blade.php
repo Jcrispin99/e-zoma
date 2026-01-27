@@ -16,4 +16,10 @@
         <i class="fa-solid fa-file-pdf"></i>
     </x-wire-button>
     @endcan
+
+    @can('read_purchase-orders', $purchaseOrder)
+    <x-wire-button dark href="{{ route('admin.qr.labels', ['type' => 'purchase-order', 'id' => $purchaseOrder->id]) }}">
+        <i class="fa-solid fa-qrcode"></i>
+    </x-wire-button>
+    @endcan
 </div>

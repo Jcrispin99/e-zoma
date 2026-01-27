@@ -6,6 +6,7 @@ use Livewire\Component;
 use App\Models\Product;
 use App\Models\QrStyle;
 use App\Models\Purchase;
+use App\Models\PurchaseOrder;
 use App\Models\Variant;
 
 class QrGenerator extends Component
@@ -44,9 +45,15 @@ class QrGenerator extends Component
         $this->applyStyle($defaultStyle);
 
         $variants = $this->loadVariants($type, $id);
+        $usePivotQty = in_array($type, ['purchase', 'purchase-order'], true);
 
-        $this->labels = $variants->map(function (Variant $variant) {
+        $this->labels = $variants->map(function (Variant $variant) use ($usePivotQty) {
             $description = $variant->attributeValues->pluck('value')->implode(' / ') ?: 'Default';
+            $qty = 1;
+            if ($usePivotQty) {
+                $qty = (int) ($variant->pivot->quantity ?? 1);
+                $qty = max(0, $qty);
+            }
             return [
                 'id' => $variant->id,
                 'product_name' => optional($variant->product)->name,
@@ -56,7 +63,7 @@ class QrGenerator extends Component
                 'barcode' => $variant->barcode,
                 'price' => $variant->price,
                 'payload' => $this->makeQrData($variant),
-                'qty' => 1,
+                'qty' => $qty,
             ];
         })->toArray();
     }
@@ -70,6 +77,10 @@ class QrGenerator extends Component
         if ($type === 'purchase') {
             $purchase = Purchase::with(['variants.attributeValues', 'variants.product'])->findOrFail($id);
             return $purchase->variants;
+        }
+        if ($type === 'purchase-order') {
+            $purchaseOrder = PurchaseOrder::with(['variants.attributeValues', 'variants.product'])->findOrFail($id);
+            return $purchaseOrder->variants;
         }
         abort(404);
     }

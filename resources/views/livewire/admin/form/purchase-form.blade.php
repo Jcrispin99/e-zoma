@@ -101,6 +101,8 @@
 
                     <x-wire-dropdown.header separator label="Acciones" />
                     <x-wire-dropdown.item label="Enviar factura por correo" wire:click="openModal({{ $purchase }})" />
+                    <x-wire-dropdown.item label="Imprimir QR (productos)"
+                        :href="route('admin.qr.labels', ['type' => 'purchase', 'id' => $purchase->id])" />
                     <x-wire-dropdown.item label="Ver PDF" :href="route('admin.purchases.pdf.view', $purchase)" />
                     <x-wire-dropdown.item label="Ver público"
                         :href="URL::signedRoute('public.purchases.pdf.view', ['purchase' => $purchase])" />

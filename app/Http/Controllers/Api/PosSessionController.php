@@ -24,6 +24,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Facades\Kardex;
+use Illuminate\Validation\ValidationException;
 
 class PosSessionController extends Controller
 {
@@ -185,6 +186,7 @@ class PosSessionController extends Controller
             ],
             'default_customer' => $defaultCustomer ? [
                 'id' => $defaultCustomer->id,
+                'identity_id' => $defaultCustomer->identity_id,
                 'name' => $defaultCustomer->name,
                 'document_number' => $defaultCustomer->document_number,
             ] : null,
@@ -225,6 +227,20 @@ class PosSessionController extends Controller
             foreach ($validated['orders'] as $order) {
                 $customerId = $order['customer_id'];
                 $customer = Customer::query()->findOrFail($customerId);
+
+                if ($order['voucher_type'] === 'invoice') {
+                    if (empty($posConfig->invoice_journal_id)) {
+                        throw ValidationException::withMessages([
+                            'orders' => ['No hay diario configurado para facturas.'],
+                        ]);
+                    }
+                    $doc = trim((string) ($customer->document_number ?? ''));
+                    if (!preg_match('/^\d{11}$/', $doc)) {
+                        throw ValidationException::withMessages([
+                            'orders' => ['Factura solo para clientes con RUC.'],
+                        ]);
+                    }
+                }
 
                 // Determinar journal según tipo de voucher
                 $journalId = $order['voucher_type'] === 'invoice'

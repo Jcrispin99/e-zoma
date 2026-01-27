@@ -27,8 +27,6 @@
                 <option value="cash">Efectivo</option>
                 <option value="bank">Banco</option>
                 <option value="general">General</option>
-                <option value="purchase-order">Orden de Compra</option>
-
             </x-wire-native-select>
 
             <x-wire-checkbox id="is_fiscal" name="is_fiscal" label="Documento fiscal" value="1" :checked="(bool) old('is_fiscal', false)" />

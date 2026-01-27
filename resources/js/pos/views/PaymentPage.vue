@@ -48,6 +48,12 @@ const customer = computed(
   () => sessionStore.selectedCustomer || sessionStore.defaultCustomer || null
 );
 
+const canInvoice = computed(() => {
+  if (!invoiceJournalCode.value) return false;
+  const doc = String(customer.value?.document_number || '').trim();
+  return /^\d{11}$/.test(doc);
+});
+
 // Modal de cliente compartido
 const showCustomerModal = ref(false);
 function openCustomerModal() {
@@ -105,6 +111,7 @@ const quickAmounts = computed(() => {
 });
 
 function selectDoc(type) {
+  if (type === 'factura' && !canInvoice.value) return;
   docType.value = type;
 }
 
@@ -202,6 +209,16 @@ async function fetchPaymentMethods() {
 onMounted(() => {
   fetchPaymentMethods();
 });
+
+watch(
+  () => canInvoice.value,
+  (ok) => {
+    if (!ok && docType.value === 'factura') {
+      docType.value = 'boleta';
+    }
+  },
+  { immediate: true }
+);
 
 // Atajos de teclado
 function handleKeydown(e) {
@@ -522,10 +539,12 @@ async function pay() {
                 <button
                   :class="[
                     'flex-1 px-4 py-3 rounded-lg border-2 font-medium transition-all',
+                    !canInvoice ? 'opacity-50 cursor-not-allowed' : '',
                     docType === 'factura'
                       ? 'bg-blue-600 text-white border-blue-600'
                       : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400',
                   ]"
+                  :disabled="!canInvoice"
                   @click="selectDoc('factura')"
                 >
                   <div class="font-semibold">Factura</div>

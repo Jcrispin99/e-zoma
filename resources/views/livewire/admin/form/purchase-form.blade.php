@@ -94,11 +94,6 @@
                     <x-wire-dropdown.item label="Reabrir" wire:click="reopen" />
                     @endif
 
-                    @if($purchase?->purchase_order_id)
-                    <x-wire-dropdown.item label="Ver OC"
-                        :href="route('admin.purchases-orders.edit', $purchase->purchase_order_id)" />
-                    @endif
-
                     <x-wire-dropdown.header separator label="Acciones" />
                     <x-wire-dropdown.item label="Enviar factura por correo" wire:click="openModal({{ $purchase }})" />
                     <x-wire-dropdown.item label="Imprimir QR (productos)"
@@ -137,14 +132,6 @@
                 <x-wire-input label="Correlativo" wire:model="correlative" readonly disabled />
 
                 <x-wire-input label="Fecha" wire:model="date" type="date" />
-
-                @if($mode === 'create')
-                <x-wire-select label="Orden de Compra" wire:model.live="purchase_order_id"
-                    placeholder="Seleccione una orden de compra" :async-data="[
-                        'api' => route('api.purchase-orders.index'),
-                        'method' => 'POST',
-                    ]" option-label="name" option-value="id" option-description="description" class="flex-1" />
-                @endif
 
                 <div class="col-span-2">
                     <x-wire-select label="Proveedor" wire:model="supplier_id" placeholder="Seleccione un proveedor"

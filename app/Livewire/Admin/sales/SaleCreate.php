@@ -7,7 +7,6 @@ use App\Models\Inventory;
 use App\Models\Sale;
 use App\Models\Variant;
 use Livewire\Component;
-use App\Models\Quote;
 use App\Models\Journal;
 use App\Services\SequenceService;
 use App\Services\KardexServices;
@@ -18,10 +17,6 @@ class SaleCreate extends Component
     public $correlative = '';
 
     public $date;
-
-    public $quote_id;
-
-    protected $queryString = ['quote_id'];
 
     public $warehouse_id;
 
@@ -98,83 +93,12 @@ class SaleCreate extends Component
             ->toArray();
         $default = collect($this->taxes)->firstWhere('is_default', true) ?? collect($this->taxes)->first();
         $this->default_tax_id = $default['id'] ?? null;
-
-        if ($this->quote_id) {
-            $quote = Quote::with('variants.product')->find($this->quote_id);
-            if ($quote) {
-                if ($quote->sales()->exists() || (($quote->status ?? null) === 'converted')) {
-                    $this->dispatch('swal', [
-                        'icon' => 'warning',
-                        'title' => 'Cotización ya convertida',
-                        'text' => 'Esta cotización ya tiene una venta vinculada.',
-                    ]);
-                    $this->quote_id = null;
-                } else {
-                    $this->customer_id = $quote->customer_id;
-                    $taxesCol = collect($this->taxes);
-                    $this->variants = $quote->variants->map(function ($variant) use ($taxesCol) {
-                        $pivotRate = (float) ($variant->pivot->tax_rate ?? 0);
-                        $matched = $taxesCol->firstWhere('rate_percent', $pivotRate) ?? $taxesCol->first();
-                        $rate = (float) ($matched['rate_percent'] ?? 0);
-                        $inclusive = (bool) ($matched['is_price_inclusive'] ?? false);
-                        $lineTotal = (float) ($variant->pivot->quantity ?? 0) * (float) ($variant->pivot->price ?? 0);
-                        $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
-                        return [
-                            'id' => $variant->id,
-                            'name' => $variant->fullName,
-                            'quantity' => $variant->pivot->quantity,
-                            'price' => $variant->pivot->price,
-                            'tax_id' => $matched['id'] ?? null,
-                            'tax_rate' => $rate,
-                            'tax_inclusive' => $inclusive,
-                            'subtotal' => $base,
-                        ];
-                    })->toArray();
-                    $this->total = $quote->total;
-                }
-            }
-        }
     }
 
 
     public function updated($property, $value)
     {
-        if ($property == 'quote_id') {
-            $quote = Quote::find($value);
-            if ($quote) {
-                if ($quote->sales()->exists() || (($quote->status ?? null) === 'converted')) {
-                    $this->dispatch('swal', [
-                        'icon' => 'warning',
-                        'title' => 'Cotización ya convertida',
-                        'text' => 'Esta cotización ya tiene una venta vinculada.',
-                    ]);
-                    $this->quote_id = null;
-                    return;
-                }
-
-                $this->customer_id = $quote->customer_id;
-
-                $taxesCol = collect($this->taxes);
-                $this->variants = $quote->variants->map(function ($variant) use ($taxesCol) {
-                    $pivotRate = (float) ($variant->pivot->tax_rate ?? 0);
-                    $matched = $taxesCol->firstWhere('rate_percent', $pivotRate) ?? $taxesCol->first();
-                    $rate = (float) ($matched['rate_percent'] ?? 0);
-                    $inclusive = (bool) ($matched['is_price_inclusive'] ?? false);
-                    $lineTotal = (float) ($variant->pivot->quantity ?? 0) * (float) ($variant->pivot->price ?? 0);
-                    $base = ($inclusive && $rate > 0) ? ($lineTotal / (1 + ($rate / 100))) : $lineTotal;
-                    return [
-                        'id' => $variant->id,
-                        'name' => $variant->product->name,
-                        'quantity' => $variant->pivot->quantity,
-                        'price' => $variant->pivot->price,
-                        'tax_id' => $matched['id'] ?? null,
-                        'tax_rate' => $rate,
-                        'tax_inclusive' => $inclusive,
-                        'subtotal' => $base,
-                    ];
-                })->toArray();
-            }
-        }
+        //
     }
 
     public function addProduct()
@@ -301,7 +225,6 @@ class SaleCreate extends Component
             [
                 'journal_id' => 'required|exists:journals,id',
                 'date' => 'nullable|date',
-                'quote_id' => 'nullable|exists:quotes,id',
                 'customer_id' => 'required|exists:customers,id',
                 'warehouse_id' => 'required|exists:warehouses,id',
                 'total' => 'required|numeric|min:0',
@@ -352,7 +275,6 @@ class SaleCreate extends Component
             'serie' => $parts['serie'],
             'correlative' => $parts['correlative'],
             'date' => $this->date ?? now(),
-            'quote_id' => $this->quote_id,
             'customer_id' => $this->customer_id,
             'warehouse_id' => $this->warehouse_id,
             'total' => $totalCalculado,
@@ -376,23 +298,6 @@ class SaleCreate extends Component
             ]);
 
             // Movimiento de inventario ahora ocurre al contabilizar (SaleEdit::post)
-        }
-
-        if ($this->quote_id) {
-            $quote = Quote::find($this->quote_id);
-            if ($quote && ($quote->sales()->exists() || (($quote->status ?? null) === 'converted'))) {
-                session()->flash('swalt', [
-                    'icon' => 'error',
-                    'title' => 'Cotización convertida',
-                    'text' => 'Ya existe una venta vinculada a esta cotización. No se puede crear otra.',
-                ]);
-                return redirect()->back();
-            }
-        }
-
-        // tras crear la venta y registrar salidas de inventario
-        if ($this->quote_id && isset($quote) && $quote) {
-            $quote->update(['status' => 'converted']);
         }
 
         // Envío a SUNAT ahora se realiza mediante Job disparado en el evento created del modelo Sale

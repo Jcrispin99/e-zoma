@@ -128,10 +128,6 @@
                     @elseif($sale->status === 'cancelled')
                     @endif
 
-                    @if($sale->quote_id)
-                    <x-wire-dropdown.item label="Ver cotización" :href="route('admin.quotes.edit', $sale->quote_id)" />
-                    @endif
-
                     <x-wire-dropdown.header separator label="Acciones" />
                     <x-wire-dropdown.item label="Enviar factura por correo" wire:click="openModal({{ $sale }})" />
                     <x-wire-dropdown.item label="Descargar PDF" :href="route('admin.sales.pdf', $sale)" />

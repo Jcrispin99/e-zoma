@@ -6,12 +6,10 @@ use App\Facades\Kardex;
 use App\Mail\PdfSend;
 use App\Models\Journal;
 use App\Models\Purchase;
-use App\Models\PurchaseOrder;
 use App\Models\Tax;
 use App\Models\Variant;
 use App\Models\Warehouse;
 use App\Services\SequenceService;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Component;
 
@@ -27,7 +25,6 @@ class PurchaseForm extends Component
 
     // Core fields
     public $date;
-    public $purchase_order_id;
     public $warehouse_id;
     public $supplier_id;
     public $total = 0;
@@ -76,11 +73,10 @@ class PurchaseForm extends Component
         });
     }
 
-    public function mount(Purchase $purchase = null, $mode = 'create', $purchase_order_id = null)
+    public function mount(?Purchase $purchase = null, $mode = 'create')
     {
         $this->mode = $mode ?? ($purchase ? 'edit' : 'create');
         $this->purchase = $purchase;
-        $this->purchase_order_id = $purchase_order_id;
 
         // Taxes
         $this->taxes = Tax::query()
@@ -110,7 +106,7 @@ class PurchaseForm extends Component
         ])->toArray();
 
         if ($this->mode === 'edit' && $this->purchase) {
-            $p = $this->purchase->load('variants.product', 'supplier', 'warehouse', 'purchaseOrder');
+            $p = $this->purchase->load('variants.product', 'supplier', 'warehouse');
             $this->journal_id = $p->journal_id;
             $this->correlative = $p->correlative;
             $this->date = optional($p->date)->format('Y-m-d');
@@ -153,29 +149,6 @@ class PurchaseForm extends Component
                         ->orderBy('id', 'asc')
                         ->first();
                     $this->warehouse_id = $firstWarehouse?->id;
-                }
-            }
-
-            if ($this->purchase_order_id) {
-                $po = PurchaseOrder::find($this->purchase_order_id);
-                if ($po) {
-                    $this->supplier_id = $po->supplier_id;
-                    $po->load('supplier', 'variants');
-                    $taxesCol = collect($this->taxes);
-                    $this->variants = $po->variants->map(function ($variant) use ($taxesCol) {
-                        $pivotRate = (float) ($variant->pivot->tax_rate ?? 0);
-                        $matched = $taxesCol->firstWhere('rate_percent', $pivotRate) ?? $taxesCol->first();
-                        return [
-                            'id' => $variant->id,
-                            'name' => $variant->fullName,
-                            'quantity' => $variant->pivot->quantity,
-                            'price' => $variant->pivot->price,
-                            'tax_id' => $matched['id'] ?? null,
-                            'tax_rate' => $matched['rate_percent'] ?? 0,
-                            'tax_inclusive' => (bool) ($matched['is_price_inclusive'] ?? false),
-                            'subtotal' => $variant->pivot->subtotal,
-                        ];
-                    })->toArray();
                 }
             }
         }
@@ -310,7 +283,6 @@ class PurchaseForm extends Component
         if ($this->mode === 'create') {
             $rules = array_merge($rules, [
                 'journal_id' => 'required|exists:journals,id',
-                'purchase_order_id' => 'nullable|exists:purchase_orders,id',
             ]);
         }
 
@@ -355,7 +327,6 @@ class PurchaseForm extends Component
                 'serie' => $parts['serie'],
                 'correlative' => $parts['correlative'],
                 'date' => $this->date ?? now(),
-                'purchase_order_id' => $this->purchase_order_id,
                 'supplier_id' => $this->supplier_id,
                 'warehouse_id' => $this->warehouse_id,
                 'total' => $this->total,
@@ -420,10 +391,6 @@ class PurchaseForm extends Component
         }
         $this->purchase->variants()->sync($syncData);
 
-        if ($this->purchase->purchase_order_id && $this->purchase->purchaseOrder) {
-            $this->recalcPoMetrics($this->purchase->purchaseOrder);
-        }
-
         if ($doRedirect) {
             session()->flash('swalt', [
                 'icon' => 'success',
@@ -474,10 +441,6 @@ class PurchaseForm extends Component
         $this->purchase->update(['status' => 'posted']);
         $this->status = 'posted';
 
-        if ($this->purchase->purchase_order_id && $this->purchase->purchaseOrder) {
-            $this->recalcPoMetrics($this->purchase->purchaseOrder);
-        }
-
         $this->dispatch('swal', [
             'icon' => 'success',
             'title' => 'Compra contabilizada',
@@ -522,10 +485,6 @@ class PurchaseForm extends Component
         $this->purchase->update(['status' => 'cancelled']);
         $this->status = 'cancelled';
 
-        if ($this->purchase->purchase_order_id && $this->purchase->purchaseOrder) {
-            $this->recalcPoMetrics($this->purchase->purchaseOrder);
-        }
-
         $this->dispatch('swal', [
             'icon' => 'success',
             'title' => 'Compra cancelada',
@@ -540,10 +499,6 @@ class PurchaseForm extends Component
         }
         $this->purchase->update(['status' => 'draft']);
         $this->status = 'draft';
-
-        if ($this->purchase->purchase_order_id && $this->purchase->purchaseOrder) {
-            $this->recalcPoMetrics($this->purchase->purchaseOrder);
-        }
 
         $this->dispatch('swal', [
             'icon' => 'success',
@@ -618,38 +573,6 @@ class PurchaseForm extends Component
             'icon' => 'success',
             'title' => 'Pago anulado',
             'text' => 'Se anuló el pago. Ahora puede cancelar la compra si lo requiere.',
-        ]);
-    }
-
-    private function recalcPoMetrics(PurchaseOrder $po): void
-    {
-        $orderedQty = DB::table('variantables')
-            ->where('variantable_type', PurchaseOrder::class)
-            ->where('variantable_id', $po->id)
-            ->sum('quantity');
-
-        $billedQty = DB::table('variantables')
-            ->join('purchases', 'variantables.variantable_id', '=', 'purchases.id')
-            ->where('variantables.variantable_type', Purchase::class)
-            ->where('purchases.purchase_order_id', $po->id)
-            ->where('purchases.status', '<>', 'cancelled')
-            ->sum('variantables.quantity');
-
-        $purchasesCount = Purchase::query()
-            ->where('purchase_order_id', $po->id)
-            ->where('status', '<>', 'cancelled')
-            ->count();
-
-        $billingStatus = $billedQty <= 0
-            ? 'none'
-            : ($billedQty < $orderedQty ? 'partial' : 'complete');
-
-        $po->update([
-            'ordered_qty_total' => (float) $orderedQty,
-            'billed_qty_total' => (float) $billedQty,
-            'purchases_count' => $purchasesCount,
-            'billing_status' => $billingStatus,
-            'billed_at' => $billingStatus === 'complete' ? now() : null,
         ]);
     }
 

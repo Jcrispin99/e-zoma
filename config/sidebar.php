@@ -67,7 +67,7 @@ $links = [
         'title' => 'Compras',
         'icon' => 'fa-solid fa-cart-shopping',
         'route' => '#',
-        'active' => ['admin.suppliers.*', 'admin.purchases-orders.*', 'admin.purchases.*'],
+        'active' => ['admin.suppliers.*', 'admin.purchases.*'],
         'items' => [
             [
                 'type' => 'link',
@@ -89,7 +89,7 @@ $links = [
         'type' => 'group',
         'title' => 'Ventas',
         'icon' => 'fa-solid fa-cash-register',
-        'active' => ['admin.customers.*', 'admin.quotes.*', 'admin.sales.*'],
+        'active' => ['admin.customers.*', 'admin.sales.*'],
         'items' => [
             [
                 'type' => 'link',
@@ -97,13 +97,6 @@ $links = [
                 'route' => 'admin.customers.index',
                 'active' => 'admin.customers.*',
                 'can' => ['read_customers'],
-            ],
-            [
-                'type' => 'link',
-                'title' => 'Cotizaciones',
-                'route' => 'admin.quotes.index',
-                'active' => 'admin.quotes.*',
-                'can' => ['read_quotes'],
             ],
             [
                 'type' => 'link',

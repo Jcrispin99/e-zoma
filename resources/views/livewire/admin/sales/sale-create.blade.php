@@ -60,11 +60,6 @@
                     <x-wire-button color="secondary" icon="x-mark" :href="route('admin.sales.index')">
                         Cancelar
                     </x-wire-button>
-                    <x-wire-button icon="document-text" color="sky"
-                        x-bind:href="quote_id ? `/admin/quotes/${quote_id}/pdf/view` : null"
-                        x-bind:disabled="!quote_id">
-                        Ver Cotización (vista)
-                    </x-wire-button>
                 </div>
             </x-wire-card>
             <div class="grid lg:grid-cols-4 gap-4">
@@ -76,12 +71,6 @@
                 </x-wire-native-select>
 
                 <x-wire-input label="Fecha" wire:model.live="date" type="date" />
-
-                <x-wire-select label="Cotización" wire:model.live="quote_id" placeholder="Seleccione una cotización"
-                    :async-data="[
-                            'api' => route('api.quotes.index'),
-                            'method' => 'POST',
-                        ]" option-label="name" option-value="id" option-description="description" class="flex-1" />
 
                 <div class="col-span-2">
                     <x-wire-select label="Cliente" wire:model="customer_id" placeholder="Seleccione un cliente"
